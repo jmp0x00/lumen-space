@@ -250,6 +250,7 @@ button:focus-visible {
 .top-bar,
 .people-panel,
 .action-bar,
+.debug-panel,
 .toast {
   position: relative;
   z-index: 2;
@@ -267,6 +268,12 @@ button:focus-visible {
 .top-bar h2 {
   font-size: clamp(1.25rem, 3vw, 2.25rem);
   line-height: 1.04;
+}
+
+#room-label,
+#room-title {
+  pointer-events: auto;
+  user-select: none;
 }
 
 .eyebrow {
@@ -403,6 +410,41 @@ button:focus-visible {
   font-size: 0.9rem;
 }
 
+.debug-panel {
+  position: fixed;
+  left: 20px;
+  bottom: 92px;
+  width: min(420px, calc(100vw - 40px));
+  max-height: min(44vh, 360px);
+  border: 1px solid rgba(125, 211, 252, 0.3);
+  border-radius: 8px;
+  padding: 12px;
+  overflow: auto;
+  color: #dff6ff;
+  background: rgba(3, 8, 15, 0.82);
+  box-shadow: 0 18px 52px var(--shadow);
+  backdrop-filter: blur(16px);
+  pointer-events: none;
+}
+
+.debug-panel-title {
+  margin-bottom: 8px;
+  color: var(--cyan);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+#debug-output {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
 .space-label {
   position: fixed;
   z-index: 1;
@@ -434,6 +476,14 @@ button:focus-visible {
     left: 12px;
     width: auto;
     max-height: 28vh;
+  }
+
+  .debug-panel {
+    right: 12px;
+    bottom: 184px;
+    left: 12px;
+    width: auto;
+    max-height: 24vh;
   }
 
   .action-bar {

@@ -10,9 +10,11 @@ Use this checklist after any UI or networking change.
 6. Open the copied room link in a second browser tab or a second browser profile.
 7. Confirm both names and colors appear in both participant panels.
 8. Move each pointer and confirm the corresponding light drifts in the other tab.
-9. Move through a small touch star and confirm a pulse appears and the star temporarily disappears.
-10. Click `Send Pulse` in each tab and confirm pulse rings appear in both tabs.
-11. Close one tab and confirm the peer disappears within the stale-peer window.
-12. Click `Add Bot` and confirm a bot appears, moves, and eventually pulses.
-13. Click `Remove Bot` and confirm the latest bot disappears.
-14. Block network access or CDN loading, reload, and confirm the app keeps reporting retry status rather than a blank screen.
+9. Double-click the room label and confirm the hidden debug panel shows position, velocity, and speed rows that update as lumes move.
+10. Double-click the room label again and confirm the debug panel hides.
+11. Move through a small touch star and confirm a pulse appears and the star temporarily disappears.
+12. Click `Send Pulse` in each tab and confirm pulse rings appear in both tabs.
+13. Close one tab and confirm the peer disappears within the stale-peer window.
+14. Click `Add Bot` and confirm a bot appears, moves, and eventually pulses.
+15. Click `Remove Bot` and confirm the latest bot disappears.
+16. Block network access or CDN loading, reload, and confirm the app keeps reporting retry status rather than a blank screen.

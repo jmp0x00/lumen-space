@@ -185,6 +185,24 @@ export function updateMotion(state, target, deltaSeconds, options = {}) {
   };
 }
 
+export function formatParticipantDebugRows(participants, options = {}) {
+  const digits = clamp(Math.floor(Number(options.digits ?? 2)), 0, 4);
+  return (Array.isArray(participants) ? participants : [])
+    .filter(isObject)
+    .map((participant) => {
+      const position = clampVector(participant.position);
+      const velocity = sanitizeVector(participant.velocity);
+      return {
+        id: String(participant.id ?? "unknown"),
+        name: String(participant.name ?? "Unknown").slice(0, NAME_MAX_LENGTH),
+        kind: participant.isLocal ? "local" : participant.isBot ? "bot" : "peer",
+        position: roundVector(position, digits),
+        velocity: roundVector(velocity, digits),
+        speed: roundNumber(Math.hypot(velocity.x, velocity.y, velocity.z), digits)
+      };
+    });
+}
+
 export function updateBotParticipants(participants, now = Date.now()) {
   return participants.map((participant, index) => updateBotParticipant(participant, now, index));
 }
@@ -692,6 +710,20 @@ function planeDistance(first, second) {
   const start = sanitizeVector(first);
   const end = sanitizeVector(second);
   return Math.hypot(start.x - end.x, start.y - end.y);
+}
+
+function roundVector(vector, digits) {
+  const safeVector = sanitizeVector(vector);
+  return {
+    x: roundNumber(safeVector.x, digits),
+    y: roundNumber(safeVector.y, digits),
+    z: roundNumber(safeVector.z, digits)
+  };
+}
+
+function roundNumber(value, digits) {
+  const factor = 10 ** digits;
+  return Math.round(Number(value) * factor) / factor;
 }
 
 function mixHexColors(first, second) {

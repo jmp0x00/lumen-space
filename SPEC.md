@@ -55,6 +55,7 @@ Out of scope:
 - Users must be able to add and remove local bots.
 - Bot names must use the same generated-name flow as player defaults.
 - Bots must drift within world bounds and emit occasional pulses.
+- A hidden debug toggle must show current lume positions, velocities, and speed for physics tuning without adding a visible player-facing control.
 
 ## Acceptance Criteria
 
@@ -66,6 +67,7 @@ Out of scope:
 - Pulse events appear locally and remotely.
 - Overlapping pulse fronts from different sources create a resonance flash without a separate network message.
 - The user can add a bot, see it move and pulse, and remove it again.
+- Double-clicking the room label toggles a debug overlay whose position and velocity rows update as lumes move.
 - Closing one tab removes that participant from the other tab within the stale-peer window.
 - `npm test` passes.
 - `README.md`, `SPEC.md`, `ARCHITECTURE.md`, and `RETROSPECTIVE.md` exist at repository root.

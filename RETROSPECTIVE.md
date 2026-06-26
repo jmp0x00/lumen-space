@@ -13,6 +13,7 @@
 - Added an external name generator for funny editable player names and bot names, with a local fallback for resilience.
 - Added a manual name regeneration control after trying the default-name flow in the lobby.
 - Added touch stars so pulses can emerge from environmental interaction instead of only explicit controls, then refined them to respawn with deterministic random-looking positions and colors for multiplayer consistency and blend star/lumen pulse colors.
+- Added a hidden debug overlay for current lume positions and velocities, because multiplayer movement feel needed live instrumentation rather than relying only on visual judgment.
 
 ## AI Tools Used
 
@@ -30,6 +31,7 @@
 
 - The planning phase helped avoid accidentally building a default card game.
 - Separating pure logic from WebRTC/WebGL kept tests straightforward.
+- Adding a small hidden debug readout made multiplayer movement easier to reason about while preserving the simple player-facing interface.
 - A static app shape matched the GitDocs sharing goal and avoided backend credentials.
 
 ## What Did Not Work Well

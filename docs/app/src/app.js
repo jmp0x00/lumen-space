@@ -14,6 +14,7 @@ import {
   createPulseMessage,
   createRoomId,
   createTouchStars,
+  formatParticipantDebugRows,
   getRoomIdFromLocation,
   lerpVector,
   normalizeRoomId,
@@ -52,6 +53,8 @@ const elements = {
   removeBotButton: document.querySelector("#remove-bot-button"),
   pulseButton: document.querySelector("#pulse-button"),
   leaveButton: document.querySelector("#leave-button"),
+  debugPanel: document.querySelector("#debug-panel"),
+  debugOutput: document.querySelector("#debug-output"),
   toast: document.querySelector("#toast")
 };
 
@@ -77,6 +80,7 @@ let lastFrameAt = performance.now();
 let pulseSequence = 0;
 let connectionAttempt = 0;
 let isRoomActive = false;
+let isDebugVisible = false;
 let roomControlsBound = false;
 let pointerAbortController = null;
 let peers = {};
@@ -202,6 +206,7 @@ async function enterRoom() {
   };
   pointerTarget = localParticipant.position;
   touchStars = createTouchStars(roomId);
+  setDebugVisible(false);
   updatePeopleList();
   setStatus("Starting room", "pending");
 
@@ -238,6 +243,8 @@ function bindRoomControls() {
   elements.removeBotButton.addEventListener("click", removeBot);
   elements.pulseButton.addEventListener("click", sendLocalPulse);
   elements.leaveButton.addEventListener("click", leaveRoom);
+  elements.roomLabel.addEventListener("dblclick", handleDebugLabelDoubleClick);
+  elements.roomTitle.addEventListener("dblclick", handleDebugLabelDoubleClick);
   window.addEventListener("keydown", handleKeydown);
 }
 
@@ -386,6 +393,7 @@ function startSimulationLoop() {
       connection?.sendPulse(message);
     }
     resonances = updatePulseResonances(resonances, pulses, nowMs);
+    updateDebugPanel();
     animationFrame = window.requestAnimationFrame(tick);
   };
 
@@ -468,6 +476,7 @@ function leaveRoom() {
   resonances = [];
   touchStars = [];
   botParticipants = [];
+  setDebugVisible(false);
   setStatus("Starting", "pending");
 }
 
@@ -476,6 +485,54 @@ function handleKeydown(event) {
     event.preventDefault();
     sendLocalPulse();
   }
+}
+
+function handleDebugLabelDoubleClick(event) {
+  event.preventDefault();
+  toggleDebugPanel();
+}
+
+function toggleDebugPanel() {
+  setDebugVisible(!isDebugVisible);
+}
+
+function setDebugVisible(nextVisible) {
+  isDebugVisible = Boolean(nextVisible);
+  elements.debugPanel.hidden = !isDebugVisible;
+  if (!isDebugVisible) {
+    elements.debugOutput.textContent = "";
+    return;
+  }
+  updateDebugPanel();
+}
+
+function updateDebugPanel() {
+  if (!isDebugVisible) {
+    return;
+  }
+
+  const rows = formatParticipantDebugRows(getParticipants(), { digits: 2 });
+  elements.debugOutput.textContent = rows
+    .map(
+      (row) =>
+        `${row.kind.padEnd(5)} ${row.name.padEnd(18)} ` +
+        `p(${formatDebugVector(row.position)}) ` +
+        `v(${formatDebugVector(row.velocity)}) ` +
+        `s=${formatDebugNumber(row.speed)}`
+    )
+    .join("\n");
+}
+
+function formatDebugVector(vector) {
+  return [
+    formatDebugNumber(vector.x),
+    formatDebugNumber(vector.y),
+    formatDebugNumber(vector.z)
+  ].join(", ");
+}
+
+function formatDebugNumber(value) {
+  return Number(value).toFixed(2).padStart(6, " ");
 }
 
 function updatePeopleList() {

@@ -51,6 +51,7 @@ npm test
 ```
 
 Manual browser validation is documented in [docs/testing/manual-smoke-test.md](docs/testing/manual-smoke-test.md).
+For physics tuning, double-click the room label in the room to toggle a hidden debug readout with lume positions and velocities.
 
 ## Project Structure
 
