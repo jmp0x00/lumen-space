@@ -34,6 +34,7 @@ Out of scope:
 ## Functional Requirements
 
 - The app must provide a lobby before entering the visual space.
+- The lobby must generate an editable funny default name for first-time visitors.
 - The lobby must support creating a room ID and joining an existing room ID.
 - Invite URLs must include `?room=<room-id>`.
 - The app must sanitize nickname, color, room ID, presence, and pulse inputs.
@@ -44,6 +45,7 @@ Out of scope:
 - Malformed network messages must be ignored safely.
 - If realtime connection fails, the app must keep retrying without switching into a separate offline mode.
 - Users must be able to add and remove local bots.
+- Bot names must use the same generated-name flow as player defaults.
 - Bots must drift within world bounds and emit occasional pulses.
 
 ## Acceptance Criteria

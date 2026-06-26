@@ -10,6 +10,7 @@
 - Selected vanilla web, Three.js, Trystero, GitDocs-style static hosting, and Node's built-in test runner.
 - Decided to keep the domain layer pure so AI-generated behavior can be covered by deterministic tests.
 - Replaced automatic offline mode with manually controlled bots while realtime connection keeps retrying.
+- Added an external name generator for funny editable player names and bot names, with a local fallback for resilience.
 
 ## AI Tools Used
 

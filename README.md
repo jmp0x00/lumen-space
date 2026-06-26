@@ -7,6 +7,7 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 ## Game Description
 
 - Choose a nickname and color.
+- Fresh rooms start with a generated funny name that can be edited.
 - Create or join a room link.
 - Move your light by moving the pointer.
 - Send pulses that expand through the shared space.

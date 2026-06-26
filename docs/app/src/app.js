@@ -24,6 +24,7 @@ import {
   updateBotParticipants
 } from "./domain.js";
 import { connectToRoom } from "./network.js";
+import { generateDisplayName, generateDisplayNameSync } from "./names.js";
 import { createSpaceScene } from "./scene.js";
 
 const elements = {
@@ -52,9 +53,14 @@ const elements = {
 const storageKey = "lumen-space.identity";
 const savedIdentity = loadSavedIdentity();
 const initialRoomId = getRoomIdFromLocation(window.location);
+const hasSavedIdentity = Boolean(savedIdentity);
+const generatedIdentity = sanitizeIdentity({
+  name: generateDisplayNameSync(`player-${Date.now()}`),
+  color: DEFAULT_COLOR
+});
 
-let selectedColor = savedIdentity.color;
-let identity = savedIdentity;
+let selectedColor = (savedIdentity ?? generatedIdentity).color;
+let identity = savedIdentity ?? generatedIdentity;
 let roomId = initialRoomId ?? createRoomId();
 let connection = null;
 let sceneController = null;
@@ -82,13 +88,19 @@ let localParticipant = {
 };
 
 let botParticipants = [];
+let nameWasEdited = false;
 
 initLobby();
 
 function initLobby() {
-  elements.nameInput.value = savedIdentity.name;
+  elements.nameInput.value = identity.name;
   elements.roomInput.value = roomId;
   renderColorChoices();
+  refreshGeneratedLobbyName();
+
+  elements.nameInput.addEventListener("input", () => {
+    nameWasEdited = true;
+  });
 
   elements.createRoomButton.addEventListener("click", () => {
     roomId = createRoomId();
@@ -112,6 +124,18 @@ function initLobby() {
     roomId = normalizedRoom;
     await enterRoom();
   });
+}
+
+async function refreshGeneratedLobbyName() {
+  if (hasSavedIdentity) {
+    return;
+  }
+
+  const generatedName = await generateDisplayName(`player-${roomId}-${Date.now()}`);
+  if (!nameWasEdited && !isRoomActive) {
+    identity = sanitizeIdentity({ ...identity, name: generatedName });
+    elements.nameInput.value = identity.name;
+  }
 }
 
 function renderColorChoices() {
@@ -357,8 +381,8 @@ function sendLocalPulse() {
   connection?.sendPulse(createPulseMessage(pulse));
 }
 
-function addBot() {
-  const bot = createBotParticipant(botParticipants.length, Date.now());
+async function addBot() {
+  const bot = await createBotParticipant(botParticipants.length, Date.now());
   botParticipants = [...botParticipants, bot];
   updatePeopleList();
   showToast(`${bot.name} joined as a bot.`);
@@ -446,9 +470,10 @@ function showToast(message) {
 
 function loadSavedIdentity() {
   try {
-    return sanitizeIdentity(JSON.parse(window.localStorage.getItem(storageKey)));
+    const stored = window.localStorage.getItem(storageKey);
+    return stored ? sanitizeIdentity(JSON.parse(stored)) : null;
   } catch {
-    return sanitizeIdentity({ name: "", color: DEFAULT_COLOR });
+    return null;
   }
 }
 
@@ -463,21 +488,21 @@ function chooseStartPosition(seedText) {
   return clampVector({ x, y, z: 0 });
 }
 
-function createBotParticipant(index, createdAt = Date.now()) {
-  const botTemplates = [
-    { name: "Aurora", color: "#f0abfc", basePosition: { x: SPACE_BOUNDS.x[0] * 0.42, y: 1.6, z: -0.6 } },
-    { name: "Solis", color: "#fcd34d", basePosition: { x: SPACE_BOUNDS.x[1] * 0.36, y: -1.4, z: -0.8 } },
-    { name: "Vale", color: "#86efac", basePosition: { x: 0.8, y: 2.25, z: -1.2 } },
-    { name: "Nova", color: "#c4b5fd", basePosition: { x: -1.4, y: -2.2, z: -0.4 } },
-    { name: "Lyra", color: "#fb7185", basePosition: { x: 2.2, y: 1.1, z: -1.3 } }
+async function createBotParticipant(index, createdAt = Date.now()) {
+  const botPositions = [
+    { color: "#f0abfc", basePosition: { x: SPACE_BOUNDS.x[0] * 0.42, y: 1.6, z: -0.6 } },
+    { color: "#fcd34d", basePosition: { x: SPACE_BOUNDS.x[1] * 0.36, y: -1.4, z: -0.8 } },
+    { color: "#86efac", basePosition: { x: 0.8, y: 2.25, z: -1.2 } },
+    { color: "#c4b5fd", basePosition: { x: -1.4, y: -2.2, z: -0.4 } },
+    { color: "#fb7185", basePosition: { x: 2.2, y: 1.1, z: -1.3 } }
   ];
-  const template = botTemplates[index % botTemplates.length];
-  const cycle = Math.floor(index / botTemplates.length);
+  const template = botPositions[index % botPositions.length];
   const driftSeed = 2.4 + index * 1.7;
+  const name = await generateDisplayName(`bot-${roomId}-${index}-${createdAt}`);
 
   return {
     id: `bot-${index + 1}-${createdAt}`,
-    name: cycle > 0 ? `${template.name} ${cycle + 1}` : template.name,
+    name,
     color: template.color,
     basePosition: template.basePosition,
     position: template.basePosition,

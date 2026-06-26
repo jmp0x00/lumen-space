@@ -6,6 +6,7 @@
 - ES modules in the browser.
 - Three.js `0.185.0` via CDN for WebGL rendering.
 - Trystero `0.25.2` via CDN for WebRTC peer rooms and public relay-based signaling.
+- Unique Names Generator `4.7.1` via CDN for generated player and bot names.
 - Node.js built-in test runner for unit tests.
 
 ## Architecture Overview
@@ -14,6 +15,7 @@ The app is split into a pure domain layer and browser adapters.
 
 - `domain.js` owns room ID normalization, identity sanitization, movement math, presence reduction, stale-peer pruning, bot motion, and pulse lifecycle logic.
 - `network.js` dynamically imports Trystero and exposes a small room adapter with `sendPresence`, `sendPulse`, and `leave`.
+- `names.js` dynamically imports Unique Names Generator and falls back to a small deterministic local generator if the CDN is unavailable.
 - `scene.js` dynamically imports Three.js and renders participants, labels, star field, and pulse rings.
 - `app.js` coordinates lobby state, local storage, URL updates, realtime connection, simulation ticks, and UI controls.
 
