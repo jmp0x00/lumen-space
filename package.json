@@ -1,0 +1,14 @@
+{
+  "name": "vadim-kiryukhin-lumen-space",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Lumen Space, a small realtime social visual game for the AI-native development challenge.",
+  "scripts": {
+    "serve": "python3 -m http.server 4173 --directory docs/app",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

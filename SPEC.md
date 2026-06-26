@@ -1,0 +1,56 @@
+# Lumen Space Specification
+
+## Game Rules
+
+Lumen Space is a social visual game without scoring or winners. The goal is to create a pleasant shared space where players can notice one another, move gently, and exchange simple light pulses.
+
+1. A player enters a nickname, chooses a color, and joins a room.
+2. Every connected player appears as a glowing light.
+3. Moving the pointer pulls the local light through the space with inertia.
+4. Pressing `Send Pulse`, pressing Space, or double-clicking the scene emits a colored pulse from the local light.
+5. Other players in the same room see the player's latest position and pulses.
+6. Rooms are ephemeral. When all players leave, no room state remains.
+
+## Scope
+
+In scope:
+
+- Static browser app under `docs/app`.
+- Peer-to-peer realtime rooms for 2-8 participants.
+- Nickname and color identity stored locally.
+- Three.js visual scene with participant lights and pulse rings.
+- Solo fallback when realtime networking is unavailable.
+- Unit tests for pure domain logic.
+- Required challenge documentation.
+
+Out of scope:
+
+- Accounts or authentication.
+- Persistent rooms or server-side storage.
+- Voice, video, or chat.
+- Competitive scoring.
+- Owned signaling, TURN, Supabase, Firebase, or backend infrastructure.
+
+## Functional Requirements
+
+- The app must provide a lobby before entering the visual space.
+- The lobby must support creating a room ID and joining an existing room ID.
+- Invite URLs must include `?room=<room-id>`.
+- The app must sanitize nickname, color, room ID, presence, and pulse inputs.
+- The local light must remain within defined world bounds.
+- Remote peer motion must interpolate smoothly instead of snapping.
+- Stale peers must be removed after the heartbeat timeout.
+- Duplicate pulse messages must not create duplicate visuals.
+- Malformed network messages must be ignored safely.
+- If realtime connection fails, the user must still see a solo visual space with clear status.
+
+## Acceptance Criteria
+
+- A user can run `npm run serve` and open the app locally.
+- A user can enter the lobby, create a room, and copy an invite link.
+- Two browser tabs using the same room show each other as separate colored lights.
+- Pointer movement updates the local light and propagates to peers.
+- Pulse events appear locally and remotely.
+- Closing one tab removes that participant from the other tab within the stale-peer window.
+- `npm test` passes.
+- `README.md`, `SPEC.md`, `ARCHITECTURE.md`, and `RETROSPECTIVE.md` exist at repository root.

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="Lumen Space is a realtime social visual game where visitors appear as lights in a shared cosmic room."
+    >
+    <title>Lumen Space</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="lobby" id="lobby" aria-labelledby="app-title">
+        <form class="lobby-panel" id="join-form">
+          <div class="brand-row">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <div>
+              <h1 id="app-title">Lumen Space</h1>
+              <p>Shared light room</p>
+            </div>
+          </div>
+
+          <label for="name-input">Name</label>
+          <input
+            id="name-input"
+            name="name"
+            type="text"
+            maxlength="18"
+            autocomplete="nickname"
+            placeholder="Ada"
+            required
+          >
+
+          <fieldset class="color-field">
+            <legend>Color</legend>
+            <div class="color-grid" id="color-grid"></div>
+          </fieldset>
+
+          <label for="room-input">Room</label>
+          <div class="room-row">
+            <input
+              id="room-input"
+              name="room"
+              type="text"
+              autocomplete="off"
+              placeholder="lumen-room"
+              required
+            >
+            <button class="secondary-button" id="create-room-button" type="button">
+              Create
+            </button>
+          </div>
+
+          <button class="primary-button" type="submit">Enter Space</button>
+          <p class="lobby-note" id="lobby-note" role="status">
+            Room links are ephemeral and peer-to-peer.
+          </p>
+        </form>
+      </section>
+
+      <section class="space" id="space" aria-label="Lumen Space room" hidden>
+        <div class="scene-host" id="scene-host" aria-hidden="true"></div>
+
+        <header class="top-bar">
+          <div>
+            <p class="eyebrow" id="room-label">Room</p>
+            <h2 id="room-title">Lumen Space</h2>
+          </div>
+          <div class="status-pill" id="connection-status">Starting</div>
+        </header>
+
+        <aside class="people-panel" aria-label="Room participants">
+          <div class="panel-title-row">
+            <h3>Lights</h3>
+            <span id="peer-count">1</span>
+          </div>
+          <ul id="people-list"></ul>
+        </aside>
+
+        <nav class="action-bar" aria-label="Room actions">
+          <button class="secondary-button" id="copy-link-button" type="button">
+            Copy Link
+          </button>
+          <button class="primary-button" id="pulse-button" type="button">
+            Send Pulse
+          </button>
+          <button class="ghost-button" id="leave-button" type="button">
+            Leave
+          </button>
+        </nav>
+
+        <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+      </section>
+    </main>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
