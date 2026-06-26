@@ -6,7 +6,7 @@ import {
   STALE_PEER_MS,
   addPulse,
   clampVector,
-  collectDueSoloPulses,
+  collectDueBotPulses,
   createInviteUrl,
   createPresenceMessage,
   createPulse,
@@ -21,7 +21,7 @@ import {
   sanitizeIdentity,
   updateMotion,
   updatePulses,
-  updateSoloParticipants
+  updateBotParticipants
 } from "./domain.js";
 import { connectToRoom } from "./network.js";
 import { createSpaceScene } from "./scene.js";
@@ -42,6 +42,8 @@ const elements = {
   peopleList: document.querySelector("#people-list"),
   peerCount: document.querySelector("#peer-count"),
   copyLinkButton: document.querySelector("#copy-link-button"),
+  addBotButton: document.querySelector("#add-bot-button"),
+  removeBotButton: document.querySelector("#remove-bot-button"),
   pulseButton: document.querySelector("#pulse-button"),
   leaveButton: document.querySelector("#leave-button"),
   toast: document.querySelector("#toast")
@@ -58,10 +60,12 @@ let connection = null;
 let sceneController = null;
 let presenceTimer = 0;
 let pruneTimer = 0;
+let reconnectTimer = 0;
 let animationFrame = 0;
 let lastFrameAt = performance.now();
 let pulseSequence = 0;
-let isSoloFallback = false;
+let connectionAttempt = 0;
+let isRoomActive = false;
 let roomControlsBound = false;
 let pointerAbortController = null;
 let peers = {};
@@ -77,7 +81,7 @@ let localParticipant = {
   lastSeen: Date.now()
 };
 
-let mockParticipants = createMockParticipants();
+let botParticipants = [];
 
 initLobby();
 
@@ -128,6 +132,7 @@ function renderColorChoices() {
 }
 
 async function enterRoom() {
+  isRoomActive = true;
   elements.lobby.hidden = true;
   elements.space.hidden = false;
   elements.roomLabel.textContent = `Room ${roomId}`;
@@ -164,8 +169,70 @@ async function enterRoom() {
     return;
   }
 
+  connectRealtime();
+}
+
+function bindRoomControls() {
+  if (roomControlsBound) {
+    return;
+  }
+  roomControlsBound = true;
+  elements.copyLinkButton.addEventListener("click", copyInviteLink);
+  elements.addBotButton.addEventListener("click", addBot);
+  elements.removeBotButton.addEventListener("click", removeBot);
+  elements.pulseButton.addEventListener("click", sendLocalPulse);
+  elements.leaveButton.addEventListener("click", leaveRoom);
+  window.addEventListener("keydown", handleKeydown);
+}
+
+function bindPointerControls() {
+  pointerAbortController?.abort();
+  pointerAbortController = new AbortController();
+  const updateTarget = (event) => {
+    pointerTarget = clampVector(sceneController.screenToWorld(event.clientX, event.clientY));
+  };
+
+  window.addEventListener("pointermove", updateTarget, {
+    signal: pointerAbortController.signal
+  });
+  window.addEventListener("pointerdown", updateTarget, {
+    signal: pointerAbortController.signal
+  });
+}
+
+function startPresenceLoop() {
+  stopPresenceLoop();
+  sendPresence();
+  presenceTimer = window.setInterval(sendPresence, 250);
+  pruneTimer = window.setInterval(() => {
+    const before = Object.keys(peers).length;
+    peers = pruneStalePeers(peers, Date.now(), STALE_PEER_MS);
+    if (Object.keys(peers).length !== before) {
+      updatePeopleList();
+    }
+  }, 1_000);
+}
+
+function stopPresenceLoop() {
+  window.clearInterval(presenceTimer);
+  window.clearInterval(pruneTimer);
+  presenceTimer = 0;
+  pruneTimer = 0;
+}
+
+async function connectRealtime() {
+  if (!isRoomActive || connection) {
+    return;
+  }
+
+  window.clearTimeout(reconnectTimer);
+  reconnectTimer = 0;
+  connectionAttempt += 1;
+  const attempt = connectionAttempt;
+  setStatus(attempt === 1 ? "Connecting" : `Retrying connection ${attempt}`, "pending");
+
   try {
-    connection = await connectToRoom({
+    const nextConnection = await connectToRoom({
       appId: APP_ID,
       roomId,
       onPeerJoin(peerId) {
@@ -198,53 +265,26 @@ async function enterRoom() {
         console.warn(error);
       }
     });
-    isSoloFallback = false;
+
+    if (!isRoomActive || attempt !== connectionAttempt) {
+      nextConnection.leave();
+      return;
+    }
+
+    connection = nextConnection;
     setStatus("Online", "online");
     startPresenceLoop();
   } catch (error) {
-    isSoloFallback = true;
-    setStatus("Solo fallback", "solo");
-    showToast("Realtime unavailable. Solo mode is active.");
-    console.warn(error);
-  }
-}
-
-function bindRoomControls() {
-  if (roomControlsBound) {
-    return;
-  }
-  roomControlsBound = true;
-  elements.copyLinkButton.addEventListener("click", copyInviteLink);
-  elements.pulseButton.addEventListener("click", sendLocalPulse);
-  elements.leaveButton.addEventListener("click", leaveRoom);
-  window.addEventListener("keydown", handleKeydown);
-}
-
-function bindPointerControls() {
-  pointerAbortController?.abort();
-  pointerAbortController = new AbortController();
-  const updateTarget = (event) => {
-    pointerTarget = clampVector(sceneController.screenToWorld(event.clientX, event.clientY));
-  };
-
-  window.addEventListener("pointermove", updateTarget, {
-    signal: pointerAbortController.signal
-  });
-  window.addEventListener("pointerdown", updateTarget, {
-    signal: pointerAbortController.signal
-  });
-}
-
-function startPresenceLoop() {
-  sendPresence();
-  presenceTimer = window.setInterval(sendPresence, 250);
-  pruneTimer = window.setInterval(() => {
-    const before = Object.keys(peers).length;
-    peers = pruneStalePeers(peers, Date.now(), STALE_PEER_MS);
-    if (Object.keys(peers).length !== before) {
-      updatePeopleList();
+    if (!isRoomActive || attempt !== connectionAttempt) {
+      return;
     }
-  }, 1_000);
+    console.warn(error);
+    connection = null;
+    peers = {};
+    stopPresenceLoop();
+    setStatus(`Retrying connection ${attempt + 1}`, "pending");
+    reconnectTimer = window.setTimeout(connectRealtime, 3_500);
+  }
 }
 
 function startSimulationLoop() {
@@ -271,11 +311,11 @@ function startSimulationLoop() {
       ])
     );
 
-    if (isSoloFallback) {
-      mockParticipants = updateSoloParticipants(mockParticipants, nowMs);
-      const soloPulseResult = collectDueSoloPulses(mockParticipants, nowMs);
-      mockParticipants = soloPulseResult.participants;
-      for (const pulse of soloPulseResult.pulses) {
+    if (botParticipants.length > 0) {
+      botParticipants = updateBotParticipants(botParticipants, nowMs);
+      const botPulseResult = collectDueBotPulses(botParticipants, nowMs);
+      botParticipants = botPulseResult.participants;
+      for (const pulse of botPulseResult.pulses) {
         pulses = addPulse(pulses, createPulseMessage(pulse), pulse.sourceId, nowMs);
       }
     }
@@ -289,7 +329,7 @@ function startSimulationLoop() {
 
 function getParticipants() {
   const liveParticipants = [localParticipant, ...Object.values(peers)];
-  return isSoloFallback ? [...liveParticipants, ...mockParticipants] : liveParticipants;
+  return [...liveParticipants, ...botParticipants];
 }
 
 function sendPresence() {
@@ -317,6 +357,24 @@ function sendLocalPulse() {
   connection?.sendPulse(createPulseMessage(pulse));
 }
 
+function addBot() {
+  const bot = createBotParticipant(botParticipants.length, Date.now());
+  botParticipants = [...botParticipants, bot];
+  updatePeopleList();
+  showToast(`${bot.name} joined as a bot.`);
+}
+
+function removeBot() {
+  const removedBot = botParticipants.at(-1);
+  if (!removedBot) {
+    showToast("No bots to remove.");
+    return;
+  }
+  botParticipants = botParticipants.slice(0, -1);
+  updatePeopleList();
+  showToast(`${removedBot.name} removed.`);
+}
+
 async function copyInviteLink() {
   const inviteUrl = createInviteUrl(window.location.href, roomId);
   try {
@@ -328,20 +386,21 @@ async function copyInviteLink() {
 }
 
 function leaveRoom() {
+  isRoomActive = false;
+  connectionAttempt += 1;
   connection?.leave();
   connection = null;
   sceneController?.dispose();
   pointerAbortController?.abort();
-  window.clearInterval(presenceTimer);
-  window.clearInterval(pruneTimer);
+  window.clearTimeout(reconnectTimer);
+  stopPresenceLoop();
   window.cancelAnimationFrame(animationFrame);
   window.removeEventListener("keydown", handleKeydown);
   elements.space.hidden = true;
   elements.lobby.hidden = false;
   peers = {};
   pulses = [];
-  isSoloFallback = false;
-  mockParticipants = createMockParticipants();
+  botParticipants = [];
   setStatus("Starting", "pending");
 }
 
@@ -363,7 +422,7 @@ function updatePeopleList() {
     row.innerHTML = `
       <span class="person-swatch" style="--person-color: ${participant.color}"></span>
       <span class="person-name"></span>
-      <span class="person-meta">${participant.isLocal ? "you" : participant.isMock ? "solo" : "live"}</span>
+      <span class="person-meta">${participant.isLocal ? "you" : participant.isBot ? "bot" : "live"}</span>
     `;
     row.querySelector(".person-name").textContent = participant.name;
     elements.peopleList.appendChild(row);
@@ -404,43 +463,28 @@ function chooseStartPosition(seedText) {
   return clampVector({ x, y, z: 0 });
 }
 
-function createMockParticipants(createdAt = Date.now()) {
-  return [
-    {
-      id: "mock-aurora",
-      name: "Aurora",
-      color: "#f0abfc",
-      basePosition: { x: SPACE_BOUNDS.x[0] * 0.42, y: 1.6, z: -0.6 },
-      position: { x: SPACE_BOUNDS.x[0] * 0.42, y: 1.6, z: -0.6 },
-      driftSeed: 2.4,
-      pulseEveryMs: 4_600,
-      nextPulseAt: createdAt + 1_300,
-      pulseStrength: 0.72,
-      isMock: true
-    },
-    {
-      id: "mock-solis",
-      name: "Solis",
-      color: "#fcd34d",
-      basePosition: { x: SPACE_BOUNDS.x[1] * 0.36, y: -1.4, z: -0.8 },
-      position: { x: SPACE_BOUNDS.x[1] * 0.36, y: -1.4, z: -0.8 },
-      driftSeed: 4.1,
-      pulseEveryMs: 5_300,
-      nextPulseAt: createdAt + 2_400,
-      pulseStrength: 0.9,
-      isMock: true
-    },
-    {
-      id: "mock-vale",
-      name: "Vale",
-      color: "#86efac",
-      basePosition: { x: 0.8, y: 2.25, z: -1.2 },
-      position: { x: 0.8, y: 2.25, z: -1.2 },
-      driftSeed: 6.8,
-      pulseEveryMs: 6_100,
-      nextPulseAt: createdAt + 3_100,
-      pulseStrength: 0.78,
-      isMock: true
-    }
+function createBotParticipant(index, createdAt = Date.now()) {
+  const botTemplates = [
+    { name: "Aurora", color: "#f0abfc", basePosition: { x: SPACE_BOUNDS.x[0] * 0.42, y: 1.6, z: -0.6 } },
+    { name: "Solis", color: "#fcd34d", basePosition: { x: SPACE_BOUNDS.x[1] * 0.36, y: -1.4, z: -0.8 } },
+    { name: "Vale", color: "#86efac", basePosition: { x: 0.8, y: 2.25, z: -1.2 } },
+    { name: "Nova", color: "#c4b5fd", basePosition: { x: -1.4, y: -2.2, z: -0.4 } },
+    { name: "Lyra", color: "#fb7185", basePosition: { x: 2.2, y: 1.1, z: -1.3 } }
   ];
+  const template = botTemplates[index % botTemplates.length];
+  const cycle = Math.floor(index / botTemplates.length);
+  const driftSeed = 2.4 + index * 1.7;
+
+  return {
+    id: `bot-${index + 1}-${createdAt}`,
+    name: cycle > 0 ? `${template.name} ${cycle + 1}` : template.name,
+    color: template.color,
+    basePosition: template.basePosition,
+    position: template.basePosition,
+    driftSeed,
+    pulseEveryMs: 4_500 + (index % 5) * 650,
+    nextPulseAt: createdAt + 900 + (index % 5) * 520,
+    pulseStrength: 0.72 + (index % 3) * 0.08,
+    isBot: true
+  };
 }

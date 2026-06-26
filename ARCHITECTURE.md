@@ -12,7 +12,7 @@
 
 The app is split into a pure domain layer and browser adapters.
 
-- `domain.js` owns room ID normalization, identity sanitization, movement math, presence reduction, stale-peer pruning, solo fallback motion, and pulse lifecycle logic.
+- `domain.js` owns room ID normalization, identity sanitization, movement math, presence reduction, stale-peer pruning, bot motion, and pulse lifecycle logic.
 - `network.js` dynamically imports Trystero and exposes a small room adapter with `sendPresence`, `sendPulse`, and `leave`.
 - `scene.js` dynamically imports Three.js and renders participants, labels, star field, and pulse rings.
 - `app.js` coordinates lobby state, local storage, URL updates, realtime connection, simulation ticks, and UI controls.
@@ -28,7 +28,7 @@ This shape keeps network and rendering side effects away from the logic covered 
 5. `network.js` broadcasts throttled `presence` messages through Trystero.
 6. Remote `presence` messages are reduced into peer state and interpolated by the simulation loop.
 7. Local and remote `pulse` messages are normalized, deduplicated, rendered, and expired.
-8. In solo fallback mode, deterministic mock participants drift and emit scheduled pulses from the same pulse pipeline.
+8. User-added bots drift and emit scheduled pulses from the same pulse pipeline as people.
 
 ## Message Interfaces
 
@@ -64,7 +64,7 @@ Pulse:
 
 - Use GitDocs-friendly static files instead of a build system.
 - Use Trystero's default decentralized strategy to avoid an owned backend server.
-- Import browser-only dependencies dynamically so app startup can report failures clearly.
+- Import browser-only dependencies dynamically so app startup can report failures clearly and retry realtime connection.
 - Keep rooms ephemeral to avoid storage, privacy, and cleanup concerns.
 - Treat the project as a social visual game, matching the challenge while preserving the desired creative direction.
 

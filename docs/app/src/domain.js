@@ -17,7 +17,7 @@ export const SPACE_BOUNDS = Object.freeze({
 
 export const STALE_PEER_MS = 10_000;
 export const PULSE_DURATION_MS = 1_800;
-export const SOLO_PULSE_DEFAULT_INTERVAL_MS = 4_800;
+export const BOT_PULSE_DEFAULT_INTERVAL_MS = 4_800;
 
 const ROOM_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 const ROOM_MAX_LENGTH = 40;
@@ -177,11 +177,11 @@ export function updateMotion(state, target, deltaSeconds, options = {}) {
   };
 }
 
-export function updateSoloParticipants(participants, now = Date.now()) {
-  return participants.map((participant, index) => updateSoloParticipant(participant, now, index));
+export function updateBotParticipants(participants, now = Date.now()) {
+  return participants.map((participant, index) => updateBotParticipant(participant, now, index));
 }
 
-export function collectDueSoloPulses(participants, now = Date.now()) {
+export function collectDueBotPulses(participants, now = Date.now()) {
   const nextParticipants = [];
   const duePulses = [];
 
@@ -199,7 +199,7 @@ export function collectDueSoloPulses(participants, now = Date.now()) {
       duePulses.push(pulse);
       nextParticipants.push({
         ...participant,
-        nextPulseAt: now + Number(participant.pulseEveryMs ?? SOLO_PULSE_DEFAULT_INTERVAL_MS)
+        nextPulseAt: now + Number(participant.pulseEveryMs ?? BOT_PULSE_DEFAULT_INTERVAL_MS)
       });
     } else {
       nextParticipants.push(participant);
@@ -209,10 +209,10 @@ export function collectDueSoloPulses(participants, now = Date.now()) {
   return { participants: nextParticipants, pulses: duePulses };
 }
 
-function updateSoloParticipant(participant, now, fallbackIndex) {
+function updateBotParticipant(participant, now, botIndex) {
   const seed = Number.isFinite(Number(participant.driftSeed))
     ? Number(participant.driftSeed)
-    : fallbackIndex + 1;
+    : botIndex + 1;
   const basePosition = clampVector(participant.basePosition ?? participant.position);
   const time = now / 1000;
   const xAmplitude = 0.65 + (seed % 5) * 0.14;
@@ -238,7 +238,7 @@ function updateSoloParticipant(participant, now, fallbackIndex) {
       z: nextPosition.z - sanitizeVector(participant.position).z
     },
     lastSeen: now,
-    isMock: true
+    isBot: true
   };
 }
 
@@ -278,7 +278,7 @@ export function reducePresence(peers, peerId, data, receivedAt = Date.now()) {
       timestamp: normalized.timestamp,
       lastSeen: receivedAt,
       isLocal: false,
-      isMock: false
+      isBot: false
     }
   };
 }

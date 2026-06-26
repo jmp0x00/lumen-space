@@ -79,9 +79,9 @@ export async function createSpaceScene({ container, getParticipants, getPulses, 
         participant.position.y,
         participant.position.z
       );
-      mesh.group.scale.setScalar(participant.isLocal ? 1.18 : participant.isMock ? 0.74 : 1);
+      mesh.group.scale.setScalar(participant.isLocal ? 1.18 : participant.isBot ? 0.74 : 1);
       mesh.group.userData.name = participant.name;
-      mesh.group.userData.isMock = participant.isMock;
+      mesh.group.userData.isBot = participant.isBot;
 
       const label = labels.get(participant.id);
       if (label) {
@@ -204,12 +204,12 @@ function createParticipantMesh(THREE, participant, glowTexture) {
       map: glowTexture,
       color,
       transparent: true,
-      opacity: participant.isMock ? 0.38 : 0.72,
+      opacity: participant.isBot ? 0.38 : 0.72,
       blending: THREE.AdditiveBlending,
       depthWrite: false
     })
   );
-  const light = new THREE.PointLight(color, participant.isMock ? 0.48 : 0.95, 5);
+  const light = new THREE.PointLight(color, participant.isBot ? 0.48 : 0.95, 5);
 
   glow.scale.set(1.9, 1.9, 1);
   group.add(glow, core, light);

@@ -10,8 +10,9 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Create or join a room link.
 - Move your light by moving the pointer.
 - Send pulses that expand through the shared space.
+- Add or remove local bots when you want extra ambient lights in the room.
 - Rooms are peer-to-peer and ephemeral; no account, backend server, or database is used.
-- If realtime networking is unavailable, solo fallback mode adds ambient lights that drift and pulse on their own.
+- If realtime networking is unavailable, the app keeps retrying while the visual room stays usable.
 
 ## Screenshots
 

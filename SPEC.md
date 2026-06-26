@@ -19,7 +19,7 @@ In scope:
 - Peer-to-peer realtime rooms for 2-8 participants.
 - Nickname and color identity stored locally.
 - Three.js visual scene with participant lights and pulse rings.
-- Solo fallback when realtime networking is unavailable.
+- Manually added local bots that drift and pulse.
 - Unit tests for pure domain logic.
 - Required challenge documentation.
 
@@ -42,8 +42,9 @@ Out of scope:
 - Stale peers must be removed after the heartbeat timeout.
 - Duplicate pulse messages must not create duplicate visuals.
 - Malformed network messages must be ignored safely.
-- If realtime connection fails, the user must still see a solo visual space with clear status.
-- Solo fallback lights must drift within world bounds and emit occasional pulses.
+- If realtime connection fails, the app must keep retrying without switching into a separate offline mode.
+- Users must be able to add and remove local bots.
+- Bots must drift within world bounds and emit occasional pulses.
 
 ## Acceptance Criteria
 
@@ -52,7 +53,7 @@ Out of scope:
 - Two browser tabs using the same room show each other as separate colored lights.
 - Pointer movement updates the local light and propagates to peers.
 - Pulse events appear locally and remotely.
-- Solo fallback mode shows ambient lights that move and pulse without user input.
+- The user can add a bot, see it move and pulse, and remove it again.
 - Closing one tab removes that participant from the other tab within the stale-peer window.
 - `npm test` passes.
 - `README.md`, `SPEC.md`, `ARCHITECTURE.md`, and `RETROSPECTIVE.md` exist at repository root.

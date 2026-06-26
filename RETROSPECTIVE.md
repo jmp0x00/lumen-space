@@ -9,7 +9,7 @@
 - Chose Lumen Space: a realtime peer-to-peer cosmic room where users appear as lights and send pulses.
 - Selected vanilla web, Three.js, Trystero, GitDocs-style static hosting, and Node's built-in test runner.
 - Decided to keep the domain layer pure so AI-generated behavior can be covered by deterministic tests.
-- Iterated on solo fallback so ambient lights drift and pulse instead of remaining static.
+- Replaced automatic offline mode with manually controlled bots while realtime connection keeps retrying.
 
 ## AI Tools Used
 
@@ -52,7 +52,7 @@ Initial implementation session: TBD after final validation.
 
 - Confirm the exact hosted GitDocs URL pattern before writing the README link.
 - Test WebRTC across two different networks earlier if realtime reliability becomes part of evaluation.
-- Consider a tiny optional relay fallback only after the static MVP is proven.
+- Consider a tiny optional relay only after the static MVP is proven.
 
 ## Key Lessons Learned
 

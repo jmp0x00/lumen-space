@@ -264,7 +264,7 @@ button:focus-visible {
   text-align: right;
 }
 
-.status-pill[data-state="solo"] {
+.status-pill[data-state="pending"] {
   border-color: rgba(252, 211, 77, 0.45);
   color: #fde68a;
 }
@@ -351,6 +351,8 @@ button:focus-visible {
   left: 50%;
   bottom: 22px;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 10px;
   transform: translateX(-50%);
   border: 1px solid var(--line);
@@ -415,10 +417,11 @@ button:focus-visible {
     left: 12px;
     justify-content: stretch;
     transform: none;
+    flex-wrap: wrap;
   }
 
   .action-bar button {
-    flex: 1;
+    flex: 1 1 31%;
     min-width: 0;
     padding: 0 10px;
   }
