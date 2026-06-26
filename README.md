@@ -10,7 +10,7 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Fresh rooms start with a generated funny name that can be edited or regenerated.
 - Create or join a room link.
 - Move your light by moving the pointer.
-- Drift through small colorful touch stars to release environmental pulses.
+- Drift through small colorful touch stars to release pulses that blend star and lumen colors.
 - Send pulses that expand through the shared space.
 - When different players' pulse fronts meet, they create a brief resonance flash.
 - Add or remove local bots when you want extra ambient lights in the room.

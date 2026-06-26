@@ -30,7 +30,7 @@ This shape keeps network and rendering side effects away from the logic covered 
 5. `network.js` broadcasts throttled `presence` messages through Trystero.
 6. Remote `presence` messages are reduced into peer state and interpolated by the simulation loop.
 7. The domain layer creates deterministic random-looking touch stars from the room ID.
-8. Crossing an available touch star emits a normal pulse with optional `trigger`, `starId`, and `starGeneration` metadata.
+8. Crossing an available touch star emits a pulse whose color blends the star and lumen colors, with optional `trigger`, `starId`, and `starGeneration` metadata.
 9. Other clients suppress and respawn the matching touch star when that star-touch pulse arrives.
 10. Local and remote `pulse` messages are normalized, deduplicated, rendered, and expired.
 11. The domain layer derives resonance events when different pulse fronts meet; no extra network message is sent.
@@ -60,7 +60,7 @@ Pulse:
   "version": 1,
   "id": "pulse-local-1782482400000-0",
   "origin": { "x": 0, "y": 0, "z": 0 },
-  "color": "#7dd3fc",
+  "color": "#b6d32b",
   "strength": 1.1,
   "timestamp": 1782482400000,
   "trigger": "star-touch",
@@ -69,7 +69,7 @@ Pulse:
 }
 ```
 
-`trigger`, `starId`, and `starGeneration` are optional and are only sent for environment-triggered star-touch pulses.
+For star-touch pulses, `color` is the blended star/lumen color. `trigger`, `starId`, and `starGeneration` are optional and are only sent for environment-triggered star-touch pulses.
 
 ## Major Design Decisions
 

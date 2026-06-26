@@ -7,7 +7,7 @@ Lumen Space is a social visual game without scoring or winners. The goal is to c
 1. A player enters a nickname, chooses a color, and joins a room.
 2. Every connected player appears as a glowing light.
 3. Moving the pointer pulls the local light through the space with inertia.
-4. Touching a small environmental star emits a colored pulse from the local light.
+4. Touching a small environmental star emits a pulse from the local light, colored by blending the star and lumen colors.
 5. Pressing `Send Pulse`, pressing Space, or double-clicking the scene emits a colored pulse from the local light.
 6. When pulse fronts from different sources meet, they create a brief resonance flash.
 7. Other players in the same room see the player's latest position and pulses.
@@ -45,6 +45,7 @@ Out of scope:
 - Remote peer motion must interpolate smoothly instead of snapping.
 - Rooms must render deterministic random-looking touch stars that can trigger pulses when crossed.
 - After a touch, the star must temporarily disappear and respawn in a new deterministic random-looking position and color.
+- Star-touch pulse colors must blend the touched star color with the triggering lumen color.
 - Star-touch pulses must temporarily suppress and respawn the matching star for other clients through existing pulse metadata.
 - Stale peers must be removed after the heartbeat timeout.
 - Duplicate pulse messages must not create duplicate visuals.
@@ -61,7 +62,7 @@ Out of scope:
 - A user can enter the lobby, regenerate a nickname, create a room, and copy an invite link.
 - Two browser tabs using the same room show each other as separate colored lights.
 - Pointer movement updates the local light and propagates to peers.
-- Touching an environmental star emits a pulse and temporarily hides that star.
+- Touching an environmental star emits a blended-color pulse and temporarily hides that star.
 - Pulse events appear locally and remotely.
 - Overlapping pulse fronts from different sources create a resonance flash without a separate network message.
 - The user can add a bot, see it move and pulse, and remove it again.

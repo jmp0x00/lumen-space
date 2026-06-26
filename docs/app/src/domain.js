@@ -256,7 +256,7 @@ export function collectTouchStarPulses(
           id: `pulse-${participantId}-${star.id}-${Math.floor(now)}`,
           sourceId: participantId,
           origin: participant.position,
-          color: participant.color ?? star.color,
+          color: mixHexColors(star.color, participant.color ?? DEFAULT_COLOR),
           strength: participant.isBot ? 0.84 : 1.16,
           timestamp: now,
           trigger: "star-touch",

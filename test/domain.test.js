@@ -249,6 +249,28 @@ test("touch stars emit one pulse and enter cooldown when touched", () => {
   assert.equal(repeated.touchStars[0].availableAt, 2_000 + TOUCH_STAR_COOLDOWN_MS);
 });
 
+test("touch star pulse color blends the star and lumen colors", () => {
+  const touchStars = [
+    {
+      id: "touch-star-0",
+      position: { x: 1, y: 2, z: 0 },
+      color: "#ff0000",
+      phase: 0,
+      availableAt: 0
+    }
+  ];
+  const participant = {
+    id: "local",
+    color: "#0000ff",
+    position: touchStars[0].position,
+    isLocal: true
+  };
+
+  const touched = collectTouchStarPulses(touchStars, [participant], 2_000);
+
+  assert.equal(touched.pulses[0].color, "#800080");
+});
+
 test("touch stars collide on the movement plane even when rendered with depth", () => {
   const touchStars = [
     {
