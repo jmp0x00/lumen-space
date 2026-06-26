@@ -36,6 +36,7 @@ Out of scope:
 
 - The app must provide a lobby before entering the visual space.
 - The lobby must generate an editable funny default name for first-time visitors.
+- The lobby must let users replace the current nickname with a newly generated name.
 - The lobby must support creating a room ID and joining an existing room ID.
 - Invite URLs must include `?room=<room-id>`.
 - The app must sanitize nickname, color, room ID, presence, and pulse inputs.
@@ -53,7 +54,7 @@ Out of scope:
 ## Acceptance Criteria
 
 - A user can run `npm run serve` and open the app locally.
-- A user can enter the lobby, create a room, and copy an invite link.
+- A user can enter the lobby, regenerate a nickname, create a room, and copy an invite link.
 - Two browser tabs using the same room show each other as separate colored lights.
 - Pointer movement updates the local light and propagates to peers.
 - Pulse events appear locally and remotely.

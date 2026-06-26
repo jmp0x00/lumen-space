@@ -11,6 +11,7 @@
 - Decided to keep the domain layer pure so AI-generated behavior can be covered by deterministic tests.
 - Replaced automatic offline mode with manually controlled bots while realtime connection keeps retrying.
 - Added an external name generator for funny editable player names and bot names, with a local fallback for resilience.
+- Added a manual name regeneration control after trying the default-name flow in the lobby.
 
 ## AI Tools Used
 

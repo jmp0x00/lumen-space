@@ -167,10 +167,35 @@ button:focus-visible {
   content: "";
 }
 
-.room-row {
+.input-action-row {
+  position: relative;
+}
+
+.input-action-row input {
+  padding-right: 52px;
+}
+
+.input-icon-button {
+  position: absolute;
+  top: 50%;
+  right: 6px;
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 1.2rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.input-icon-button span {
+  transform: translateY(-1px);
 }
 
 .primary-button,

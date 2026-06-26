@@ -23,15 +23,26 @@
           </div>
 
           <label for="name-input">Name</label>
-          <input
-            id="name-input"
-            name="name"
-            type="text"
-            maxlength="18"
-            autocomplete="nickname"
-            placeholder="Ada"
-            required
-          >
+          <div class="input-action-row">
+            <input
+              id="name-input"
+              name="name"
+              type="text"
+              maxlength="18"
+              autocomplete="nickname"
+              placeholder="Ada"
+              required
+            >
+            <button
+              class="input-icon-button"
+              id="generate-name-button"
+              type="button"
+              aria-label="Generate a new name"
+              title="Generate a new name"
+            >
+              <span aria-hidden="true">&#8635;</span>
+            </button>
+          </div>
 
           <fieldset class="color-field">
             <legend>Color</legend>
@@ -39,7 +50,7 @@
           </fieldset>
 
           <label for="room-input">Room</label>
-          <div class="room-row">
+          <div class="input-action-row">
             <input
               id="room-input"
               name="room"
@@ -48,8 +59,14 @@
               placeholder="lumen-room"
               required
             >
-            <button class="secondary-button" id="create-room-button" type="button">
-              Create
+            <button
+              class="input-icon-button"
+              id="create-room-button"
+              type="button"
+              aria-label="Generate a new room"
+              title="Generate a new room"
+            >
+              <span aria-hidden="true">&#8635;</span>
             </button>
           </div>
 

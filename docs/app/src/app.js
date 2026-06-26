@@ -32,6 +32,7 @@ const elements = {
   lobby: document.querySelector("#lobby"),
   joinForm: document.querySelector("#join-form"),
   nameInput: document.querySelector("#name-input"),
+  generateNameButton: document.querySelector("#generate-name-button"),
   roomInput: document.querySelector("#room-input"),
   colorGrid: document.querySelector("#color-grid"),
   lobbyNote: document.querySelector("#lobby-note"),
@@ -91,6 +92,7 @@ let localParticipant = {
 
 let botParticipants = [];
 let nameWasEdited = false;
+let manualNameSequence = 0;
 
 initLobby();
 
@@ -103,6 +105,8 @@ function initLobby() {
   elements.nameInput.addEventListener("input", () => {
     nameWasEdited = true;
   });
+
+  elements.generateNameButton.addEventListener("click", replaceNameWithGenerated);
 
   elements.createRoomButton.addEventListener("click", () => {
     roomId = createRoomId();
@@ -137,6 +141,25 @@ async function refreshGeneratedLobbyName() {
   if (!nameWasEdited && !isRoomActive) {
     identity = sanitizeIdentity({ ...identity, name: generatedName });
     elements.nameInput.value = identity.name;
+  }
+}
+
+function replaceNameWithGenerated() {
+  nameWasEdited = true;
+  elements.generateNameButton.disabled = true;
+  try {
+    const generatedName = generateDisplayNameSync(
+      `manual-${roomId}-${Date.now()}-${manualNameSequence++}`
+    );
+    identity = sanitizeIdentity({ ...identity, name: generatedName, color: selectedColor });
+    elements.nameInput.value = identity.name;
+    elements.nameInput.focus();
+    elements.nameInput.select();
+    elements.lobbyNote.textContent = "New name ready.";
+  } catch {
+    elements.lobbyNote.textContent = "Could not generate a name. Try typing one.";
+  } finally {
+    elements.generateNameButton.disabled = false;
   }
 }
 
