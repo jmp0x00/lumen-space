@@ -219,24 +219,7 @@ export function collectDueBotPulses(participants, now = Date.now()) {
 
 export function createTouchStars(roomId, count = TOUCH_STAR_COUNT) {
   const roomSeed = normalizeRoomId(roomId) ?? "lumen-room";
-  return Array.from({ length: count }, (_, index) => {
-    const xSeed = seededText(`${roomSeed}:${index}`, "x");
-    const ySeed = seededText(`${roomSeed}:${index}`, "y");
-    const zSeed = seededText(`${roomSeed}:${index}`, "z");
-    const colorIndex = Math.floor(seededText(`${roomSeed}:${index}`, "color") * COLORS.length);
-
-    return {
-      id: `touch-star-${index}`,
-      position: {
-        x: scaleBetween(xSeed, SPACE_BOUNDS.x[0] + 1, SPACE_BOUNDS.x[1] - 1),
-        y: scaleBetween(ySeed, SPACE_BOUNDS.y[0] + 0.9, SPACE_BOUNDS.y[1] - 0.9),
-        z: scaleBetween(zSeed, -0.9, 0.4)
-      },
-      color: COLORS[colorIndex] ?? DEFAULT_COLOR,
-      phase: seededText(`${roomSeed}:${index}`, "phase") * Math.PI * 2,
-      availableAt: 0
-    };
-  });
+  return Array.from({ length: count }, (_, index) => createTouchStar(roomSeed, index));
 }
 
 export function collectTouchStarPulses(
@@ -267,6 +250,7 @@ export function collectTouchStarPulses(
         continue;
       }
 
+      const nextGeneration = normalizeStarGeneration(star.generation) + 1;
       pulses.push(
         createPulse({
           id: `pulse-${participantId}-${star.id}-${Math.floor(now)}`,
@@ -276,14 +260,11 @@ export function collectTouchStarPulses(
           strength: participant.isBot ? 0.84 : 1.16,
           timestamp: now,
           trigger: "star-touch",
-          starId: star.id
+          starId: star.id,
+          starGeneration: nextGeneration
         })
       );
-      nextTouchStars[index] = {
-        ...star,
-        availableAt: now + cooldownMs,
-        touchedAt: now
-      };
+      nextTouchStars[index] = createNextTouchStar(star, nextGeneration, now + cooldownMs, now);
       touchedIds.add(star.id);
       break;
     }
@@ -306,8 +287,14 @@ export function suppressTouchStarsFromPulses(
       continue;
     }
     const suppressionStart = Number(pulse.receivedAt ?? pulse.timestamp ?? now);
-    const currentStart = starPulseTimes.get(pulse.starId) ?? 0;
-    starPulseTimes.set(pulse.starId, Math.max(currentStart, suppressionStart));
+    const current = starPulseTimes.get(pulse.starId);
+    starPulseTimes.set(pulse.starId, {
+      suppressionStart: Math.max(current?.suppressionStart ?? 0, suppressionStart),
+      starGeneration: Math.max(
+        current?.starGeneration ?? 0,
+        normalizeStarGeneration(pulse.starGeneration)
+      )
+    });
   }
 
   if (starPulseTimes.size === 0) {
@@ -315,16 +302,78 @@ export function suppressTouchStarsFromPulses(
   }
 
   return touchStars.map((star) => {
-    const suppressionStart = starPulseTimes.get(star.id);
-    if (!suppressionStart) {
+    const suppression = starPulseTimes.get(star.id);
+    if (!suppression) {
       return star;
     }
 
-    return {
-      ...star,
-      availableAt: Math.max(Number(star.availableAt ?? 0), suppressionStart + cooldownMs)
-    };
+    const currentGeneration = normalizeStarGeneration(star.generation);
+    const nextGeneration = Math.max(currentGeneration, suppression.starGeneration);
+    const availableAt = Math.max(
+      Number(star.availableAt ?? 0),
+      suppression.suppressionStart + cooldownMs
+    );
+    if (nextGeneration === currentGeneration) {
+      return {
+        ...star,
+        availableAt
+      };
+    }
+    return createNextTouchStar(star, nextGeneration, availableAt, suppression.suppressionStart);
   });
+}
+
+function createTouchStar(roomSeed, index, generation = 0, availableAt = 0, touchedAt = undefined) {
+  const safeRoomSeed = normalizeRoomId(roomSeed) ?? "lumen-room";
+  const safeIndex = normalizeStarIndex(index);
+  const safeGeneration = normalizeStarGeneration(generation);
+  const seed = `${safeRoomSeed}:${safeIndex}:${safeGeneration}`;
+  const hue = Math.floor(seededText(seed, "hue") * 360);
+  const saturation = scaleBetween(seededText(seed, "saturation"), 68, 92);
+  const lightness = scaleBetween(seededText(seed, "lightness"), 58, 74);
+  const star = {
+    id: `touch-star-${safeIndex}`,
+    roomSeed: safeRoomSeed,
+    index: safeIndex,
+    generation: safeGeneration,
+    position: {
+      x: scaleBetween(seededText(seed, "x"), SPACE_BOUNDS.x[0] + 1, SPACE_BOUNDS.x[1] - 1),
+      y: scaleBetween(seededText(seed, "y"), SPACE_BOUNDS.y[0] + 0.9, SPACE_BOUNDS.y[1] - 0.9),
+      z: scaleBetween(seededText(seed, "z"), -0.9, 0.4)
+    },
+    color: hslToHex(hue, saturation, lightness),
+    phase: seededText(seed, "phase") * Math.PI * 2,
+    availableAt: Number(availableAt) || 0
+  };
+  if (touchedAt !== undefined && Number.isFinite(Number(touchedAt))) {
+    star.touchedAt = Number(touchedAt);
+  }
+  return star;
+}
+
+function createNextTouchStar(star, generation, availableAt, touchedAt) {
+  return createTouchStar(
+    star?.roomSeed,
+    star?.index ?? parseStarIndex(star?.id),
+    generation,
+    availableAt,
+    touchedAt
+  );
+}
+
+function normalizeStarIndex(value) {
+  const index = Math.floor(Number(value));
+  return Number.isFinite(index) && index >= 0 ? index : 0;
+}
+
+function parseStarIndex(starId) {
+  const match = /^touch-star-(\d+)$/.exec(String(starId ?? ""));
+  return match ? Number(match[1]) : 0;
+}
+
+function normalizeStarGeneration(value) {
+  const generation = Math.floor(Number(value));
+  return Number.isFinite(generation) && generation > 0 ? generation : 0;
 }
 
 function updateBotParticipant(participant, now, botIndex) {
@@ -426,6 +475,7 @@ export function createPulse({
   sourceId = "local",
   trigger = null,
   starId = null,
+  starGeneration = null,
   receivedAt = null
 }) {
   const safeTimestamp = normalizeTimestamp(timestamp);
@@ -441,6 +491,7 @@ export function createPulse({
   if (safeTrigger) {
     pulse.trigger = safeTrigger;
     pulse.starId = String(starId ?? "").slice(0, 80);
+    pulse.starGeneration = normalizeStarGeneration(starGeneration);
   }
   if (Number.isFinite(Number(receivedAt))) {
     pulse.receivedAt = Number(receivedAt);
@@ -462,6 +513,7 @@ export function createPulseMessage(pulse) {
   if (safePulse.trigger) {
     message.trigger = safePulse.trigger;
     message.starId = safePulse.starId;
+    message.starGeneration = safePulse.starGeneration;
   }
   return message;
 }
@@ -568,6 +620,7 @@ export function normalizePulseMessage(data, sourceId = "remote", receivedAt = Da
     sourceId,
     trigger: data.trigger,
     starId: data.starId,
+    starGeneration: data.starGeneration,
     receivedAt
   });
 }
@@ -662,6 +715,34 @@ function hexToRgb(color) {
 
 function rgbToHex({ r, g, b }) {
   return `#${[r, g, b].map((part) => part.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function hslToHex(hue, saturation, lightness) {
+  const h = ((Number(hue) % 360) + 360) % 360;
+  const s = clamp(Number(saturation), 0, 100) / 100;
+  const l = clamp(Number(lightness), 0, 100) / 100;
+  const chroma = (1 - Math.abs(2 * l - 1)) * s;
+  const segment = h / 60;
+  const x = chroma * (1 - Math.abs((segment % 2) - 1));
+  const match = l - chroma / 2;
+  const [r1, g1, b1] =
+    segment < 1
+      ? [chroma, x, 0]
+      : segment < 2
+        ? [x, chroma, 0]
+        : segment < 3
+          ? [0, chroma, x]
+          : segment < 4
+            ? [0, x, chroma]
+            : segment < 5
+              ? [x, 0, chroma]
+              : [chroma, 0, x];
+
+  return rgbToHex({
+    r: Math.round((r1 + match) * 255),
+    g: Math.round((g1 + match) * 255),
+    b: Math.round((b1 + match) * 255)
+  });
 }
 
 function seededText(seed, salt) {

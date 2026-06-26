@@ -29,9 +29,9 @@ This shape keeps network and rendering side effects away from the logic covered 
 4. `app.js` updates local motion on each animation frame.
 5. `network.js` broadcasts throttled `presence` messages through Trystero.
 6. Remote `presence` messages are reduced into peer state and interpolated by the simulation loop.
-7. The domain layer creates deterministic touch stars from the room ID.
-8. Crossing an available touch star emits a normal pulse with optional `trigger` and `starId` metadata.
-9. Other clients suppress the matching touch star when that star-touch pulse arrives.
+7. The domain layer creates deterministic random-looking touch stars from the room ID.
+8. Crossing an available touch star emits a normal pulse with optional `trigger`, `starId`, and `starGeneration` metadata.
+9. Other clients suppress and respawn the matching touch star when that star-touch pulse arrives.
 10. Local and remote `pulse` messages are normalized, deduplicated, rendered, and expired.
 11. The domain layer derives resonance events when different pulse fronts meet; no extra network message is sent.
 12. User-added bots drift and emit scheduled pulses from the same pulse pipeline as people.
@@ -64,11 +64,12 @@ Pulse:
   "strength": 1.1,
   "timestamp": 1782482400000,
   "trigger": "star-touch",
-  "starId": "touch-star-0"
+  "starId": "touch-star-0",
+  "starGeneration": 1
 }
 ```
 
-`trigger` and `starId` are optional and are only sent for environment-triggered star-touch pulses.
+`trigger`, `starId`, and `starGeneration` are optional and are only sent for environment-triggered star-touch pulses.
 
 ## Major Design Decisions
 

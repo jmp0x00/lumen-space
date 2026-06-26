@@ -214,6 +214,7 @@ test("touch stars are deterministic per room and stay inside playable bounds", (
   for (const star of first) {
     assert.match(star.id, /^touch-star-\d+$/);
     assert.equal(star.availableAt, 0);
+    assert.equal(Object.hasOwn(star, "touchedAt"), false);
     assert.ok(star.position.x >= SPACE_BOUNDS.x[0] && star.position.x <= SPACE_BOUNDS.x[1]);
     assert.ok(star.position.y >= SPACE_BOUNDS.y[0] && star.position.y <= SPACE_BOUNDS.y[1]);
     assert.ok(star.position.z >= SPACE_BOUNDS.z[0] && star.position.z <= SPACE_BOUNDS.z[1]);
@@ -221,19 +222,12 @@ test("touch stars are deterministic per room and stay inside playable bounds", (
 });
 
 test("touch stars emit one pulse and enter cooldown when touched", () => {
-  const touchStars = [
-    {
-      id: "touch-star-0",
-      position: { x: 1, y: 2, z: 0 },
-      color: "#fcd34d",
-      phase: 0,
-      availableAt: 0
-    }
-  ];
+  const touchStars = createTouchStars("lumen-touch", 1);
+  const originalStar = touchStars[0];
   const participant = {
     id: "local",
     color: "#7dd3fc",
-    position: { x: 1.1, y: 2, z: 0 },
+    position: originalStar.position,
     isLocal: true
   };
 
@@ -242,8 +236,12 @@ test("touch stars emit one pulse and enter cooldown when touched", () => {
   assert.equal(touched.pulses.length, 1);
   assert.equal(touched.pulses[0].trigger, "star-touch");
   assert.equal(touched.pulses[0].starId, "touch-star-0");
+  assert.equal(touched.pulses[0].starGeneration, 1);
   assert.equal(touched.pulses[0].sourceId, "local");
   assert.deepEqual(touched.pulses[0].origin, participant.position);
+  assert.equal(touched.touchStars[0].generation, 1);
+  assert.notDeepEqual(touched.touchStars[0].position, originalStar.position);
+  assert.notEqual(touched.touchStars[0].color, originalStar.color);
   assert.equal(touched.touchStars[0].availableAt, 2_000 + TOUCH_STAR_COOLDOWN_MS);
 
   const repeated = collectTouchStarPulses(touched.touchStars, [participant], 2_100);
@@ -275,28 +273,21 @@ test("touch stars collide on the movement plane even when rendered with depth", 
 });
 
 test("touch stars suppress from received star-touch pulses but ignore manual pulses", () => {
-  const touchStars = [
-    {
-      id: "touch-star-0",
-      position: { x: 1, y: 2, z: 0 },
-      color: "#fcd34d",
-      phase: 0,
-      availableAt: 0
-    }
-  ];
+  const touchStars = createTouchStars("lumen-sync", 1);
   const manualPulse = createPulse({
     id: "manual-pulse",
     sourceId: "peer-1",
-    origin: { x: 1, y: 2, z: 0 },
+    origin: touchStars[0].position,
     timestamp: 2_000
   });
   const starTouchPulse = createPulse({
     id: "star-pulse",
     sourceId: "peer-1",
-    origin: { x: 1, y: 2, z: 0 },
+    origin: touchStars[0].position,
     timestamp: 2_000,
     trigger: "star-touch",
     starId: "touch-star-0",
+    starGeneration: 1,
     receivedAt: 2_250
   });
 
@@ -304,6 +295,33 @@ test("touch stars suppress from received star-touch pulses but ignore manual pul
 
   const suppressed = suppressTouchStarsFromPulses(touchStars, [starTouchPulse], 2_250);
   assert.equal(suppressed[0].availableAt, 2_250 + TOUCH_STAR_COOLDOWN_MS);
+  assert.equal(suppressed[0].generation, 1);
+  assert.notDeepEqual(suppressed[0].position, touchStars[0].position);
+  assert.notEqual(suppressed[0].color, touchStars[0].color);
+});
+
+test("touch star pulse metadata lets another client compute the same respawn", () => {
+  const localStars = createTouchStars("lumen-sync", 1);
+  const remoteStars = createTouchStars("lumen-sync", 1);
+  const participant = {
+    id: "local",
+    color: "#7dd3fc",
+    position: localStars[0].position,
+    isLocal: true
+  };
+
+  const localTouch = collectTouchStarPulses(localStars, [participant], 2_000);
+  const remotePulse = normalizePulseMessage(
+    createPulseMessage(localTouch.pulses[0]),
+    "peer-1",
+    2_250
+  );
+  const remoteSuppressed = suppressTouchStarsFromPulses(remoteStars, [remotePulse], 2_250);
+
+  assert.equal(remotePulse.starGeneration, 1);
+  assert.deepEqual(remoteSuppressed[0].position, localTouch.touchStars[0].position);
+  assert.equal(remoteSuppressed[0].color, localTouch.touchStars[0].color);
+  assert.equal(remoteSuppressed[0].availableAt, 2_250 + TOUCH_STAR_COOLDOWN_MS);
 });
 
 test("pulse resonances trigger once when different pulse fronts meet", () => {

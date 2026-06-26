@@ -43,8 +43,9 @@ Out of scope:
 - The app must sanitize nickname, color, room ID, presence, and pulse inputs.
 - The local light must remain within defined world bounds.
 - Remote peer motion must interpolate smoothly instead of snapping.
-- Rooms must render deterministic touch stars that can trigger pulses when crossed.
-- Star-touch pulses must temporarily suppress the matching star for other clients through existing pulse metadata.
+- Rooms must render deterministic random-looking touch stars that can trigger pulses when crossed.
+- After a touch, the star must temporarily disappear and respawn in a new deterministic random-looking position and color.
+- Star-touch pulses must temporarily suppress and respawn the matching star for other clients through existing pulse metadata.
 - Stale peers must be removed after the heartbeat timeout.
 - Duplicate pulse messages must not create duplicate visuals.
 - Pulse fronts from different sources must create a short-lived resonance visual when they meet.
