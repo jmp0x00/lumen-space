@@ -20,6 +20,7 @@ import {
   removePeer,
   sanitizeIdentity,
   updateMotion,
+  updatePulseResonances,
   updatePulses,
   updateBotParticipants
 } from "./domain.js";
@@ -76,6 +77,7 @@ let roomControlsBound = false;
 let pointerAbortController = null;
 let peers = {};
 let pulses = [];
+let resonances = [];
 let pointerTarget = { x: 0, y: 0, z: 0 };
 let localParticipant = {
   id: "local",
@@ -183,6 +185,7 @@ async function enterRoom() {
       container: elements.sceneHost,
       getParticipants,
       getPulses: () => pulses,
+      getResonances: () => resonances,
       onPulse: sendLocalPulse
     });
     sceneController.start();
@@ -345,6 +348,7 @@ function startSimulationLoop() {
     }
 
     pulses = updatePulses(pulses, nowMs);
+    resonances = updatePulseResonances(resonances, pulses, nowMs);
     animationFrame = window.requestAnimationFrame(tick);
   };
 
@@ -424,6 +428,7 @@ function leaveRoom() {
   elements.lobby.hidden = false;
   peers = {};
   pulses = [];
+  resonances = [];
   botParticipants = [];
   setStatus("Starting", "pending");
 }

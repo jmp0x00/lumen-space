@@ -17,6 +17,11 @@ export const SPACE_BOUNDS = Object.freeze({
 
 export const STALE_PEER_MS = 10_000;
 export const PULSE_DURATION_MS = 1_800;
+export const PULSE_BASE_RADIUS = 0.6;
+export const PULSE_RADIUS_SCALE = 7.5;
+export const RESONANCE_DURATION_MS = 700;
+export const RESONANCE_EDGE_TOLERANCE = 0.72;
+export const MAX_ACTIVE_RESONANCES = 16;
 export const BOT_PULSE_DEFAULT_INTERVAL_MS = 4_800;
 
 const ROOM_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -354,6 +359,57 @@ export function updatePulses(pulses, now = Date.now(), durationMs = PULSE_DURATI
     .filter((pulse) => pulse.ageMs <= durationMs);
 }
 
+export function getPulseRadius(pulse) {
+  return (
+    PULSE_BASE_RADIUS +
+    clamp(pulse?.progress ?? 0, 0, 1) * PULSE_RADIUS_SCALE * clamp(pulse?.strength ?? 1, 0.2, 2.5)
+  );
+}
+
+export function updatePulseResonances(
+  resonances,
+  pulses,
+  now = Date.now(),
+  options = {}
+) {
+  const durationMs = options.durationMs ?? RESONANCE_DURATION_MS;
+  const tolerance = options.tolerance ?? RESONANCE_EDGE_TOLERANCE;
+  const maxActive = options.maxActive ?? MAX_ACTIVE_RESONANCES;
+  const activeResonances = resonances
+    .map((resonance) => {
+      const ageMs = Math.max(0, now - Number(resonance.timestamp ?? now));
+      const progress = clamp(ageMs / durationMs, 0, 1);
+      return {
+        ...resonance,
+        ageMs,
+        progress,
+        opacity: 1 - progress
+      };
+    })
+    .filter((resonance) => resonance.ageMs <= durationMs);
+
+  const seenIds = new Set(activeResonances.map((resonance) => resonance.id));
+  const detected = detectPulseResonances(pulses, now, { tolerance });
+  const nextResonances = [...activeResonances];
+
+  for (const resonance of detected) {
+    if (!seenIds.has(resonance.id)) {
+      seenIds.add(resonance.id);
+      nextResonances.push({
+        ...resonance,
+        timestamp: now,
+        ageMs: 0,
+        progress: 0,
+        opacity: 1
+      });
+    }
+  }
+
+  return nextResonances
+    .sort((a, b) => b.timestamp - a.timestamp || b.intensity - a.intensity || a.id.localeCompare(b.id))
+    .slice(0, maxActive);
+}
+
 export function normalizePresenceMessage(data, receivedAt = Date.now()) {
   if (!isObject(data) || data.type !== "presence" || data.version !== 1) {
     return null;
@@ -386,6 +442,87 @@ export function normalizePulseMessage(data, sourceId = "remote", receivedAt = Da
 function normalizeTimestamp(value, fallback = Date.now()) {
   const timestamp = Number(value);
   return Number.isFinite(timestamp) && timestamp > 0 ? timestamp : fallback;
+}
+
+function detectPulseResonances(pulses, now, { tolerance }) {
+  const activePulses = pulses.filter((pulse) => Number(pulse?.opacity ?? 0) > 0.04);
+  const resonances = [];
+
+  for (let firstIndex = 0; firstIndex < activePulses.length; firstIndex += 1) {
+    const first = activePulses[firstIndex];
+    for (let secondIndex = firstIndex + 1; secondIndex < activePulses.length; secondIndex += 1) {
+      const second = activePulses[secondIndex];
+      if (first.sourceId && first.sourceId === second.sourceId) {
+        continue;
+      }
+
+      const distance = vectorDistance(first.origin, second.origin);
+      if (distance <= 0.01) {
+        continue;
+      }
+
+      const firstRadius = getPulseRadius(first);
+      const secondRadius = getPulseRadius(second);
+      const edgeGap = Math.abs(firstRadius + secondRadius - distance);
+      if (edgeGap > tolerance) {
+        continue;
+      }
+
+      const closeness = 1 - edgeGap / tolerance;
+      const strength = clamp((Number(first.strength ?? 1) + Number(second.strength ?? 1)) / 2, 0.2, 1);
+      const intensity = clamp(
+        closeness * Math.min(Number(first.opacity ?? 1), Number(second.opacity ?? 1)) * strength,
+        0.15,
+        1
+      );
+      const contactAmount = clamp(firstRadius / distance, 0, 1);
+      const position = lerpVector(first.origin, second.origin, contactAmount);
+
+      resonances.push({
+        id: createResonanceId(first.id, second.id),
+        pulseIds: [first.id, second.id],
+        position,
+        color: mixHexColors(first.color, second.color),
+        intensity,
+        timestamp: now
+      });
+    }
+  }
+
+  return resonances.sort((a, b) => b.intensity - a.intensity || a.id.localeCompare(b.id));
+}
+
+function createResonanceId(firstId, secondId) {
+  return `resonance:${[String(firstId), String(secondId)].sort().join(":")}`;
+}
+
+function vectorDistance(first, second) {
+  const start = sanitizeVector(first);
+  const end = sanitizeVector(second);
+  return Math.hypot(start.x - end.x, start.y - end.y, start.z - end.z);
+}
+
+function mixHexColors(first, second) {
+  const firstParts = hexToRgb(normalizeHexColor(first));
+  const secondParts = hexToRgb(normalizeHexColor(second));
+  return rgbToHex({
+    r: Math.round((firstParts.r + secondParts.r) / 2),
+    g: Math.round((firstParts.g + secondParts.g) / 2),
+    b: Math.round((firstParts.b + secondParts.b) / 2)
+  });
+}
+
+function hexToRgb(color) {
+  const value = color.replace("#", "");
+  return {
+    r: Number.parseInt(value.slice(0, 2), 16),
+    g: Number.parseInt(value.slice(2, 4), 16),
+    b: Number.parseInt(value.slice(4, 6), 16)
+  };
+}
+
+function rgbToHex({ r, g, b }) {
+  return `#${[r, g, b].map((part) => part.toString(16).padStart(2, "0")).join("")}`;
 }
 
 function isObject(value) {

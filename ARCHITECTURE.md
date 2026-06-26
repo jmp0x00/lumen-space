@@ -13,10 +13,10 @@
 
 The app is split into a pure domain layer and browser adapters.
 
-- `domain.js` owns room ID normalization, identity sanitization, movement math, presence reduction, stale-peer pruning, bot motion, and pulse lifecycle logic.
+- `domain.js` owns room ID normalization, identity sanitization, movement math, presence reduction, stale-peer pruning, bot motion, pulse lifecycle logic, and pulse resonance detection.
 - `network.js` dynamically imports Trystero and exposes a small room adapter with `sendPresence`, `sendPulse`, and `leave`.
 - `names.js` dynamically imports Unique Names Generator and falls back to a small deterministic local generator if the CDN is unavailable.
-- `scene.js` dynamically imports Three.js and renders participants, labels, star field, and pulse rings.
+- `scene.js` dynamically imports Three.js and renders participants, labels, star field, pulse rings, and resonance flashes.
 - `app.js` coordinates lobby state, local storage, URL updates, realtime connection, simulation ticks, and UI controls.
 
 This shape keeps network and rendering side effects away from the logic covered by unit tests.
@@ -30,7 +30,8 @@ This shape keeps network and rendering side effects away from the logic covered 
 5. `network.js` broadcasts throttled `presence` messages through Trystero.
 6. Remote `presence` messages are reduced into peer state and interpolated by the simulation loop.
 7. Local and remote `pulse` messages are normalized, deduplicated, rendered, and expired.
-8. User-added bots drift and emit scheduled pulses from the same pulse pipeline as people.
+8. The domain layer derives resonance events when different pulse fronts meet; no extra network message is sent.
+9. User-added bots drift and emit scheduled pulses from the same pulse pipeline as people.
 
 ## Message Interfaces
 

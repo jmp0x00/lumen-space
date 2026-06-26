@@ -1,6 +1,14 @@
+import { getPulseRadius } from "./domain.js";
+
 const THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js";
 
-export async function createSpaceScene({ container, getParticipants, getPulses, onPulse }) {
+export async function createSpaceScene({
+  container,
+  getParticipants,
+  getPulses,
+  getResonances = () => [],
+  onPulse
+}) {
   const THREE = await import(THREE_URL);
 
   const scene = new THREE.Scene();
@@ -20,6 +28,7 @@ export async function createSpaceScene({ container, getParticipants, getPulses, 
   const intersection = new THREE.Vector3();
   const participantMeshes = new Map();
   const pulseMeshes = new Map();
+  const resonanceMeshes = new Map();
   const labels = new Map();
   const glowTexture = createGlowTexture(THREE);
 
@@ -53,6 +62,7 @@ export async function createSpaceScene({ container, getParticipants, getPulses, 
   function render() {
     syncParticipants(THREE);
     syncPulses(THREE);
+    syncResonances(THREE);
     renderer.render(scene, camera);
     syncLabels(THREE);
   }
@@ -113,7 +123,7 @@ export async function createSpaceScene({ container, getParticipants, getPulses, 
         scene.add(mesh);
       }
 
-      const radius = 0.6 + pulse.progress * 7.5 * pulse.strength;
+      const radius = getPulseRadius(pulse);
       mesh.position.set(pulse.origin.x, pulse.origin.y, pulse.origin.z);
       mesh.scale.setScalar(radius);
       mesh.material.opacity = Math.max(0, pulse.opacity * 0.54);
@@ -125,6 +135,40 @@ export async function createSpaceScene({ container, getParticipants, getPulses, 
         mesh.geometry.dispose();
         mesh.material.dispose();
         pulseMeshes.delete(id);
+      }
+    }
+  }
+
+  function syncResonances(THREERef) {
+    const resonances = getResonances();
+    const activeIds = new Set(resonances.map((resonance) => resonance.id));
+
+    for (const resonance of resonances) {
+      let mesh = resonanceMeshes.get(resonance.id);
+      if (!mesh) {
+        mesh = createResonanceMesh(THREERef, resonance, glowTexture);
+        resonanceMeshes.set(resonance.id, mesh);
+        scene.add(mesh.group);
+      }
+
+      const color = new THREERef.Color(resonance.color);
+      const opacity = Math.max(0, resonance.opacity * (0.34 + resonance.intensity * 0.66));
+      const scale = 0.62 + resonance.progress * 1.25 + resonance.intensity * 0.44;
+      mesh.group.position.set(resonance.position.x, resonance.position.y, resonance.position.z);
+      mesh.group.scale.setScalar(scale);
+      mesh.halo.material.color.copy(color);
+      mesh.halo.material.opacity = opacity * 0.8;
+      mesh.ring.material.color.copy(color);
+      mesh.ring.material.opacity = opacity * 0.5;
+      mesh.light.color.copy(color);
+      mesh.light.intensity = opacity * (1.2 + resonance.intensity * 1.4);
+    }
+
+    for (const [id, mesh] of resonanceMeshes) {
+      if (!activeIds.has(id)) {
+        scene.remove(mesh.group);
+        disposeGroup(mesh.group);
+        resonanceMeshes.delete(id);
       }
     }
   }
@@ -179,6 +223,9 @@ export async function createSpaceScene({ container, getParticipants, getPulses, 
       mesh.geometry.dispose();
       mesh.material.dispose();
     }
+    for (const mesh of resonanceMeshes.values()) {
+      disposeGroup(mesh.group);
+    }
     for (const label of labels.values()) {
       label.remove();
     }
@@ -227,6 +274,37 @@ function createPulseMesh(THREE, pulse) {
     side: THREE.DoubleSide
   });
   return new THREE.Mesh(geometry, material);
+}
+
+function createResonanceMesh(THREE, resonance, glowTexture) {
+  const color = new THREE.Color(resonance.color);
+  const group = new THREE.Group();
+  const halo = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: glowTexture,
+      color,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    })
+  );
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(0.68, 1, 72),
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.5,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    })
+  );
+  const light = new THREE.PointLight(color, 1.4, 4.8);
+
+  halo.scale.set(1.9, 1.9, 1);
+  group.add(halo, ring, light);
+  return { group, halo, ring, light };
 }
 
 function createStars(THREE) {

@@ -8,8 +8,9 @@ Lumen Space is a social visual game without scoring or winners. The goal is to c
 2. Every connected player appears as a glowing light.
 3. Moving the pointer pulls the local light through the space with inertia.
 4. Pressing `Send Pulse`, pressing Space, or double-clicking the scene emits a colored pulse from the local light.
-5. Other players in the same room see the player's latest position and pulses.
-6. Rooms are ephemeral. When all players leave, no room state remains.
+5. When pulse fronts from different sources meet, they create a brief resonance flash.
+6. Other players in the same room see the player's latest position and pulses.
+7. Rooms are ephemeral. When all players leave, no room state remains.
 
 ## Scope
 
@@ -42,6 +43,7 @@ Out of scope:
 - Remote peer motion must interpolate smoothly instead of snapping.
 - Stale peers must be removed after the heartbeat timeout.
 - Duplicate pulse messages must not create duplicate visuals.
+- Pulse fronts from different sources must create a short-lived resonance visual when they meet.
 - Malformed network messages must be ignored safely.
 - If realtime connection fails, the app must keep retrying without switching into a separate offline mode.
 - Users must be able to add and remove local bots.
@@ -55,6 +57,7 @@ Out of scope:
 - Two browser tabs using the same room show each other as separate colored lights.
 - Pointer movement updates the local light and propagates to peers.
 - Pulse events appear locally and remotely.
+- Overlapping pulse fronts from different sources create a resonance flash without a separate network message.
 - The user can add a bot, see it move and pulse, and remove it again.
 - Closing one tab removes that participant from the other tab within the stale-peer window.
 - `npm test` passes.

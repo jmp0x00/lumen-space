@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   DEFAULT_COLOR,
   PULSE_DURATION_MS,
+  RESONANCE_DURATION_MS,
   SPACE_BOUNDS,
   addPulse,
   clampVector,
@@ -20,6 +21,7 @@ import {
   reducePresence,
   sanitizeIdentity,
   updateMotion,
+  updatePulseResonances,
   updatePulses,
   updateBotParticipants
 } from "../docs/app/src/domain.js";
@@ -192,6 +194,106 @@ test("pulse messages are normalized, deduplicated, and expired by age", () => {
 test("malformed pulse messages are ignored", () => {
   assert.equal(normalizePulseMessage({ type: "pulse", version: 1 }, "peer-1", 1_000), null);
   assert.equal(addPulse([], { type: "presence", version: 1 }, "peer-1", 1_000).length, 0);
+});
+
+test("pulse resonances trigger once when different pulse fronts meet", () => {
+  const pulses = [
+    {
+      ...createPulse({
+        id: "pulse-a",
+        sourceId: "peer-a",
+        origin: { x: 0, y: 0, z: 0 },
+        color: "#ff0000",
+        strength: 1,
+        timestamp: 1_000
+      }),
+      progress: 0.12,
+      opacity: 1
+    },
+    {
+      ...createPulse({
+        id: "pulse-b",
+        sourceId: "peer-b",
+        origin: { x: 3, y: 0, z: 0 },
+        color: "#0000ff",
+        strength: 1,
+        timestamp: 1_000
+      }),
+      progress: 0.12,
+      opacity: 1
+    }
+  ];
+
+  const resonances = updatePulseResonances([], pulses, 1_250);
+
+  assert.equal(resonances.length, 1);
+  assert.equal(resonances[0].id, "resonance:pulse-a:pulse-b");
+  assert.deepEqual(resonances[0].pulseIds, ["pulse-a", "pulse-b"]);
+  assert.deepEqual(resonances[0].position, { x: 1.5, y: 0, z: 0 });
+  assert.equal(resonances[0].color, "#800080");
+  assert.equal(resonances[0].intensity, 1);
+
+  const repeated = updatePulseResonances(resonances, pulses, 1_300);
+  assert.equal(repeated.length, 1);
+  assert.equal(repeated[0].timestamp, 1_250);
+  assert.equal(repeated[0].ageMs, 50);
+});
+
+test("pulse resonances ignore same-source and non-contacting pulses", () => {
+  const basePulse = {
+    ...createPulse({
+      id: "pulse-a",
+      sourceId: "peer-a",
+      origin: { x: 0, y: 0, z: 0 },
+      color: "#ff0000",
+      timestamp: 1_000
+    }),
+    progress: 0.12,
+    opacity: 1
+  };
+  const sameSourcePulse = {
+    ...createPulse({
+      id: "pulse-b",
+      sourceId: "peer-a",
+      origin: { x: 3, y: 0, z: 0 },
+      color: "#0000ff",
+      timestamp: 1_000
+    }),
+    progress: 0.12,
+    opacity: 1
+  };
+  const distantPulse = {
+    ...createPulse({
+      id: "pulse-c",
+      sourceId: "peer-c",
+      origin: { x: 8, y: 0, z: 0 },
+      color: "#86efac",
+      timestamp: 1_000
+    }),
+    progress: 0.12,
+    opacity: 1
+  };
+
+  assert.deepEqual(updatePulseResonances([], [basePulse, sameSourcePulse], 1_250), []);
+  assert.deepEqual(updatePulseResonances([], [basePulse, distantPulse], 1_250), []);
+});
+
+test("pulse resonances expire after the flash duration", () => {
+  const active = [
+    {
+      id: "resonance:pulse-a:pulse-b",
+      pulseIds: ["pulse-a", "pulse-b"],
+      position: { x: 1.5, y: 0, z: 0 },
+      color: "#800080",
+      intensity: 1,
+      timestamp: 1_000,
+      ageMs: 0,
+      progress: 0,
+      opacity: 1
+    }
+  ];
+
+  assert.deepEqual(updatePulseResonances(active, [], 1_000 + RESONANCE_DURATION_MS + 1), []);
 });
 
 test("bot participants drift deterministically within bounds", () => {
