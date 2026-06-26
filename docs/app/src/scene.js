@@ -7,6 +7,7 @@ export async function createSpaceScene({
   getParticipants,
   getPulses,
   getResonances = () => [],
+  getTouchStars = () => [],
   onPulse
 }) {
   const THREE = await import(THREE_URL);
@@ -29,6 +30,7 @@ export async function createSpaceScene({
   const participantMeshes = new Map();
   const pulseMeshes = new Map();
   const resonanceMeshes = new Map();
+  const touchStarMeshes = new Map();
   const labels = new Map();
   const glowTexture = createGlowTexture(THREE);
 
@@ -61,6 +63,7 @@ export async function createSpaceScene({
 
   function render() {
     syncParticipants(THREE);
+    syncTouchStars(THREE);
     syncPulses(THREE);
     syncResonances(THREE);
     renderer.render(scene, camera);
@@ -111,6 +114,39 @@ export async function createSpaceScene({
     }
   }
 
+  function syncTouchStars(THREERef) {
+    const now = Date.now();
+    const touchStars = getTouchStars().filter((star) => Number(star.availableAt ?? 0) <= now);
+    const activeIds = new Set(touchStars.map((star) => star.id));
+
+    for (const star of touchStars) {
+      let mesh = touchStarMeshes.get(star.id);
+      if (!mesh) {
+        mesh = createTouchStarMesh(THREERef, star, glowTexture);
+        touchStarMeshes.set(star.id, mesh);
+        scene.add(mesh.group);
+      }
+
+      const color = new THREERef.Color(star.color);
+      const twinkle = 0.86 + Math.sin(now * 0.004 + Number(star.phase ?? 0)) * 0.14;
+      mesh.group.position.set(star.position.x, star.position.y, star.position.z);
+      mesh.group.scale.setScalar(twinkle);
+      mesh.core.material.color.copy(color);
+      mesh.glow.material.color.copy(color);
+      mesh.glow.material.opacity = 0.42 + twinkle * 0.22;
+      mesh.light.color.copy(color);
+      mesh.light.intensity = 0.38 + twinkle * 0.2;
+    }
+
+    for (const [id, mesh] of touchStarMeshes) {
+      if (!activeIds.has(id)) {
+        scene.remove(mesh.group);
+        disposeGroup(mesh.group);
+        touchStarMeshes.delete(id);
+      }
+    }
+  }
+
   function syncPulses(THREERef) {
     const pulses = getPulses();
     const activeIds = new Set(pulses.map((pulse) => pulse.id));
@@ -124,9 +160,10 @@ export async function createSpaceScene({
       }
 
       const radius = getPulseRadius(pulse);
+      const opacity = Number.isFinite(Number(pulse.opacity)) ? Number(pulse.opacity) : 1;
       mesh.position.set(pulse.origin.x, pulse.origin.y, pulse.origin.z);
       mesh.scale.setScalar(radius);
-      mesh.material.opacity = Math.max(0, pulse.opacity * 0.54);
+      mesh.material.opacity = Math.max(0, opacity * 0.54);
     }
 
     for (const [id, mesh] of pulseMeshes) {
@@ -226,6 +263,9 @@ export async function createSpaceScene({
     for (const mesh of resonanceMeshes.values()) {
       disposeGroup(mesh.group);
     }
+    for (const mesh of touchStarMeshes.values()) {
+      disposeGroup(mesh.group);
+    }
     for (const label of labels.values()) {
       label.remove();
     }
@@ -274,6 +314,30 @@ function createPulseMesh(THREE, pulse) {
     side: THREE.DoubleSide
   });
   return new THREE.Mesh(geometry, material);
+}
+
+function createTouchStarMesh(THREE, star, glowTexture) {
+  const group = new THREE.Group();
+  const color = new THREE.Color(star.color);
+  const core = new THREE.Mesh(
+    new THREE.SphereGeometry(0.07, 16, 8),
+    new THREE.MeshBasicMaterial({ color })
+  );
+  const glow = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: glowTexture,
+      color,
+      transparent: true,
+      opacity: 0.58,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    })
+  );
+  const light = new THREE.PointLight(color, 0.46, 2.8);
+
+  glow.scale.set(0.88, 0.88, 1);
+  group.add(glow, core, light);
+  return { group, core, glow, light };
 }
 
 function createResonanceMesh(THREE, resonance, glowTexture) {

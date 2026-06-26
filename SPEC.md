@@ -7,10 +7,11 @@ Lumen Space is a social visual game without scoring or winners. The goal is to c
 1. A player enters a nickname, chooses a color, and joins a room.
 2. Every connected player appears as a glowing light.
 3. Moving the pointer pulls the local light through the space with inertia.
-4. Pressing `Send Pulse`, pressing Space, or double-clicking the scene emits a colored pulse from the local light.
-5. When pulse fronts from different sources meet, they create a brief resonance flash.
-6. Other players in the same room see the player's latest position and pulses.
-7. Rooms are ephemeral. When all players leave, no room state remains.
+4. Touching a small environmental star emits a colored pulse from the local light.
+5. Pressing `Send Pulse`, pressing Space, or double-clicking the scene emits a colored pulse from the local light.
+6. When pulse fronts from different sources meet, they create a brief resonance flash.
+7. Other players in the same room see the player's latest position and pulses.
+8. Rooms are ephemeral. When all players leave, no room state remains.
 
 ## Scope
 
@@ -42,6 +43,8 @@ Out of scope:
 - The app must sanitize nickname, color, room ID, presence, and pulse inputs.
 - The local light must remain within defined world bounds.
 - Remote peer motion must interpolate smoothly instead of snapping.
+- Rooms must render deterministic touch stars that can trigger pulses when crossed.
+- Star-touch pulses must temporarily suppress the matching star for other clients through existing pulse metadata.
 - Stale peers must be removed after the heartbeat timeout.
 - Duplicate pulse messages must not create duplicate visuals.
 - Pulse fronts from different sources must create a short-lived resonance visual when they meet.
@@ -57,6 +60,7 @@ Out of scope:
 - A user can enter the lobby, regenerate a nickname, create a room, and copy an invite link.
 - Two browser tabs using the same room show each other as separate colored lights.
 - Pointer movement updates the local light and propagates to peers.
+- Touching an environmental star emits a pulse and temporarily hides that star.
 - Pulse events appear locally and remotely.
 - Overlapping pulse fronts from different sources create a resonance flash without a separate network message.
 - The user can add a bot, see it move and pulse, and remove it again.

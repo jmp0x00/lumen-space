@@ -7,11 +7,13 @@ import {
   addPulse,
   clampVector,
   collectDueBotPulses,
+  collectTouchStarPulses,
   createInviteUrl,
   createPresenceMessage,
   createPulse,
   createPulseMessage,
   createRoomId,
+  createTouchStars,
   getRoomIdFromLocation,
   lerpVector,
   normalizeRoomId,
@@ -19,6 +21,7 @@ import {
   reducePresence,
   removePeer,
   sanitizeIdentity,
+  suppressTouchStarsFromPulses,
   updateMotion,
   updatePulseResonances,
   updatePulses,
@@ -79,6 +82,7 @@ let pointerAbortController = null;
 let peers = {};
 let pulses = [];
 let resonances = [];
+let touchStars = [];
 let pointerTarget = { x: 0, y: 0, z: 0 };
 let localParticipant = {
   id: "local",
@@ -197,6 +201,7 @@ async function enterRoom() {
     lastSeen: Date.now()
   };
   pointerTarget = localParticipant.position;
+  touchStars = createTouchStars(roomId);
   updatePeopleList();
   setStatus("Starting room", "pending");
 
@@ -209,6 +214,7 @@ async function enterRoom() {
       getParticipants,
       getPulses: () => pulses,
       getResonances: () => resonances,
+      getTouchStars: () => touchStars,
       onPulse: sendLocalPulse
     });
     sceneController.start();
@@ -371,6 +377,14 @@ function startSimulationLoop() {
     }
 
     pulses = updatePulses(pulses, nowMs);
+    touchStars = suppressTouchStarsFromPulses(touchStars, pulses, nowMs);
+    const starTouchResult = collectTouchStarPulses(touchStars, [localParticipant], nowMs);
+    touchStars = starTouchResult.touchStars;
+    for (const pulse of starTouchResult.pulses) {
+      const message = createPulseMessage(pulse);
+      pulses = addPulse(pulses, message, pulse.sourceId, nowMs);
+      connection?.sendPulse(message);
+    }
     resonances = updatePulseResonances(resonances, pulses, nowMs);
     animationFrame = window.requestAnimationFrame(tick);
   };
@@ -452,6 +466,7 @@ function leaveRoom() {
   peers = {};
   pulses = [];
   resonances = [];
+  touchStars = [];
   botParticipants = [];
   setStatus("Starting", "pending");
 }

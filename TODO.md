@@ -44,6 +44,7 @@ Use this as the return point for final challenge readiness work.
 - [ ] Verify desktop layout.
 - [ ] Verify mobile layout.
 - [ ] Verify pulse rendering.
+- [ ] Verify touch-star environmental pulse rendering.
 - [ ] Verify resonance flash rendering.
 - [ ] Verify add/remove bot behavior.
 - [ ] Verify copy-link behavior.

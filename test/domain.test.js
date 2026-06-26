@@ -5,14 +5,17 @@ import {
   PULSE_DURATION_MS,
   RESONANCE_DURATION_MS,
   SPACE_BOUNDS,
+  TOUCH_STAR_COOLDOWN_MS,
   addPulse,
   clampVector,
   collectDueBotPulses,
+  collectTouchStarPulses,
   createInviteUrl,
   createPresenceMessage,
   createPulse,
   createPulseMessage,
   createRoomId,
+  createTouchStars,
   getRoomIdFromLocation,
   lerpVector,
   normalizePulseMessage,
@@ -20,6 +23,7 @@ import {
   pruneStalePeers,
   reducePresence,
   sanitizeIdentity,
+  suppressTouchStarsFromPulses,
   updateMotion,
   updatePulseResonances,
   updatePulses,
@@ -194,6 +198,112 @@ test("pulse messages are normalized, deduplicated, and expired by age", () => {
 test("malformed pulse messages are ignored", () => {
   assert.equal(normalizePulseMessage({ type: "pulse", version: 1 }, "peer-1", 1_000), null);
   assert.equal(addPulse([], { type: "presence", version: 1 }, "peer-1", 1_000).length, 0);
+});
+
+test("touch stars are deterministic per room and stay inside playable bounds", () => {
+  const first = createTouchStars("lumen-alpha", 3);
+  const second = createTouchStars("lumen-alpha", 3);
+  const otherRoom = createTouchStars("lumen-beta", 3);
+
+  assert.deepEqual(first, second);
+  assert.notDeepEqual(
+    first.map((star) => star.position),
+    otherRoom.map((star) => star.position)
+  );
+  assert.equal(first.length, 3);
+  for (const star of first) {
+    assert.match(star.id, /^touch-star-\d+$/);
+    assert.equal(star.availableAt, 0);
+    assert.ok(star.position.x >= SPACE_BOUNDS.x[0] && star.position.x <= SPACE_BOUNDS.x[1]);
+    assert.ok(star.position.y >= SPACE_BOUNDS.y[0] && star.position.y <= SPACE_BOUNDS.y[1]);
+    assert.ok(star.position.z >= SPACE_BOUNDS.z[0] && star.position.z <= SPACE_BOUNDS.z[1]);
+  }
+});
+
+test("touch stars emit one pulse and enter cooldown when touched", () => {
+  const touchStars = [
+    {
+      id: "touch-star-0",
+      position: { x: 1, y: 2, z: 0 },
+      color: "#fcd34d",
+      phase: 0,
+      availableAt: 0
+    }
+  ];
+  const participant = {
+    id: "local",
+    color: "#7dd3fc",
+    position: { x: 1.1, y: 2, z: 0 },
+    isLocal: true
+  };
+
+  const touched = collectTouchStarPulses(touchStars, [participant], 2_000);
+
+  assert.equal(touched.pulses.length, 1);
+  assert.equal(touched.pulses[0].trigger, "star-touch");
+  assert.equal(touched.pulses[0].starId, "touch-star-0");
+  assert.equal(touched.pulses[0].sourceId, "local");
+  assert.deepEqual(touched.pulses[0].origin, participant.position);
+  assert.equal(touched.touchStars[0].availableAt, 2_000 + TOUCH_STAR_COOLDOWN_MS);
+
+  const repeated = collectTouchStarPulses(touched.touchStars, [participant], 2_100);
+  assert.deepEqual(repeated.pulses, []);
+  assert.equal(repeated.touchStars[0].availableAt, 2_000 + TOUCH_STAR_COOLDOWN_MS);
+});
+
+test("touch stars collide on the movement plane even when rendered with depth", () => {
+  const touchStars = [
+    {
+      id: "touch-star-depth",
+      position: { x: -2, y: 1, z: -0.9 },
+      color: "#f0abfc",
+      phase: 0,
+      availableAt: 0
+    }
+  ];
+  const participant = {
+    id: "local",
+    color: "#7dd3fc",
+    position: { x: -2.05, y: 1.08, z: 0 },
+    isLocal: true
+  };
+
+  const touched = collectTouchStarPulses(touchStars, [participant], 2_000);
+
+  assert.equal(touched.pulses.length, 1);
+  assert.equal(touched.pulses[0].starId, "touch-star-depth");
+});
+
+test("touch stars suppress from received star-touch pulses but ignore manual pulses", () => {
+  const touchStars = [
+    {
+      id: "touch-star-0",
+      position: { x: 1, y: 2, z: 0 },
+      color: "#fcd34d",
+      phase: 0,
+      availableAt: 0
+    }
+  ];
+  const manualPulse = createPulse({
+    id: "manual-pulse",
+    sourceId: "peer-1",
+    origin: { x: 1, y: 2, z: 0 },
+    timestamp: 2_000
+  });
+  const starTouchPulse = createPulse({
+    id: "star-pulse",
+    sourceId: "peer-1",
+    origin: { x: 1, y: 2, z: 0 },
+    timestamp: 2_000,
+    trigger: "star-touch",
+    starId: "touch-star-0",
+    receivedAt: 2_250
+  });
+
+  assert.equal(suppressTouchStarsFromPulses(touchStars, [manualPulse], 2_250), touchStars);
+
+  const suppressed = suppressTouchStarsFromPulses(touchStars, [starTouchPulse], 2_250);
+  assert.equal(suppressed[0].availableAt, 2_250 + TOUCH_STAR_COOLDOWN_MS);
 });
 
 test("pulse resonances trigger once when different pulse fronts meet", () => {

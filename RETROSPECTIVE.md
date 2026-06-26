@@ -12,6 +12,7 @@
 - Replaced automatic offline mode with manually controlled bots while realtime connection keeps retrying.
 - Added an external name generator for funny editable player names and bot names, with a local fallback for resilience.
 - Added a manual name regeneration control after trying the default-name flow in the lobby.
+- Added touch stars so pulses can emerge from environmental interaction instead of only explicit controls.
 
 ## AI Tools Used
 

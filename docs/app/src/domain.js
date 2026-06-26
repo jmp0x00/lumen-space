@@ -23,6 +23,9 @@ export const RESONANCE_DURATION_MS = 700;
 export const RESONANCE_EDGE_TOLERANCE = 0.72;
 export const MAX_ACTIVE_RESONANCES = 16;
 export const BOT_PULSE_DEFAULT_INTERVAL_MS = 4_800;
+export const TOUCH_STAR_COUNT = 7;
+export const TOUCH_STAR_RADIUS = 0.48;
+export const TOUCH_STAR_COOLDOWN_MS = 7_500;
 
 const ROOM_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 const ROOM_MAX_LENGTH = 40;
@@ -214,6 +217,116 @@ export function collectDueBotPulses(participants, now = Date.now()) {
   return { participants: nextParticipants, pulses: duePulses };
 }
 
+export function createTouchStars(roomId, count = TOUCH_STAR_COUNT) {
+  const roomSeed = normalizeRoomId(roomId) ?? "lumen-room";
+  return Array.from({ length: count }, (_, index) => {
+    const xSeed = seededText(`${roomSeed}:${index}`, "x");
+    const ySeed = seededText(`${roomSeed}:${index}`, "y");
+    const zSeed = seededText(`${roomSeed}:${index}`, "z");
+    const colorIndex = Math.floor(seededText(`${roomSeed}:${index}`, "color") * COLORS.length);
+
+    return {
+      id: `touch-star-${index}`,
+      position: {
+        x: scaleBetween(xSeed, SPACE_BOUNDS.x[0] + 1, SPACE_BOUNDS.x[1] - 1),
+        y: scaleBetween(ySeed, SPACE_BOUNDS.y[0] + 0.9, SPACE_BOUNDS.y[1] - 0.9),
+        z: scaleBetween(zSeed, -0.9, 0.4)
+      },
+      color: COLORS[colorIndex] ?? DEFAULT_COLOR,
+      phase: seededText(`${roomSeed}:${index}`, "phase") * Math.PI * 2,
+      availableAt: 0
+    };
+  });
+}
+
+export function collectTouchStarPulses(
+  touchStars,
+  participants,
+  now = Date.now(),
+  options = {}
+) {
+  const radius = options.radius ?? TOUCH_STAR_RADIUS;
+  const cooldownMs = options.cooldownMs ?? TOUCH_STAR_COOLDOWN_MS;
+  const touchedIds = new Set();
+  const pulses = [];
+  const nextTouchStars = touchStars.map((star) => ({ ...star }));
+
+  for (const participant of participants) {
+    const participantId = String(participant?.id ?? "");
+    if (!participantId) {
+      continue;
+    }
+
+    for (let index = 0; index < nextTouchStars.length; index += 1) {
+      const star = nextTouchStars[index];
+      if (touchedIds.has(star.id) || Number(star.availableAt ?? 0) > now) {
+        continue;
+      }
+
+      if (planeDistance(participant.position, star.position) > radius) {
+        continue;
+      }
+
+      pulses.push(
+        createPulse({
+          id: `pulse-${participantId}-${star.id}-${Math.floor(now)}`,
+          sourceId: participantId,
+          origin: participant.position,
+          color: participant.color ?? star.color,
+          strength: participant.isBot ? 0.84 : 1.16,
+          timestamp: now,
+          trigger: "star-touch",
+          starId: star.id
+        })
+      );
+      nextTouchStars[index] = {
+        ...star,
+        availableAt: now + cooldownMs,
+        touchedAt: now
+      };
+      touchedIds.add(star.id);
+      break;
+    }
+  }
+
+  return { touchStars: nextTouchStars, pulses };
+}
+
+export function suppressTouchStarsFromPulses(
+  touchStars,
+  pulses,
+  now = Date.now(),
+  options = {}
+) {
+  const cooldownMs = options.cooldownMs ?? TOUCH_STAR_COOLDOWN_MS;
+  const starPulseTimes = new Map();
+
+  for (const pulse of pulses) {
+    if (pulse?.trigger !== "star-touch" || !pulse.starId) {
+      continue;
+    }
+    const suppressionStart = Number(pulse.receivedAt ?? pulse.timestamp ?? now);
+    const currentStart = starPulseTimes.get(pulse.starId) ?? 0;
+    starPulseTimes.set(pulse.starId, Math.max(currentStart, suppressionStart));
+  }
+
+  if (starPulseTimes.size === 0) {
+    return touchStars;
+  }
+
+  return touchStars.map((star) => {
+    const suppressionStart = starPulseTimes.get(star.id);
+    if (!suppressionStart) {
+      return star;
+    }
+
+    return {
+      ...star,
+      availableAt: Math.max(Number(star.availableAt ?? 0), suppressionStart + cooldownMs)
+    };
+  });
+}
+
 function updateBotParticipant(participant, now, botIndex) {
   const seed = Number.isFinite(Number(participant.driftSeed))
     ? Number(participant.driftSeed)
@@ -310,10 +423,14 @@ export function createPulse({
   color = DEFAULT_COLOR,
   strength = 1,
   timestamp = Date.now(),
-  sourceId = "local"
+  sourceId = "local",
+  trigger = null,
+  starId = null,
+  receivedAt = null
 }) {
   const safeTimestamp = normalizeTimestamp(timestamp);
-  return {
+  const safeTrigger = trigger === "star-touch" ? "star-touch" : null;
+  const pulse = {
     id: String(id || `pulse-${sourceId}-${safeTimestamp}`),
     sourceId,
     origin: clampVector(origin),
@@ -321,11 +438,19 @@ export function createPulse({
     strength: clamp(strength, 0.2, 2.5),
     timestamp: safeTimestamp
   };
+  if (safeTrigger) {
+    pulse.trigger = safeTrigger;
+    pulse.starId = String(starId ?? "").slice(0, 80);
+  }
+  if (Number.isFinite(Number(receivedAt))) {
+    pulse.receivedAt = Number(receivedAt);
+  }
+  return pulse;
 }
 
 export function createPulseMessage(pulse) {
   const safePulse = createPulse(pulse);
-  return {
+  const message = {
     type: "pulse",
     version: 1,
     id: safePulse.id,
@@ -334,6 +459,11 @@ export function createPulseMessage(pulse) {
     strength: safePulse.strength,
     timestamp: safePulse.timestamp
   };
+  if (safePulse.trigger) {
+    message.trigger = safePulse.trigger;
+    message.starId = safePulse.starId;
+  }
+  return message;
 }
 
 export function addPulse(pulses, data, sourceId = "remote", receivedAt = Date.now()) {
@@ -435,7 +565,10 @@ export function normalizePulseMessage(data, sourceId = "remote", receivedAt = Da
     color: data.color,
     strength: data.strength,
     timestamp: normalizeTimestamp(data.timestamp, receivedAt),
-    sourceId
+    sourceId,
+    trigger: data.trigger,
+    starId: data.starId,
+    receivedAt
   });
 }
 
@@ -502,6 +635,12 @@ function vectorDistance(first, second) {
   return Math.hypot(start.x - end.x, start.y - end.y, start.z - end.z);
 }
 
+function planeDistance(first, second) {
+  const start = sanitizeVector(first);
+  const end = sanitizeVector(second);
+  return Math.hypot(start.x - end.x, start.y - end.y);
+}
+
 function mixHexColors(first, second) {
   const firstParts = hexToRgb(normalizeHexColor(first));
   const secondParts = hexToRgb(normalizeHexColor(second));
@@ -523,6 +662,24 @@ function hexToRgb(color) {
 
 function rgbToHex({ r, g, b }) {
   return `#${[r, g, b].map((part) => part.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function seededText(seed, salt) {
+  return (hashText(`${seed}:${salt}`) % 1_000_000) / 1_000_000;
+}
+
+function hashText(value) {
+  let hash = 2166136261;
+  const text = String(value);
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function scaleBetween(value, min, max) {
+  return min + clamp(value, 0, 1) * (max - min);
 }
 
 function isObject(value) {
