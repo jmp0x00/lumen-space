@@ -9,6 +9,7 @@
 - Chose Lumen Space: a realtime peer-to-peer cosmic room where users appear as lights and send pulses.
 - Selected vanilla web, Three.js, Trystero, GitDocs-style static hosting, and Node's built-in test runner.
 - Decided to keep the domain layer pure so AI-generated behavior can be covered by deterministic tests.
+- Iterated on solo fallback so ambient lights drift and pulse instead of remaining static.
 
 ## AI Tools Used
 

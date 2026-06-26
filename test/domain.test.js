@@ -6,6 +6,7 @@ import {
   SPACE_BOUNDS,
   addPulse,
   clampVector,
+  collectDueSoloPulses,
   createInviteUrl,
   createPresenceMessage,
   createPulse,
@@ -19,7 +20,8 @@ import {
   reducePresence,
   sanitizeIdentity,
   updateMotion,
-  updatePulses
+  updatePulses,
+  updateSoloParticipants
 } from "../docs/app/src/domain.js";
 
 test("createRoomId returns a normalized room ID with deterministic random injection", () => {
@@ -190,4 +192,55 @@ test("pulse messages are normalized, deduplicated, and expired by age", () => {
 test("malformed pulse messages are ignored", () => {
   assert.equal(normalizePulseMessage({ type: "pulse", version: 1 }, "peer-1", 1_000), null);
   assert.equal(addPulse([], { type: "presence", version: 1 }, "peer-1", 1_000).length, 0);
+});
+
+test("solo fallback participants drift deterministically within bounds", () => {
+  const participants = [
+    {
+      id: "mock-1",
+      name: "Mock",
+      color: "#f0abfc",
+      basePosition: { x: 0, y: 0, z: 0 },
+      position: { x: 0, y: 0, z: 0 },
+      driftSeed: 3,
+      isMock: true
+    }
+  ];
+
+  const first = updateSoloParticipants(participants, 1_000);
+  const second = updateSoloParticipants(first, 4_000);
+
+  assert.notDeepEqual(first[0].position, participants[0].position);
+  assert.notDeepEqual(second[0].position, first[0].position);
+  assert.deepEqual(participants[0].position, { x: 0, y: 0, z: 0 });
+  assert.equal(second[0].isMock, true);
+  assert.ok(second[0].position.x >= SPACE_BOUNDS.x[0] && second[0].position.x <= SPACE_BOUNDS.x[1]);
+  assert.ok(second[0].position.y >= SPACE_BOUNDS.y[0] && second[0].position.y <= SPACE_BOUNDS.y[1]);
+  assert.ok(second[0].position.z >= SPACE_BOUNDS.z[0] && second[0].position.z <= SPACE_BOUNDS.z[1]);
+});
+
+test("solo fallback pulses only when a mock participant is due", () => {
+  const participants = [
+    {
+      id: "mock-1",
+      name: "Mock",
+      color: "#86efac",
+      position: { x: 1, y: 2, z: 0 },
+      nextPulseAt: 2_000,
+      pulseEveryMs: 5_000,
+      pulseStrength: 0.75,
+      isMock: true
+    }
+  ];
+
+  const early = collectDueSoloPulses(participants, 1_999);
+  assert.deepEqual(early.pulses, []);
+  assert.equal(early.participants[0], participants[0]);
+
+  const due = collectDueSoloPulses(participants, 2_000);
+  assert.equal(due.pulses.length, 1);
+  assert.deepEqual(due.pulses[0].origin, { x: 1, y: 2, z: 0 });
+  assert.equal(due.pulses[0].sourceId, "mock-1");
+  assert.equal(due.pulses[0].strength, 0.75);
+  assert.equal(due.participants[0].nextPulseAt, 7_000);
 });

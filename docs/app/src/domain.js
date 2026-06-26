@@ -17,6 +17,7 @@ export const SPACE_BOUNDS = Object.freeze({
 
 export const STALE_PEER_MS = 10_000;
 export const PULSE_DURATION_MS = 1_800;
+export const SOLO_PULSE_DEFAULT_INTERVAL_MS = 4_800;
 
 const ROOM_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 const ROOM_MAX_LENGTH = 40;
@@ -173,6 +174,71 @@ export function updateMotion(state, target, deltaSeconds, options = {}) {
   return {
     position: nextPosition,
     velocity: cappedVelocity
+  };
+}
+
+export function updateSoloParticipants(participants, now = Date.now()) {
+  return participants.map((participant, index) => updateSoloParticipant(participant, now, index));
+}
+
+export function collectDueSoloPulses(participants, now = Date.now()) {
+  const nextParticipants = [];
+  const duePulses = [];
+
+  for (const participant of participants) {
+    const nextPulseAt = Number(participant.nextPulseAt ?? now);
+    if (now >= nextPulseAt) {
+      const pulse = createPulse({
+        id: `pulse-${participant.id}-${Math.floor(now)}`,
+        origin: participant.position,
+        color: participant.color,
+        strength: participant.pulseStrength ?? 0.82,
+        timestamp: now,
+        sourceId: participant.id
+      });
+      duePulses.push(pulse);
+      nextParticipants.push({
+        ...participant,
+        nextPulseAt: now + Number(participant.pulseEveryMs ?? SOLO_PULSE_DEFAULT_INTERVAL_MS)
+      });
+    } else {
+      nextParticipants.push(participant);
+    }
+  }
+
+  return { participants: nextParticipants, pulses: duePulses };
+}
+
+function updateSoloParticipant(participant, now, fallbackIndex) {
+  const seed = Number.isFinite(Number(participant.driftSeed))
+    ? Number(participant.driftSeed)
+    : fallbackIndex + 1;
+  const basePosition = clampVector(participant.basePosition ?? participant.position);
+  const time = now / 1000;
+  const xAmplitude = 0.65 + (seed % 5) * 0.14;
+  const yAmplitude = 0.48 + (seed % 7) * 0.09;
+  const zAmplitude = 0.2 + (seed % 3) * 0.08;
+  const xSpeed = 0.16 + (seed % 4) * 0.025;
+  const ySpeed = 0.12 + (seed % 6) * 0.021;
+  const zSpeed = 0.1 + (seed % 5) * 0.018;
+  const nextPosition = clampVector({
+    x: basePosition.x + Math.sin(time * xSpeed + seed * 1.7) * xAmplitude,
+    y: basePosition.y + Math.cos(time * ySpeed + seed * 0.9) * yAmplitude,
+    z: basePosition.z + Math.sin(time * zSpeed + seed * 2.4) * zAmplitude
+  });
+
+  return {
+    ...participant,
+    basePosition,
+    position: nextPosition,
+    targetPosition: nextPosition,
+    velocity: {
+      x: nextPosition.x - sanitizeVector(participant.position).x,
+      y: nextPosition.y - sanitizeVector(participant.position).y,
+      z: nextPosition.z - sanitizeVector(participant.position).z
+    },
+    lastSeen: now,
+    isMock: true
   };
 }
 

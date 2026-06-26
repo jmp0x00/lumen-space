@@ -6,6 +6,7 @@ import {
   STALE_PEER_MS,
   addPulse,
   clampVector,
+  collectDueSoloPulses,
   createInviteUrl,
   createPresenceMessage,
   createPulse,
@@ -19,7 +20,8 @@ import {
   removePeer,
   sanitizeIdentity,
   updateMotion,
-  updatePulses
+  updatePulses,
+  updateSoloParticipants
 } from "./domain.js";
 import { connectToRoom } from "./network.js";
 import { createSpaceScene } from "./scene.js";
@@ -75,7 +77,7 @@ let localParticipant = {
   lastSeen: Date.now()
 };
 
-const mockParticipants = createMockParticipants();
+let mockParticipants = createMockParticipants();
 
 initLobby();
 
@@ -250,12 +252,13 @@ function startSimulationLoop() {
     const deltaSeconds = (now - lastFrameAt) / 1000;
     lastFrameAt = now;
 
+    const nowMs = Date.now();
     const motion = updateMotion(localParticipant, pointerTarget, deltaSeconds);
     localParticipant = {
       ...localParticipant,
       position: motion.position,
       velocity: motion.velocity,
-      lastSeen: Date.now()
+      lastSeen: nowMs
     };
 
     peers = Object.fromEntries(
@@ -268,7 +271,16 @@ function startSimulationLoop() {
       ])
     );
 
-    pulses = updatePulses(pulses, Date.now());
+    if (isSoloFallback) {
+      mockParticipants = updateSoloParticipants(mockParticipants, nowMs);
+      const soloPulseResult = collectDueSoloPulses(mockParticipants, nowMs);
+      mockParticipants = soloPulseResult.participants;
+      for (const pulse of soloPulseResult.pulses) {
+        pulses = addPulse(pulses, createPulseMessage(pulse), pulse.sourceId, nowMs);
+      }
+    }
+
+    pulses = updatePulses(pulses, nowMs);
     animationFrame = window.requestAnimationFrame(tick);
   };
 
@@ -329,6 +341,7 @@ function leaveRoom() {
   peers = {};
   pulses = [];
   isSoloFallback = false;
+  mockParticipants = createMockParticipants();
   setStatus("Starting", "pending");
 }
 
@@ -391,27 +404,42 @@ function chooseStartPosition(seedText) {
   return clampVector({ x, y, z: 0 });
 }
 
-function createMockParticipants() {
+function createMockParticipants(createdAt = Date.now()) {
   return [
     {
       id: "mock-aurora",
       name: "Aurora",
       color: "#f0abfc",
+      basePosition: { x: SPACE_BOUNDS.x[0] * 0.42, y: 1.6, z: -0.6 },
       position: { x: SPACE_BOUNDS.x[0] * 0.42, y: 1.6, z: -0.6 },
+      driftSeed: 2.4,
+      pulseEveryMs: 4_600,
+      nextPulseAt: createdAt + 1_300,
+      pulseStrength: 0.72,
       isMock: true
     },
     {
       id: "mock-solis",
       name: "Solis",
       color: "#fcd34d",
+      basePosition: { x: SPACE_BOUNDS.x[1] * 0.36, y: -1.4, z: -0.8 },
       position: { x: SPACE_BOUNDS.x[1] * 0.36, y: -1.4, z: -0.8 },
+      driftSeed: 4.1,
+      pulseEveryMs: 5_300,
+      nextPulseAt: createdAt + 2_400,
+      pulseStrength: 0.9,
       isMock: true
     },
     {
       id: "mock-vale",
       name: "Vale",
       color: "#86efac",
+      basePosition: { x: 0.8, y: 2.25, z: -1.2 },
       position: { x: 0.8, y: 2.25, z: -1.2 },
+      driftSeed: 6.8,
+      pulseEveryMs: 6_100,
+      nextPulseAt: createdAt + 3_100,
+      pulseStrength: 0.78,
       isMock: true
     }
   ];

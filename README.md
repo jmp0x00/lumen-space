@@ -11,6 +11,7 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Move your light by moving the pointer.
 - Send pulses that expand through the shared space.
 - Rooms are peer-to-peer and ephemeral; no account, backend server, or database is used.
+- If realtime networking is unavailable, solo fallback mode adds ambient lights that drift and pulse on their own.
 
 ## Screenshots
 

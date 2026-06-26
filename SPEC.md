@@ -43,6 +43,7 @@ Out of scope:
 - Duplicate pulse messages must not create duplicate visuals.
 - Malformed network messages must be ignored safely.
 - If realtime connection fails, the user must still see a solo visual space with clear status.
+- Solo fallback lights must drift within world bounds and emit occasional pulses.
 
 ## Acceptance Criteria
 
@@ -51,6 +52,7 @@ Out of scope:
 - Two browser tabs using the same room show each other as separate colored lights.
 - Pointer movement updates the local light and propagates to peers.
 - Pulse events appear locally and remotely.
+- Solo fallback mode shows ambient lights that move and pulse without user input.
 - Closing one tab removes that participant from the other tab within the stale-peer window.
 - `npm test` passes.
 - `README.md`, `SPEC.md`, `ARCHITECTURE.md`, and `RETROSPECTIVE.md` exist at repository root.
