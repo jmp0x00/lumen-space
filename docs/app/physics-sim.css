@@ -188,6 +188,7 @@ label,
 .control-row button,
 .scenario-button,
 .mode-button,
+.sound-toggle-button,
 .launch-button {
   display: grid;
   min-height: 42px;
@@ -203,6 +204,7 @@ label,
 .control-row button[aria-pressed="true"],
 .scenario-button[aria-pressed="true"],
 .mode-button[aria-pressed="true"],
+.sound-toggle-button[aria-pressed="true"],
 .realtime-preset-button[aria-pressed="true"] {
   color: #041016;
   background: linear-gradient(135deg, var(--cyan), var(--green));
@@ -244,6 +246,10 @@ label,
   width: 100%;
   color: #041016;
   background: linear-gradient(135deg, var(--cyan), var(--green));
+}
+
+.sound-toggle-button {
+  width: 100%;
 }
 
 label {

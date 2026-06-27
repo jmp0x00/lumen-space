@@ -44,6 +44,7 @@
 - Tightened the realtime simulator count control after manual use showed it felt inert: changing the count now relaunches the embedded room directly instead of only affecting the next explicit launch.
 - Replaced the default Python static server with a tiny no-cache development server after browser caching repeatedly hid local HTML and module changes during simulator validation.
 - Added local synthesized pulse sound effects with a pure cue-planning layer and a Web Audio adapter, while keeping realtime simulator iframes silent to avoid turning validation into overlapping audio noise.
+- Added explicit mute/unmute controls and refined simulator audio to use one shell-level control plus one designated source iframe, which better matches how multi-client validation is actually used.
 
 ## AI Tools Used
 

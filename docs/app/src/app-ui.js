@@ -45,6 +45,7 @@ export function createDefaultAppUi({ document, window, colors, actions }) {
       elements.connectionStatus.textContent = view.status?.text ?? "Starting";
       elements.connectionStatus.dataset.state = view.status?.state ?? "pending";
       renderPeople(elements, view.participants ?? []);
+      renderSoundControl(elements, view.sound);
       renderDebug(elements, view.debug);
     },
     setGenerateNameBusy(isBusy) {
@@ -126,6 +127,7 @@ function queryDefaultElements(document) {
     addBotButton: document.querySelector("#add-bot-button"),
     removeBotButton: document.querySelector("#remove-bot-button"),
     pulseButton: document.querySelector("#pulse-button"),
+    soundButton: document.querySelector("#sound-button"),
     leaveButton: document.querySelector("#leave-button"),
     debugPanel: document.querySelector("#debug-panel"),
     debugOutput: document.querySelector("#debug-output"),
@@ -161,6 +163,9 @@ function bindDefaultUi(elements, actions) {
   });
   elements.pulseButton.addEventListener("click", () => {
     actions.onPulse?.();
+  });
+  elements.soundButton.addEventListener("click", () => {
+    actions.onToggleSound?.();
   });
   elements.leaveButton.addEventListener("click", () => {
     actions.onLeaveRoom?.();
@@ -205,6 +210,16 @@ function renderColorChoices({
       return button;
     })
   );
+}
+
+function renderSoundControl(elements, sound) {
+  const isAvailable = Boolean(sound?.available);
+  const isEnabled = Boolean(sound?.enabled);
+  elements.soundButton.hidden = !isAvailable;
+  elements.soundButton.textContent = isEnabled ? "Sound On" : "Sound Off";
+  elements.soundButton.title = isEnabled ? "Mute sound effects" : "Unmute sound effects";
+  elements.soundButton.setAttribute("aria-label", elements.soundButton.title);
+  elements.soundButton.setAttribute("aria-pressed", String(isEnabled));
 }
 
 function renderPeople(elements, participants) {

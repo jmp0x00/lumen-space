@@ -70,14 +70,21 @@ export function createRealtimeRoomClients({
   presetId = "mixed",
   roomId = REALTIME_ROOM_DEFAULT_ID,
   baseUrl = "./index.html",
-  clientCount
+  clientCount,
+  soundSourceIndex = 0,
+  soundInitiallyEnabled = false
 } = {}) {
   const preset = getRealtimeRoomPreset(presetId);
   const normalizedRoomId = normalizeRoomId(roomId) ?? REALTIME_ROOM_DEFAULT_ID;
   const count = normalizeRealtimeRoomClientCount(clientCount, preset.clients.length);
+  const sourceIndex = normalizeSoundSourceIndex(soundSourceIndex, count);
   return Array.from({ length: count }, (_, index) => {
     const client = createRepeatedPresetClient(preset.clients, index);
-    const config = normalizePresetClient(client, index, count);
+    const config = {
+      ...normalizePresetClient(client, index, count),
+      soundSource: index === sourceIndex,
+      soundInitiallyEnabled: Boolean(soundInitiallyEnabled && index === sourceIndex)
+    };
     return {
       ...config,
       roomId: normalizedRoomId,
@@ -136,7 +143,9 @@ export function getSimulationClientConfig(locationLike) {
     phase: readFiniteNumber(params.get("simPhase"), index * 0.57),
     pulseEveryMs: readNonNegativeInteger(params.get("simPulseEveryMs"), 0),
     startPosition,
-    disableBots: readFeatureFlag(params, "appBots") !== true
+    disableBots: readFeatureFlag(params, "appBots") !== true,
+    soundSource: readFeatureFlag(params, "appSound") === true,
+    soundInitiallyEnabled: readFeatureFlag(params, "appSoundEnabled") === true
   };
 }
 
@@ -268,8 +277,16 @@ function createSimulationClientUrl(baseUrl, roomId, roomPreset, config) {
   url.searchParams.set("simPulseEveryMs", String(config.pulseEveryMs));
   url.searchParams.set("appBots", "0");
   url.searchParams.set("appUi", "none");
+  url.searchParams.set("appSound", config.soundSource ? "1" : "0");
+  url.searchParams.set("appSoundEnabled", config.soundInitiallyEnabled ? "1" : "0");
   writeVectorParams(url.searchParams, "simStart", config.startPosition);
   return url.href;
+}
+
+function normalizeSoundSourceIndex(value, count) {
+  const sourceIndex = Math.round(Number(value));
+  const maxIndex = Math.max(0, Number(count) - 1);
+  return Number.isFinite(sourceIndex) ? Math.max(0, Math.min(maxIndex, sourceIndex)) : 0;
 }
 
 function getNearestAvailableStarPosition(localParticipant, touchStars, now) {

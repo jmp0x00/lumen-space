@@ -33,6 +33,12 @@ test("realtime room presets produce app URLs for no-bot WebRTC clients", () => {
   assert.equal(url.searchParams.get("simBehavior"), "star");
   assert.equal(url.searchParams.get("appBots"), "0");
   assert.equal(url.searchParams.get("appUi"), "none");
+  assert.equal(url.searchParams.get("appSound"), "1");
+  assert.equal(url.searchParams.get("appSoundEnabled"), "0");
+  assert.deepEqual(
+    clients.map((client) => client.soundSource),
+    [true, false, false, false, false, false]
+  );
 });
 
 test("realtime room clients can be generated with a custom client count", () => {
@@ -79,6 +85,66 @@ test("simulation client config parses URL parameters and disables bots by defaul
   assert.equal(config.count, 6);
   assert.equal(config.pulseEveryMs, 4_200);
   assert.equal(config.disableBots, true);
+  assert.equal(config.soundSource, false);
+  assert.equal(config.soundInitiallyEnabled, false);
+});
+
+test("simulation client config parses the single sound source flags", () => {
+  const config = getSimulationClientConfig(
+    "http://localhost:4173/index.html?simClient=1&appSound=1&appSoundEnabled=1"
+  );
+
+  assert.equal(config.soundSource, true);
+  assert.equal(config.soundInitiallyEnabled, true);
+});
+
+test("realtime room clients keep sound assigned to only one source", () => {
+  const clients = createRealtimeRoomClients({
+    presetId: "stars",
+    clientCount: 4,
+    soundSourceIndex: 2,
+    soundInitiallyEnabled: true
+  });
+
+  assert.deepEqual(
+    clients.map((client) => ({
+      name: client.name,
+      soundSource: client.soundSource,
+      soundInitiallyEnabled: client.soundInitiallyEnabled,
+      appSound: new URL(client.url).searchParams.get("appSound"),
+      appSoundEnabled: new URL(client.url).searchParams.get("appSoundEnabled")
+    })),
+    [
+      {
+        name: "Ada Star",
+        soundSource: false,
+        soundInitiallyEnabled: false,
+        appSound: "0",
+        appSoundEnabled: "0"
+      },
+      {
+        name: "Lin Star",
+        soundSource: false,
+        soundInitiallyEnabled: false,
+        appSound: "0",
+        appSoundEnabled: "0"
+      },
+      {
+        name: "Grace Star",
+        soundSource: true,
+        soundInitiallyEnabled: true,
+        appSound: "1",
+        appSoundEnabled: "1"
+      },
+      {
+        name: "Hedy Star",
+        soundSource: false,
+        soundInitiallyEnabled: false,
+        appSound: "0",
+        appSoundEnabled: "0"
+      }
+    ]
+  );
 });
 
 test("simulation targets chase the nearest available star and ignore cooling stars", () => {
@@ -147,6 +213,7 @@ test("runtime config uses the full default UI outside scripted clients", () => {
   assert.equal(config.persistIdentity, true);
   assert.equal(config.usePointerInput, true);
   assert.equal(config.soundEffects, true);
+  assert.equal(config.soundInitiallyEnabled, true);
   assert.equal(config.initialBotCount, 2);
   assert.equal(config.uiMode, "default");
   assert.equal(config.createUi.name, "createDefaultAppUi");
@@ -179,6 +246,7 @@ test("runtime config drives scripted clients through app-level configuration", (
   assert.equal(config.persistIdentity, false);
   assert.equal(config.usePointerInput, false);
   assert.equal(config.soundEffects, false);
+  assert.equal(config.soundInitiallyEnabled, false);
   assert.equal(config.initialBotCount, 0);
   assert.equal(config.identity.name, "Ada Star");
   assert.equal(config.identity.color, "#7dd3fc");
@@ -196,6 +264,7 @@ test("runtime config drives scripted clients through app-level configuration", (
     botCount: 0,
     position: { x: 1.234, y: -2.345, z: 0.456 },
     target: { x: 3.333, y: 2.222, z: -1.111 },
+    sound: { available: false, enabled: false },
     now: 1_782_482_400_000
   });
   assert.deepEqual(state, {
@@ -211,6 +280,21 @@ test("runtime config drives scripted clients through app-level configuration", (
     botCount: 0,
     position: { x: 1.23, y: -2.35, z: 0.46 },
     target: { x: 3.33, y: 2.22, z: -1.11 },
+    sound: { available: false, enabled: false },
     updatedAt: 1_782_482_400_000
   });
+});
+
+test("runtime config enables sound only for scripted source clients", () => {
+  const sourceConfig = createRuntimeConfig(
+    "http://localhost:4173/index.html?simClient=1&appSound=1&appSoundEnabled=0"
+  );
+  const silentConfig = createRuntimeConfig(
+    "http://localhost:4173/index.html?simClient=1&appSound=0&appSoundEnabled=1"
+  );
+
+  assert.equal(sourceConfig.soundEffects, true);
+  assert.equal(sourceConfig.soundInitiallyEnabled, false);
+  assert.equal(silentConfig.soundEffects, false);
+  assert.equal(silentConfig.soundInitiallyEnabled, false);
 });

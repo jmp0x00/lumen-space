@@ -2,7 +2,7 @@ import {
   getSimulationClientConfig,
   getSimulationClientStartPosition,
   getSimulationTarget
-} from "./simulation-clients.js?v=realtime-room-sim-20260627";
+} from "./simulation-clients.js?v=sound-toggle-20260627";
 import {
   createDefaultAppUi,
   createSceneOnlyAppUi
@@ -19,6 +19,7 @@ export function createRuntimeConfig(locationLike) {
   }
 
   const scriptedUiMode = normalizeUiMode(params.get("appUi"), "scene-only");
+  const scriptedSoundEffects = Boolean(scriptedClient.soundSource);
   return {
     identity: {
       name: scriptedClient.name,
@@ -27,7 +28,8 @@ export function createRuntimeConfig(locationLike) {
     autoEnter: true,
     persistIdentity: false,
     usePointerInput: false,
-    soundEffects: false,
+    soundEffects: scriptedSoundEffects,
+    soundInitiallyEnabled: scriptedSoundEffects && scriptedClient.soundInitiallyEnabled,
     initialBotCount: scriptedClient.disableBots ? 0 : 2,
     uiMode: scriptedUiMode,
     createUi: getUiGenerator(scriptedUiMode),
@@ -59,6 +61,10 @@ export function createRuntimeConfig(locationLike) {
         botCount: context.botCount,
         position: roundStateVector(context.position),
         target: roundStateVector(context.target),
+        sound: {
+          available: Boolean(context.sound?.available),
+          enabled: Boolean(context.sound?.enabled)
+        },
         updatedAt: context.now
       };
     }
@@ -72,6 +78,7 @@ function createDefaultRuntimeConfig(uiMode, { soundEffects = true } = {}) {
     persistIdentity: true,
     usePointerInput: true,
     soundEffects,
+    soundInitiallyEnabled: soundEffects,
     initialBotCount: 2,
     uiMode,
     createUi: getUiGenerator(uiMode),

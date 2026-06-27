@@ -25,13 +25,13 @@ import {
   normalizePulseEventMessage,
   createClientId
 } from "./protocol.js";
-import { createRuntimeConfig } from "./runtime-config.js?v=pulse-sounds-20260627";
+import { createRuntimeConfig } from "./runtime-config.js?v=sound-toggle-20260627";
 import { createSpaceScene } from "./scene.js?v=peer-collision-radius-20260627";
 import {
   collectNewSoundCues,
   createPulseSoundPlayer,
   createSoundCueSnapshot
-} from "./sound.js?v=pulse-sounds-20260627";
+} from "./sound.js?v=sound-toggle-20260627";
 
 const storageKey = "lumen-space.identity";
 const runtimeConfig = createRuntimeConfig(window.location);
@@ -64,9 +64,11 @@ let pointerAbortController = null;
 let nameWasEdited = false;
 let manualNameSequence = 0;
 let soundCueSnapshot = createSoundCueSnapshot();
+let soundEnabled =
+  Boolean(runtimeConfig.soundEffects) && runtimeConfig.soundInitiallyEnabled !== false;
 const pulseAudio = createPulseSoundPlayer({
   window,
-  enabled: runtimeConfig.soundEffects,
+  enabled: soundEnabled,
   volume: 0.82
 });
 
@@ -84,6 +86,7 @@ const ui = runtimeConfig.createUi({
     onAddBot: addBot,
     onRemoveBot: removeBot,
     onPulse: sendLocalPulse,
+    onToggleSound: toggleSound,
     onLeaveRoom: leaveRoom,
     onToggleDebug: toggleDebugPanel
   }
@@ -92,6 +95,10 @@ const ui = runtimeConfig.createUi({
 initLobby();
 
 function initLobby() {
+  window.addEventListener("message", handleRuntimeMessage);
+  window.__lumenSetSoundEnabled = (enabled) => {
+    setSoundEnabled(enabled, { render: true, unlock: Boolean(enabled) });
+  };
   renderUi();
   refreshGeneratedLobbyName();
 
@@ -377,11 +384,17 @@ function startRoomLoop() {
 
 function renderUi() {
   ui.render(
-    selectUiView(game, {
-      uiMode: runtimeConfig.uiMode,
-      canShowDebug: ui.canShowDebug,
-      now: Date.now()
-    })
+    {
+      ...selectUiView(game, {
+        uiMode: runtimeConfig.uiMode,
+        canShowDebug: ui.canShowDebug,
+        now: Date.now()
+      }),
+      sound: {
+        available: Boolean(runtimeConfig.soundEffects),
+        enabled: soundEnabled
+      }
+    }
   );
 }
 
@@ -421,7 +434,13 @@ function publishRuntimeState(nowMs) {
     return;
   }
 
-  const state = runtimeConfig.createState(selectRuntimeStateContext(game, nowMs));
+  const state = runtimeConfig.createState({
+    ...selectRuntimeStateContext(game, nowMs),
+    sound: {
+      available: Boolean(runtimeConfig.soundEffects),
+      enabled: soundEnabled
+    }
+  });
   window.__lumenSpaceClientState = state;
 
   if (window.parent !== window && nowMs - runtimeStatePostedAt >= 500) {
@@ -474,6 +493,10 @@ function handleKeydown(event) {
   }
 }
 
+function toggleSound() {
+  setSoundEnabled(!soundEnabled, { render: true, unlock: true });
+}
+
 function toggleDebugPanel() {
   dispatch({ type: "debug/set", visible: ui.canShowDebug && !game.debugVisible });
 }
@@ -508,7 +531,7 @@ function executeEffects(effects = []) {
 }
 
 function unlockPulseAudio() {
-  if (runtimeConfig.soundEffects) {
+  if (soundEnabled) {
     void pulseAudio.unlock();
   }
 }
@@ -522,11 +545,41 @@ function playNewSoundCues() {
     localClientId: game.clientId
   });
   soundCueSnapshot = result.snapshot;
-  pulseAudio.playCues(result.cues);
+  if (soundEnabled) {
+    pulseAudio.playCues(result.cues);
+  }
 }
 
 function resetSoundCues() {
   soundCueSnapshot = createSoundCueSnapshot();
+}
+
+function setSoundEnabled(nextEnabled, { render = false, unlock = false } = {}) {
+  const isEnabled = Boolean(runtimeConfig.soundEffects && nextEnabled);
+  soundEnabled = isEnabled;
+  pulseAudio.setEnabled(isEnabled);
+  snapshotCurrentSoundCues();
+  if (unlock && isEnabled) {
+    unlockPulseAudio();
+  }
+  if (render) {
+    renderUi();
+  }
+}
+
+function snapshotCurrentSoundCues() {
+  soundCueSnapshot = createSoundCueSnapshot({
+    pulseIds: game.pulses.map((pulse) => pulse.id),
+    resonanceIds: game.resonances.map((resonance) => resonance.id)
+  });
+}
+
+function handleRuntimeMessage(event) {
+  if (event.origin !== window.location.origin || event.data?.type !== "lumen-sound-control") {
+    return;
+  }
+
+  setSoundEnabled(event.data.enabled, { render: true, unlock: Boolean(event.data.enabled) });
 }
 
 function showToast(message) {

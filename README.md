@@ -16,6 +16,7 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Send pulses that expand through the shared space.
 - When different players' pulse fronts meet, they create a brief resonance flash.
 - Hear soft synthesized pulse sounds for manual pulses, brighter star-touch pulses, and resonance flashes after the browser unlocks audio through interaction.
+- Use the room sound control to mute or unmute pulse sound effects.
 - Rooms start with passive AI-driven local bots that seek touch stars, and you can add or remove more bots.
 - Rooms are peer-to-peer and ephemeral; no account, backend server, or database is used.
 - If realtime networking is unavailable, the app keeps retrying while the visual room stays usable.
@@ -53,7 +54,8 @@ To inspect peer collision scenarios without joining a room manually, open
 `http://localhost:4173/physics-sim.html`. The simulator includes a pure physics
 canvas mode and a realtime mode that embeds multiple scene-only no-bot app
 clients in the same WebRTC room with scripted user presets and a live 1-8
-client count control.
+client count control. Realtime simulator audio is controlled by one simulator
+button and is routed through a single designated embedded client.
 
 ## Test
 

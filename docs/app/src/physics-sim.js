@@ -14,7 +14,7 @@ import {
   createRealtimeRoomClients,
   getRealtimeRoomPreset,
   normalizeRealtimeRoomClientCount
-} from "./simulation-clients.js?v=realtime-client-count-live-20260627";
+} from "./simulation-clients.js?v=sound-toggle-20260627";
 import {
   getPeerCollisionDistance,
   getPeerCollisionRadius
@@ -29,6 +29,7 @@ import {
 import { SPACE_BOUNDS, clamp, vectorDistance } from "./physics/vector.js";
 
 const REALTIME_RELAUNCH_DELAY_MS = 350;
+const REALTIME_SOUND_SOURCE_INDEX = 0;
 
 const canvas = document.querySelector("#sim-canvas");
 const context = canvas.getContext("2d");
@@ -43,6 +44,7 @@ const elements = {
   realtimeRoomOutput: document.querySelector("#realtime-room-output"),
   realtimeClientCount: document.querySelector("#realtime-client-count-input"),
   realtimeClientCountOutput: document.querySelector("#realtime-client-count-output"),
+  realtimeSound: document.querySelector("#realtime-sound-button"),
   launchRealtime: document.querySelector("#launch-realtime-button"),
   debugTitle: document.querySelector("#debug-title"),
   distanceLabel: document.querySelector("#metric-distance-label"),
@@ -75,6 +77,7 @@ let realtimeClientCount = REALTIME_ROOM_PRESETS.mixed.clients.length;
 let realtimeLaunchTimer = 0;
 let realtimeFrames = [];
 let realtimeClientStates = new Map();
+let realtimeSoundEnabled = false;
 
 bindControls();
 setScenario("cluster");
@@ -130,9 +133,13 @@ function bindControls() {
     scheduleRealtimeRoomLaunch({ immediate: true });
   });
   elements.launchRealtime.addEventListener("click", launchRealtimeRoom);
+  elements.realtimeSound.addEventListener("click", () => {
+    setRealtimeSoundEnabled(!realtimeSoundEnabled, { broadcast: true });
+  });
   window.addEventListener("message", handleRealtimeClientMessage);
   window.addEventListener("resize", resizeCanvas);
   renderRealtimePresetButtons();
+  syncRealtimeSoundButton();
   syncControlLabels();
 }
 
@@ -496,11 +503,14 @@ function launchRealtimeRoom() {
     presetId: realtimePreset,
     roomId,
     baseUrl,
-    clientCount: realtimeClientCount
+    clientCount: realtimeClientCount,
+    soundSourceIndex: REALTIME_SOUND_SOURCE_INDEX,
+    soundInitiallyEnabled: false
   });
   realtimeClientStates = new Map();
   realtimeFrames = clients.map(createRealtimeFrame);
   elements.roomGrid.replaceChildren(...realtimeFrames.map((frame) => frame.element));
+  syncRealtimeSoundButton();
   renderRealtimeMetrics();
 }
 
@@ -559,11 +569,58 @@ function createRealtimeFrame(client) {
     if (!state) {
       setRealtimeFrameStatus(frame, "Loaded", "pending");
     }
+    syncRealtimeSoundFrame(frame);
   });
   frame.iframe.src = client.url;
 
   element.append(header, frame.iframe);
   return frame;
+}
+
+function setRealtimeSoundEnabled(nextEnabled, { broadcast = false } = {}) {
+  realtimeSoundEnabled = Boolean(nextEnabled);
+  syncRealtimeSoundButton();
+  if (broadcast) {
+    broadcastRealtimeSoundControl();
+  }
+}
+
+function syncRealtimeSoundButton() {
+  elements.realtimeSound.textContent = realtimeSoundEnabled
+    ? "Simulation Sound On"
+    : "Simulation Sound Off";
+  elements.realtimeSound.title = realtimeSoundEnabled
+    ? "Mute simulator sound source"
+    : "Unmute simulator sound source";
+  elements.realtimeSound.setAttribute("aria-label", elements.realtimeSound.title);
+  elements.realtimeSound.setAttribute("aria-pressed", String(realtimeSoundEnabled));
+}
+
+function broadcastRealtimeSoundControl() {
+  for (const frame of realtimeFrames) {
+    syncRealtimeSoundFrame(frame);
+  }
+}
+
+function syncRealtimeSoundFrame(frame) {
+  const enabled = Boolean(realtimeSoundEnabled && frame.client.soundSource);
+  try {
+    const setSoundEnabled = frame.iframe.contentWindow?.__lumenSetSoundEnabled;
+    if (typeof setSoundEnabled === "function") {
+      setSoundEnabled(enabled);
+      return;
+    }
+
+    frame.iframe.contentWindow?.postMessage(
+      {
+        type: "lumen-sound-control",
+        enabled
+      },
+      window.location.origin
+    );
+  } catch {
+    setRealtimeFrameStatus(frame, "Unavailable", "error");
+  }
 }
 
 function handleRealtimeClientMessage(event) {

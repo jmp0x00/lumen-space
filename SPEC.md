@@ -12,8 +12,9 @@ Lumen Space is a social visual game without scoring or winners. The goal is to c
 6. Pressing `Send Pulse`, pressing Space, or double-clicking the scene emits a colored pulse from the local light.
 7. When pulse fronts from different sources meet, they create a brief resonance flash.
 8. New pulses play soft local sound effects after browser audio is unlocked by user interaction; star-touch pulses sound brighter, and resonance flashes use a short chord.
-9. Other players in the same room see the player's latest position and pulses.
-10. Rooms are ephemeral. When all players leave, no room state remains.
+9. The player can mute or unmute local pulse sound effects.
+10. Other players in the same room see the player's latest position and pulses.
+11. Rooms are ephemeral. When all players leave, no room state remains.
 
 ## Scope
 
@@ -66,7 +67,10 @@ Out of scope:
 - Pulse fronts from different sources must create a short-lived resonance visual when they meet.
 - Newly observed pulses and resonances must create local synthesized sound cues using the Web Audio API after a user gesture unlocks audio.
 - Manual pulses, star-touch pulses, and resonance flashes must have distinct cue shapes while staying soft enough for repeated play.
-- Scripted realtime simulator clients must keep sound effects disabled to avoid many iframe clients playing over one another.
+- The default room UI must expose a mute/unmute sound control.
+- Muted sound must not replay old pulse or resonance cues when unmuted again.
+- Scripted realtime simulator clients must use a single designated sound-source client so many iframe clients do not play over one another.
+- The realtime simulator parent must expose one mute/unmute sound control instead of a separate control in every embedded client.
 - Malformed network messages and non-v2 Lumen Space protocol messages must be ignored safely.
 - If realtime connection fails, the app must keep retrying without switching into a separate offline mode.
 - Rooms must start with visible local bots, and users must be able to add and remove local bots.
@@ -88,6 +92,8 @@ Out of scope:
 - Touching an environmental star emits a blended-color pulse and temporarily hides that star.
 - Manual pulse actions create a soft local pulse sound after browser audio is unlocked.
 - Star-touch pulses create a brighter local pulse sound, and pulse resonances create a short local chord.
+- The room sound control can mute and unmute local pulse sounds without replaying old cues.
+- In realtime simulator mode, only one embedded client is configured as the audio source, and the simulator shell provides the only sound control.
 - Pulse events appear locally and remotely.
 - Peers exchange only v2 `hello`, `presence`, and pulse `event` messages; old v1 presence/pulse payloads are ignored safely.
 - Overlapping pulse fronts from different sources create a resonance flash without a separate network message.
