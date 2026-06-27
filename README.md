@@ -56,9 +56,10 @@ For physics tuning, double-click the room label in the room to toggle a hidden d
 ## Project Structure
 
 - `docs/app/`: static playable app intended for GitDocs hosting.
-- `docs/app/src/domain.js`: pure room, identity, motion, presence, and pulse logic.
+- `docs/app/src/domain.js`: pure domain facade for identity, presence, debug rows, and compatibility exports.
+- `docs/app/src/physics/`: focused pure physics modules for vectors, local motion, bot drift, touch stars, pulses, and resonance.
 - `docs/app/src/network.js`: Trystero/WebRTC room connection.
 - `docs/app/src/scene.js`: Three.js WebGL scene.
 - `docs/app/src/app.js`: UI orchestration.
-- `test/`: Node unit tests for the pure domain layer.
+- `test/`: Node unit tests for the pure domain and physics layers.
 - `SPEC.md`, `ARCHITECTURE.md`, `RETROSPECTIVE.md`: challenge deliverables.

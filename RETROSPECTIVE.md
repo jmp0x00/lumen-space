@@ -15,6 +15,12 @@
 - Added touch stars so pulses can emerge from environmental interaction instead of only explicit controls, then refined them to respawn with deterministic random-looking positions and colors for multiplayer consistency and blend star/lumen pulse colors.
 - Added a hidden debug overlay for current lume positions and velocities, because multiplayer movement feel needed live instrumentation rather than relying only on visual judgment.
 
+### 2026-06-27
+
+- Refactored the monolithic domain file into smaller pure modules for room IDs, color helpers, vector math, local motion, bot physics, touch-star physics, and pulse/resonance physics.
+- Kept `domain.js` as a compatibility facade so the browser app did not need a broad import migration while the internal architecture became easier to test and tune.
+- Added focused unit tests under `test/physics/` for vector helpers, motion integration, bot drift and pulse timing, touch-star collision/suppression, pulse lifecycle, and resonance detection.
+
 ## AI Tools Used
 
 - Codex for requirements refinement, planning, implementation, tests, and documentation.
@@ -31,6 +37,7 @@
 
 - The planning phase helped avoid accidentally building a default card game.
 - Separating pure logic from WebRTC/WebGL kept tests straightforward.
+- Splitting physics into focused modules made behavior-specific tests easier to read without changing the playable browser surface.
 - Adding a small hidden debug readout made multiplayer movement easier to reason about while preserving the simple player-facing interface.
 - A static app shape matched the GitDocs sharing goal and avoided backend credentials.
 
