@@ -38,6 +38,11 @@
 - Refactored simulator-specific app startup behavior behind `runtime-config.js`, so `app.js` stays focused on generic room orchestration while embedded clients can request scene-only UI and no bots through app-level configuration.
 - Replaced the temporary UI-part flag model with pluggable UI generators, so the app runtime now passes a view model and actions to default or scene-only UI adapters instead of knowing which panels or buttons should exist.
 - Captured the preferred core game architecture in `docs/core-game-architecture.md`: normalized local/network/bot inputs, pure state updates, tick-based simulation, and scene rendering as a derived projection rather than the source of gameplay truth.
+- Replaced the app's informal realtime protocol with a v2-only `hello`/`presence`/`event` protocol, then refactored `app.js` into a browser adapter around pure core state, event reduction, simulation, and selectors.
+- Corrected v2 presence handling after realtime simulator review showed remote peers could appear to move too quickly: remote interpolation now follows the sender's actual reported position, while the transmitted input target is kept only as advisory state.
+- Added a client-count control to realtime simulator mode so the same WebRTC harness can validate smaller and larger rooms without editing presets by hand.
+- Tightened the realtime simulator count control after manual use showed it felt inert: changing the count now relaunches the embedded room directly instead of only affecting the next explicit launch.
+- Replaced the default Python static server with a tiny no-cache development server after browser caching repeatedly hid local HTML and module changes during simulator validation.
 
 ## AI Tools Used
 

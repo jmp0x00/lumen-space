@@ -24,7 +24,7 @@ In scope:
 - Three.js visual scene with participant lights and pulse rings.
 - Local star-seeking bots that appear when a room starts, receive deterministic AI movement targets, move through the shared motion physics, and pulse.
 - Automated browser physics simulator for inspecting peer repulsion without manual multiplayer setup.
-- Realtime multi-user simulator mode that embeds several scene-only no-bot app clients in one WebRTC room and drives them with scripted user presets.
+- Realtime multi-user simulator mode that embeds several scene-only no-bot app clients in one WebRTC room and drives them with scripted user presets plus a configurable 1-8 client count.
 - Unit tests for pure domain logic.
 - Required challenge documentation.
 
@@ -55,7 +55,7 @@ Out of scope:
 - The physics simulator must show visible peer positions, repulsion vectors, closest-distance metrics, average repulsion, average speed, and per-peer coordinates.
 - The app runtime must support a configurable UI generator that receives app view state and action callbacks, then decides what UI to render.
 - The default app runtime must use the full lobby and room UI generator.
-- The physics simulator must include a realtime room mode where each simulated user is visible in its own embedded app screen, joins the same room through the normal WebRTC connection, starts without bots, uses a scene-only UI generator, and follows a chosen preset such as star chasing, scripted paths, orbiting, or chasing another user.
+- The physics simulator must include a realtime room mode where each simulated user is visible in its own embedded app screen, joins the same room through the normal WebRTC connection, starts without bots, uses a scene-only UI generator, follows a chosen preset such as star chasing, scripted paths, orbiting, or chasing another user, and can be launched with a selected 1-8 client count.
 - Rooms must render deterministic random-looking touch stars that can trigger pulses when crossed.
 - After a touch, the star must temporarily disappear and respawn in a new deterministic random-looking position and color.
 - Star-touch pulse colors must blend the touched star color with the triggering lumen color.
@@ -63,7 +63,7 @@ Out of scope:
 - Stale peers must be removed after the heartbeat timeout.
 - Duplicate pulse messages must not create duplicate visuals.
 - Pulse fronts from different sources must create a short-lived resonance visual when they meet.
-- Malformed network messages must be ignored safely.
+- Malformed network messages and non-v2 Lumen Space protocol messages must be ignored safely.
 - If realtime connection fails, the app must keep retrying without switching into a separate offline mode.
 - Rooms must start with visible local bots, and users must be able to add and remove local bots.
 - Bot names must use the same generated-name flow as player defaults.
@@ -80,9 +80,10 @@ Out of scope:
 - When a moving participant pushes an idle peer, the idle peer remains at the pushed resting position until new input or presence data moves it again.
 - Opening `physics-sim.html` starts an automated peer simulation that visibly shows repulsion without requiring network setup.
 - In `physics-sim.html`, selecting the crossing scenario shows two peers following intersecting routes through the center.
-- In `physics-sim.html`, selecting realtime mode launches multiple scene-only embedded app clients in the same no-bot WebRTC room, and each client screen shows scripted movement through the normal app/WebRTC runtime.
+- In `physics-sim.html`, selecting realtime mode launches the selected number of scene-only embedded app clients in the same no-bot WebRTC room; changing the client count in realtime mode relaunches the embedded room with that count, and each client screen shows scripted movement through the normal app/WebRTC runtime.
 - Touching an environmental star emits a blended-color pulse and temporarily hides that star.
 - Pulse events appear locally and remotely.
+- Peers exchange only v2 `hello`, `presence`, and pulse `event` messages; old v1 presence/pulse payloads are ignored safely.
 - Overlapping pulse fronts from different sources create a resonance flash without a separate network message.
 - The user can add a bot, see it move and pulse, and remove it again.
 - Connecting to a room immediately shows local bots without requiring the user to press `Add Bot`.

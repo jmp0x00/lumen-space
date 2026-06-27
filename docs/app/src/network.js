@@ -5,8 +5,9 @@ export async function connectToRoom({
   roomId,
   onPeerJoin,
   onPeerLeave,
+  onHello,
   onPresence,
-  onPulse,
+  onEvent,
   onError
 }) {
   const { joinRoom, selfId } = await import(TRYSTERO_URL);
@@ -17,25 +18,32 @@ export async function connectToRoom({
     }
   });
 
+  const helloAction = room.makeAction("hello");
   const presenceAction = room.makeAction("presence");
-  const pulseAction = room.makeAction("pulse");
+  const eventAction = room.makeAction("event");
 
   room.onPeerJoin = (peerId) => onPeerJoin?.(peerId);
   room.onPeerLeave = (peerId) => onPeerLeave?.(peerId);
+  helloAction.onMessage = (data, metadata) => {
+    onHello?.(metadata.peerId, data);
+  };
   presenceAction.onMessage = (data, metadata) => {
     onPresence?.(metadata.peerId, data);
   };
-  pulseAction.onMessage = (data, metadata) => {
-    onPulse?.(metadata.peerId, data);
+  eventAction.onMessage = (data, metadata) => {
+    onEvent?.(metadata.peerId, data);
   };
 
   return {
     selfId,
+    sendHello(data) {
+      return helloAction.send(data).catch((error) => onError?.(error));
+    },
     sendPresence(data) {
       return presenceAction.send(data).catch((error) => onError?.(error));
     },
-    sendPulse(data) {
-      return pulseAction.send(data).catch((error) => onError?.(error));
+    sendEvent(data) {
+      return eventAction.send(data).catch((error) => onError?.(error));
     },
     leave() {
       room.leave();

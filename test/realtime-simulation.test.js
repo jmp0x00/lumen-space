@@ -1,13 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  REALTIME_ROOM_CLIENT_COUNT_MAX,
+  REALTIME_ROOM_CLIENT_COUNT_MIN,
   REALTIME_ROOM_DEFAULT_ID,
   createDefaultRealtimeRoomId,
   createRealtimeRoomClients,
   getRealtimeRoomPreset,
   getSimulationClientConfig,
   getSimulationClientStartPosition,
-  getSimulationTarget
+  getSimulationTarget,
+  normalizeRealtimeRoomClientCount
 } from "../docs/app/src/simulation-clients.js";
 import { createRuntimeConfig } from "../docs/app/src/runtime-config.js";
 
@@ -30,6 +33,37 @@ test("realtime room presets produce app URLs for no-bot WebRTC clients", () => {
   assert.equal(url.searchParams.get("simBehavior"), "star");
   assert.equal(url.searchParams.get("appBots"), "0");
   assert.equal(url.searchParams.get("appUi"), "none");
+});
+
+test("realtime room clients can be generated with a custom client count", () => {
+  const clients = createRealtimeRoomClients({
+    presetId: "stars",
+    roomId: "My Room!",
+    baseUrl: "http://localhost:4173/index.html",
+    clientCount: 7
+  });
+
+  assert.equal(clients.length, 7);
+  assert.deepEqual(
+    clients.map((client) => client.index),
+    [0, 1, 2, 3, 4, 5, 6]
+  );
+  assert.equal(new Set(clients.map((client) => client.name)).size, 7);
+  assert.equal(clients[0].name, "Ada Star");
+  assert.equal(clients[4].name, "Ada Star 5");
+  assert.equal(clients[6].name, "Grace Star 7");
+
+  const url = new URL(clients[6].url);
+  assert.equal(url.searchParams.get("simName"), "Grace Star 7");
+  assert.equal(url.searchParams.get("simIndex"), "6");
+  assert.equal(url.searchParams.get("simCount"), "7");
+});
+
+test("realtime room client count clamps to the supported simulator range", () => {
+  assert.equal(normalizeRealtimeRoomClientCount(0), REALTIME_ROOM_CLIENT_COUNT_MIN);
+  assert.equal(normalizeRealtimeRoomClientCount(99), REALTIME_ROOM_CLIENT_COUNT_MAX);
+  assert.equal(createRealtimeRoomClients({ clientCount: 99 }).length, REALTIME_ROOM_CLIENT_COUNT_MAX);
+  assert.equal(createRealtimeRoomClients({ clientCount: -2 }).length, REALTIME_ROOM_CLIENT_COUNT_MIN);
 });
 
 test("simulation client config parses URL parameters and disables bots by default", () => {

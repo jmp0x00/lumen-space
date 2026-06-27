@@ -39,6 +39,9 @@ Examples:
 - remote WebRTC pulse becomes a deduplicated pulse event
 - elapsed frame time becomes a simulation tick
 
+Network inputs should arrive through the v2 Lumen Space protocol only: `hello` for identity/capability snapshots, `presence` for replaceable movement snapshots, and `event` for deduplicated one-shot gameplay events such as pulses.
+For presence snapshots, remote clients should interpolate toward the sender's reported actual position; any transmitted input target is advisory state and must not make the remote visual predict ahead.
+
 ## Tick-Based Simulation
 
 The game should not rely only on discrete messages. It also needs a continuous frame update for:
@@ -99,6 +102,7 @@ This should be done only when the current `app.js` orchestration becomes hard to
 - Keep Three.js code focused on visual synchronization.
 - Prefer deterministic tests for reducers, physics, collision, pulses, star cooldowns, and bot behavior.
 - Sanitize all network input before it enters state.
+- Reject non-v2 protocol payloads before they enter state.
 - Use stable IDs for event-like messages.
 - Use timestamps and version fields for network compatibility.
 - Avoid making remote peers authoritative over local-only objects such as local bots.

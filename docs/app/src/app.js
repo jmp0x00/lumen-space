@@ -2,40 +2,33 @@ import {
   APP_ID,
   COLORS,
   DEFAULT_COLOR,
-  SPACE_BOUNDS,
   STALE_PEER_MS,
-  addPulse,
-  applyPeerRepulsionToParticipants,
-  clampVector,
-  collectDueBotPulses,
-  collectTouchStarPulses,
   createInviteUrl,
-  createPresenceMessage,
-  createPulse,
-  createPulseMessage,
   createRoomId,
-  createTouchStars,
-  formatParticipantDebugRows,
   getRoomIdFromLocation,
-  lerpVector,
   normalizeRoomId,
-  pruneStalePeers,
-  reducePresence,
-  removePeer,
-  sanitizeIdentity,
-  suppressTouchStarsFromPulses,
-  updateMotion,
-  updatePulseResonances,
-  updatePulses,
-  updateBotParticipants
+  sanitizeIdentity
 } from "./domain.js?v=peer-collision-radius-20260627";
+import { createInitialGameState, chooseStartPosition } from "./core/game-state.js";
+import { reduceGameEvent } from "./core/game-events.js";
+import {
+  selectRuntimeStateContext,
+  selectSceneModel,
+  selectUiView
+} from "./core/scene-model.js";
+import { stepGame } from "./core/simulation.js";
 import { connectToRoom } from "./network.js";
 import { generateDisplayName, generateDisplayNameSync } from "./names.js";
+import {
+  normalizeHelloMessage,
+  normalizePresenceMessage,
+  normalizePulseEventMessage,
+  createClientId
+} from "./protocol.js";
 import { createRuntimeConfig } from "./runtime-config.js?v=runtime-config-20260627";
 import { createSpaceScene } from "./scene.js?v=peer-collision-radius-20260627";
 
 const storageKey = "lumen-space.identity";
-const defaultLobbyNote = "Room links are ephemeral and peer-to-peer.";
 const runtimeConfig = createRuntimeConfig(window.location);
 const savedIdentity = runtimeConfig.persistIdentity ? loadSavedIdentity() : null;
 const initialRoomId = getRoomIdFromLocation(window.location);
@@ -45,9 +38,12 @@ const generatedIdentity = sanitizeIdentity({
   color: runtimeConfig.identity?.color ?? DEFAULT_COLOR
 });
 
-let selectedColor = (savedIdentity ?? generatedIdentity).color;
-let identity = savedIdentity ?? generatedIdentity;
-let roomId = initialRoomId ?? createRoomId();
+let game = createInitialGameState({
+  clientId: createClientId("lumen", Date.now(), Math.random),
+  identity: savedIdentity ?? generatedIdentity,
+  selectedColor: (savedIdentity ?? generatedIdentity).color,
+  roomId: initialRoomId ?? createRoomId()
+});
 let connection = null;
 let sceneController = null;
 let presenceTimer = 0;
@@ -58,32 +54,10 @@ let lastFrameAt = performance.now();
 let roomLoopStartedAt = performance.now();
 let nextRuntimePulseAt = 0;
 let runtimeStatePostedAt = 0;
-let pulseSequence = 0;
 let connectionAttempt = 0;
-let isRoomActive = false;
-let isDebugVisible = false;
 let pointerAbortController = null;
-let peers = {};
-let pulses = [];
-let resonances = [];
-let touchStars = [];
-let pointerTarget = { x: 0, y: 0, z: 0 };
-let localParticipant = {
-  id: "local",
-  name: identity.name,
-  color: identity.color,
-  position: { x: 0, y: 0, z: 0 },
-  velocity: { x: 0, y: 0, z: 0 },
-  isLocal: true,
-  lastSeen: Date.now()
-};
-
-let botParticipants = [];
 let nameWasEdited = false;
 let manualNameSequence = 0;
-let lobbyNote = defaultLobbyNote;
-let statusText = "Starting";
-let statusState = "pending";
 
 const ui = runtimeConfig.createUi({
   document,
@@ -123,10 +97,12 @@ async function refreshGeneratedLobbyName() {
     return;
   }
 
-  const generatedName = await generateDisplayName(`player-${roomId}-${Date.now()}`);
-  if (!nameWasEdited && !isRoomActive) {
-    identity = sanitizeIdentity({ ...identity, name: generatedName });
-    renderUi();
+  const generatedName = await generateDisplayName(`player-${game.roomId}-${Date.now()}`);
+  if (!nameWasEdited && game.phase !== "room") {
+    dispatch({
+      type: "identity/set",
+      identity: { ...game.identity, name: generatedName }
+    });
   }
 }
 
@@ -135,11 +111,13 @@ function replaceNameWithGenerated() {
   ui.setGenerateNameBusy(true);
   try {
     const generatedName = generateDisplayNameSync(
-      `manual-${roomId}-${Date.now()}-${manualNameSequence++}`
+      `manual-${game.roomId}-${Date.now()}-${manualNameSequence++}`
     );
-    identity = sanitizeIdentity({ ...identity, name: generatedName, color: selectedColor });
-    lobbyNote = "New name ready.";
-    renderUi();
+    dispatch({
+      type: "identity/set",
+      identity: { ...game.identity, name: generatedName, color: game.selectedColor }
+    });
+    setLobbyNote("New name ready.");
     ui.focusName();
   } catch {
     setLobbyNote("Could not generate a name. Try typing one.");
@@ -153,13 +131,15 @@ function handleNameEdited() {
 }
 
 function selectColor(color) {
-  selectedColor = color;
-  renderUi();
+  dispatch({ type: "color/select", color });
 }
 
 function createRoomFromLobby() {
-  roomId = createRoomId();
-  setLobbyNote("New room ready.");
+  dispatch({
+    type: "room/set",
+    roomId: createRoomId(),
+    lobbyNote: "New room ready."
+  });
 }
 
 async function joinRoomFromLobby({ name, roomId: requestedRoomId }) {
@@ -169,43 +149,37 @@ async function joinRoomFromLobby({ name, roomId: requestedRoomId }) {
     return;
   }
 
-  identity = sanitizeIdentity({
+  const identity = sanitizeIdentity({
     name,
-    color: selectedColor
+    color: game.selectedColor
   });
+  dispatch({ type: "identity/set", identity });
+  dispatch({ type: "room/set", roomId: normalizedRoom });
   if (runtimeConfig.persistIdentity) {
     saveIdentity(identity);
   }
-  roomId = normalizedRoom;
   await enterRoom();
 }
 
 function setLobbyNote(message) {
-  lobbyNote = message;
-  renderUi();
+  dispatch({ type: "lobby/note", message });
 }
 
 async function enterRoom() {
-  isRoomActive = true;
-  window.history.replaceState({}, "", createInviteUrl(window.location.href, roomId));
-
-  localParticipant = {
-    ...localParticipant,
-    name: identity.name,
-    color: identity.color,
-    position: runtimeConfig.getStartPosition?.() ?? chooseStartPosition(identity.name),
-    velocity: { x: 0, y: 0, z: 0 },
-    lastSeen: Date.now()
-  };
-  pointerTarget = localParticipant.position;
-  touchStars = createTouchStars(roomId);
-  botParticipants = createInitialBotParticipants(Date.now(), runtimeConfig.initialBotCount);
+  window.history.replaceState({}, "", createInviteUrl(window.location.href, game.roomId));
+  dispatch({
+    type: "room/enter",
+    identity: game.identity,
+    roomId: game.roomId,
+    now: Date.now(),
+    startPosition: runtimeConfig.getStartPosition?.() ?? chooseStartPosition(game.identity.name),
+    initialBotCount: runtimeConfig.initialBotCount,
+    createBotName: (seed) => generateDisplayNameSync(seed)
+  });
   roomLoopStartedAt = performance.now();
   nextRuntimePulseAt = runtimeConfig.pulseEveryMs
     ? Date.now() + Math.max(1_000, runtimeConfig.pulseEveryMs)
     : 0;
-  setDebugVisible(false);
-  setStatus("Starting room", "pending");
   window.addEventListener("keydown", handleKeydown);
 
   startRoomLoop();
@@ -213,10 +187,10 @@ async function enterRoom() {
   try {
     sceneController = await createSpaceScene({
       container: ui.sceneHost,
-      getParticipants,
-      getPulses: () => pulses,
-      getResonances: () => resonances,
-      getTouchStars: () => touchStars,
+      getParticipants: () => selectSceneModel(game).participants,
+      getPulses: () => selectSceneModel(game).pulses,
+      getResonances: () => selectSceneModel(game).resonances,
+      getTouchStars: () => selectSceneModel(game).touchStars,
       onPulse: sendLocalPulse
     });
     sceneController.start();
@@ -224,7 +198,11 @@ async function enterRoom() {
       bindPointerControls();
     }
   } catch (error) {
-    setStatus("Visual engine unavailable", "error");
+    dispatch({
+      type: "status/set",
+      text: "Visual engine unavailable",
+      state: "error"
+    });
     showToast(error.message || "Unable to start WebGL.");
     return;
   }
@@ -236,7 +214,13 @@ function bindPointerControls() {
   pointerAbortController?.abort();
   pointerAbortController = new AbortController();
   const updateTarget = (event) => {
-    pointerTarget = clampVector(sceneController.screenToWorld(event.clientX, event.clientY));
+    dispatch(
+      {
+        type: "pointer/target",
+        target: sceneController.screenToWorld(event.clientX, event.clientY)
+      },
+      { render: false }
+    );
   };
 
   window.addEventListener("pointermove", updateTarget, {
@@ -252,11 +236,11 @@ function startPresenceLoop() {
   sendPresence();
   presenceTimer = window.setInterval(sendPresence, 250);
   pruneTimer = window.setInterval(() => {
-    const before = Object.keys(peers).length;
-    peers = pruneStalePeers(peers, Date.now(), STALE_PEER_MS);
-    if (Object.keys(peers).length !== before) {
-      renderUi();
-    }
+    dispatch({
+      type: "peers/prune-stale",
+      now: Date.now(),
+      timeoutMs: STALE_PEER_MS
+    });
   }, 1_000);
 }
 
@@ -268,7 +252,7 @@ function stopPresenceLoop() {
 }
 
 async function connectRealtime() {
-  if (!isRoomActive || connection) {
+  if (game.phase !== "room" || connection) {
     return;
   }
 
@@ -276,209 +260,134 @@ async function connectRealtime() {
   reconnectTimer = 0;
   connectionAttempt += 1;
   const attempt = connectionAttempt;
-  setStatus(attempt === 1 ? "Connecting" : `Retrying connection ${attempt}`, "pending");
+  dispatch({
+    type: "status/set",
+    text: attempt === 1 ? "Connecting" : `Retrying connection ${attempt}`,
+    state: "pending"
+  });
 
   try {
     const nextConnection = await connectToRoom({
       appId: APP_ID,
-      roomId,
+      roomId: game.roomId,
       onPeerJoin(peerId) {
-        peers = reducePresence(
-          peers,
-          peerId,
-          createPresenceMessage({
-            identity: { name: "Incoming light", color: DEFAULT_COLOR },
-            position: { x: 0, y: 0, z: 0 },
-            velocity: { x: 0, y: 0, z: 0 }
-          }),
-          Date.now()
-        );
-        renderUi();
-        setStatus("Online", "online");
+        dispatch({ type: "peer/join", peerId, now: Date.now() });
+        dispatch({ type: "status/set", text: "Online", state: "online" });
+        sendHello();
         sendPresence();
       },
       onPeerLeave(peerId) {
-        peers = removePeer(peers, peerId);
-        renderUi();
+        dispatch({ type: "peer/leave", peerId });
+      },
+      onHello(peerId, data) {
+        const message = normalizeHelloMessage(data, Date.now());
+        if (message) {
+          dispatch({ type: "peer/hello", peerId, message });
+        }
       },
       onPresence(peerId, data) {
-        peers = reducePresence(peers, peerId, data, Date.now());
-        renderUi();
+        const message = normalizePresenceMessage(data, Date.now());
+        if (message) {
+          dispatch({ type: "peer/presence", peerId, message });
+        }
       },
-      onPulse(peerId, data) {
-        pulses = addPulse(pulses, data, peerId, Date.now());
+      onEvent(peerId, data) {
+        const message = normalizePulseEventMessage(data, Date.now());
+        if (message) {
+          dispatch({ type: "network/pulse", peerId, message }, { render: false });
+        }
       },
       onError(error) {
         console.warn(error);
       }
     });
 
-    if (!isRoomActive || attempt !== connectionAttempt) {
+    if (game.phase !== "room" || attempt !== connectionAttempt) {
       nextConnection.leave();
       return;
     }
 
     connection = nextConnection;
-    setStatus("Online", "online");
+    dispatch({ type: "status/set", text: "Online", state: "online" });
+    sendHello();
     startPresenceLoop();
   } catch (error) {
-    if (!isRoomActive || attempt !== connectionAttempt) {
+    if (game.phase !== "room" || attempt !== connectionAttempt) {
       return;
     }
     console.warn(error);
     connection = null;
-    peers = {};
     stopPresenceLoop();
-    setStatus(`Retrying connection ${attempt + 1}`, "pending");
+    dispatch({ type: "peers/clear" });
+    dispatch({
+      type: "status/set",
+      text: `Retrying connection ${attempt + 1}`,
+      state: "pending"
+    });
     reconnectTimer = window.setTimeout(connectRealtime, 3_500);
   }
 }
 
 function startRoomLoop() {
+  window.cancelAnimationFrame(animationFrame);
+  lastFrameAt = performance.now();
   const tick = (now) => {
     const deltaSeconds = (now - lastFrameAt) / 1000;
     lastFrameAt = now;
 
     const nowMs = Date.now();
-    if (runtimeConfig.getTarget) {
-      pointerTarget = runtimeConfig.getTarget({
-        localParticipant,
-        peers: Object.values(peers),
-        touchStars,
-        elapsedSeconds: Math.max(0, (now - roomLoopStartedAt) / 1000),
-        now: nowMs
-      });
-    }
+    const runtimeTarget = runtimeConfig.getTarget
+      ? runtimeConfig.getTarget({
+          localParticipant: game.localParticipant,
+          peers: Object.values(game.peers),
+          touchStars: game.touchStars,
+          elapsedSeconds: Math.max(0, (now - roomLoopStartedAt) / 1000),
+          now: nowMs
+        })
+      : null;
 
-    const motion = updateMotion(localParticipant, pointerTarget, deltaSeconds);
-    localParticipant = {
-      ...localParticipant,
-      position: motion.position,
-      velocity: motion.velocity,
-      lastSeen: nowMs
-    };
-
-    peers = Object.fromEntries(
-      Object.entries(peers).map(([peerId, peer]) => [
-        peerId,
-        {
-          ...peer,
-          position: lerpVector(peer.position, peer.targetPosition, Math.min(1, deltaSeconds * 7))
-        }
-      ])
-    );
-
-    if (botParticipants.length > 0) {
-      botParticipants = updateBotParticipants(botParticipants, nowMs, deltaSeconds, {
-        touchStars
-      });
-    }
-
-    applyParticipantRepulsion(deltaSeconds);
-
-    if (botParticipants.length > 0) {
-      const botPulseResult = collectDueBotPulses(botParticipants, nowMs);
-      botParticipants = botPulseResult.participants;
-      for (const pulse of botPulseResult.pulses) {
-        pulses = addPulse(pulses, createPulseMessage(pulse), pulse.sourceId, nowMs);
-      }
-    }
-
-    pulses = updatePulses(pulses, nowMs);
-    touchStars = suppressTouchStarsFromPulses(touchStars, pulses, nowMs);
-    const starTouchParticipants = [localParticipant, ...botParticipants];
-    const starTouchResult = collectTouchStarPulses(touchStars, starTouchParticipants, nowMs);
-    touchStars = starTouchResult.touchStars;
-    for (const pulse of starTouchResult.pulses) {
-      const message = createPulseMessage(pulse);
-      pulses = addPulse(pulses, message, pulse.sourceId, nowMs);
-      connection?.sendPulse(message);
-    }
+    applyCoreResult(stepGame(game, { now: nowMs, deltaSeconds, runtimeTarget }), {
+      render: false
+    });
     maybeSendRuntimePulse(nowMs);
-    resonances = updatePulseResonances(resonances, pulses, nowMs);
-    updateDebugPanel();
-    publishRuntimeState(nowMs);
+    if (game.debugVisible) {
+      renderUi();
+    }
     animationFrame = window.requestAnimationFrame(tick);
   };
 
   animationFrame = window.requestAnimationFrame(tick);
 }
 
-function getParticipants() {
-  const liveParticipants = [localParticipant, ...Object.values(peers)];
-  return [...liveParticipants, ...botParticipants];
-}
-
 function renderUi() {
-  const participants = getParticipants();
-  ui.render({
-    uiMode: runtimeConfig.uiMode,
-    phase: isRoomActive ? "room" : "lobby",
-    identity,
-    selectedColor,
-    roomId,
-    lobbyNote,
-    status: {
-      text: statusText,
-      state: statusState
-    },
-    participants,
-    debug: {
-      visible: isDebugVisible,
-      rows: isDebugVisible
-        ? formatParticipantDebugRows(participants, { digits: 2, now: Date.now() })
-        : []
-    }
-  });
+  ui.render(
+    selectUiView(game, {
+      uiMode: runtimeConfig.uiMode,
+      canShowDebug: ui.canShowDebug,
+      now: Date.now()
+    })
+  );
 }
 
-function applyParticipantRepulsion(deltaSeconds) {
-  const participants = [
-    { ...localParticipant, targetPosition: pointerTarget },
-    ...Object.values(peers),
-    ...botParticipants
-  ];
-  const repelledParticipants = applyPeerRepulsionToParticipants(participants, deltaSeconds);
-  const repelledById = new Map(
-    repelledParticipants.map((participant) => [participant.id, participant])
-  );
-
-  const repelledLocalParticipant = repelledById.get(localParticipant.id);
-  if (repelledLocalParticipant) {
-    pointerTarget = repelledLocalParticipant.targetPosition ?? pointerTarget;
-    const { targetPosition, ...nextLocalParticipant } = repelledLocalParticipant;
-    localParticipant = nextLocalParticipant;
+function sendHello() {
+  if (!connection) {
+    return;
   }
-
-  peers = Object.fromEntries(
-    Object.entries(peers).map(([peerId, peer]) => [peerId, repelledById.get(peerId) ?? peer])
-  );
-  botParticipants = botParticipants.map((bot) => repelledById.get(bot.id) ?? bot);
+  dispatch({ type: "network/hello-request", now: Date.now() }, { render: false });
 }
 
 function sendPresence() {
   if (!connection) {
     return;
   }
-  connection.sendPresence(
-    createPresenceMessage({
-      identity,
-      position: localParticipant.position,
-      velocity: localParticipant.velocity
-    })
-  );
+  dispatch({ type: "network/presence-request", now: Date.now() }, { render: false });
 }
 
 function sendLocalPulse() {
-  const pulse = createPulse({
-    id: `pulse-local-${Date.now()}-${pulseSequence++}`,
-    origin: localParticipant.position,
-    color: identity.color,
-    strength: 1.1,
-    sourceId: "local"
-  });
-  pulses = addPulse(pulses, createPulseMessage(pulse), "local", Date.now());
-  connection?.sendPulse(createPulseMessage(pulse));
+  if (game.phase !== "room") {
+    return;
+  }
+  dispatch({ type: "pulse/local-request", now: Date.now(), trigger: "manual" }, { render: false });
 }
 
 function maybeSendRuntimePulse(nowMs) {
@@ -495,16 +404,7 @@ function publishRuntimeState(nowMs) {
     return;
   }
 
-  const state = runtimeConfig.createState({
-    roomId,
-    identity,
-    status: statusText,
-    peerCount: getParticipants().length,
-    botCount: botParticipants.length,
-    position: localParticipant.position,
-    target: pointerTarget,
-    now: nowMs
-  });
+  const state = runtimeConfig.createState(selectRuntimeStateContext(game, nowMs));
   window.__lumenSpaceClientState = state;
 
   if (window.parent !== window && nowMs - runtimeStatePostedAt >= 500) {
@@ -513,26 +413,20 @@ function publishRuntimeState(nowMs) {
   }
 }
 
-async function addBot() {
-  const bot = await createBotParticipant(botParticipants.length, Date.now());
-  botParticipants = [...botParticipants, bot];
-  renderUi();
-  showToast(`${bot.name} joined as a bot.`);
+function addBot() {
+  dispatch({
+    type: "bot/add",
+    now: Date.now(),
+    createBotName: (seed) => generateDisplayNameSync(seed)
+  });
 }
 
 function removeBot() {
-  const removedBot = botParticipants.at(-1);
-  if (!removedBot) {
-    showToast("No bots to remove.");
-    return;
-  }
-  botParticipants = botParticipants.slice(0, -1);
-  renderUi();
-  showToast(`${removedBot.name} removed.`);
+  dispatch({ type: "bot/remove" });
 }
 
 async function copyInviteLink() {
-  const inviteUrl = createInviteUrl(window.location.href, roomId);
+  const inviteUrl = createInviteUrl(window.location.href, game.roomId);
   try {
     await navigator.clipboard.writeText(inviteUrl);
     showToast("Link copied.");
@@ -542,7 +436,6 @@ async function copyInviteLink() {
 }
 
 function leaveRoom() {
-  isRoomActive = false;
   connectionAttempt += 1;
   connection?.leave();
   connection = null;
@@ -552,13 +445,7 @@ function leaveRoom() {
   stopPresenceLoop();
   window.cancelAnimationFrame(animationFrame);
   window.removeEventListener("keydown", handleKeydown);
-  peers = {};
-  pulses = [];
-  resonances = [];
-  touchStars = [];
-  botParticipants = [];
-  setDebugVisible(false);
-  setStatus("Starting", "pending");
+  dispatch({ type: "room/leave" });
 }
 
 function handleKeydown(event) {
@@ -569,26 +456,35 @@ function handleKeydown(event) {
 }
 
 function toggleDebugPanel() {
-  setDebugVisible(!isDebugVisible);
+  dispatch({ type: "debug/set", visible: ui.canShowDebug && !game.debugVisible });
 }
 
-function setDebugVisible(nextVisible) {
-  isDebugVisible = ui.canShowDebug && Boolean(nextVisible);
-  renderUi();
+function dispatch(event, options = {}) {
+  applyCoreResult(reduceGameEvent(game, event), options);
 }
 
-function updateDebugPanel() {
-  if (!isDebugVisible) {
-    return;
+function applyCoreResult(result, { render = true } = {}) {
+  game = result.state;
+  executeEffects(result.effects);
+  if (render) {
+    renderUi();
   }
-
-  renderUi();
 }
 
-function setStatus(text, state) {
-  statusText = text;
-  statusState = state;
-  renderUi();
+function executeEffects(effects = []) {
+  for (const effect of effects) {
+    if (effect.type === "sendHello") {
+      connection?.sendHello(effect.message);
+    } else if (effect.type === "sendPresence") {
+      connection?.sendPresence(effect.message);
+    } else if (effect.type === "sendEvent") {
+      connection?.sendEvent(effect.message);
+    } else if (effect.type === "toast") {
+      showToast(effect.message);
+    } else if (effect.type === "publishRuntimeState") {
+      publishRuntimeState(effect.now);
+    }
+  }
 }
 
 function showToast(message) {
@@ -606,45 +502,4 @@ function loadSavedIdentity() {
 
 function saveIdentity(nextIdentity) {
   window.localStorage.setItem(storageKey, JSON.stringify(sanitizeIdentity(nextIdentity)));
-}
-
-function chooseStartPosition(seedText) {
-  const seed = [...seedText].reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  const x = ((seed % 11) / 10 - 0.5) * 4;
-  const y = ((((seed * 7) % 11) / 10) - 0.5) * 2.6;
-  return clampVector({ x, y, z: 0 });
-}
-
-function createBotParticipant(index, createdAt = Date.now()) {
-  const botPositions = [
-    { color: "#f0abfc", basePosition: { x: SPACE_BOUNDS.x[0] * 0.42, y: 1.6, z: -0.6 } },
-    { color: "#fcd34d", basePosition: { x: SPACE_BOUNDS.x[1] * 0.36, y: -1.4, z: -0.8 } },
-    { color: "#86efac", basePosition: { x: 0.8, y: 2.25, z: -1.2 } },
-    { color: "#c4b5fd", basePosition: { x: -1.4, y: -2.2, z: -0.4 } },
-    { color: "#fb7185", basePosition: { x: 2.2, y: 1.1, z: -1.3 } }
-  ];
-  const template = botPositions[index % botPositions.length];
-  const driftSeed = 2.4 + index * 1.7;
-  const name = generateDisplayNameSync(`bot-${roomId}-${index}-${createdAt}`);
-
-  return {
-    id: `bot-${index + 1}-${createdAt}`,
-    name,
-    color: template.color,
-    basePosition: template.basePosition,
-    position: template.basePosition,
-    targetPosition: template.basePosition,
-    velocity: { x: 0, y: 0, z: 0 },
-    driftSeed,
-    pulseEveryMs: 4_500 + (index % 5) * 650,
-    nextPulseAt: createdAt + 900 + (index % 5) * 520,
-    pulseStrength: 0.72 + (index % 3) * 0.08,
-    isBot: true
-  };
-}
-
-function createInitialBotParticipants(createdAt = Date.now(), count = 2) {
-  return Array.from({ length: Math.max(0, Number(count) || 0) }, (_, index) =>
-    createBotParticipant(index, createdAt + index)
-  );
 }

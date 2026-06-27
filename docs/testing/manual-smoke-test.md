@@ -2,7 +2,7 @@
 
 Use this checklist after any UI or networking change.
 
-1. Run `npm run serve`.
+1. Run `npm run serve`. This uses the local no-cache static server so refreshes should pick up changed app files.
 2. Open `http://localhost:4173/`.
 3. Click the generate-name icon and confirm the nickname is replaced with a generated name.
 4. Enter or keep a nickname, choose a color, generate a room with the room icon, and enter the space.

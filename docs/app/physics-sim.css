@@ -263,7 +263,8 @@ input[type="range"] {
   accent-color: var(--cyan);
 }
 
-input[type="text"] {
+input[type="text"],
+input[type="number"] {
   width: 100%;
   min-height: 40px;
   border: 1px solid var(--line);

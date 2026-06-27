@@ -6,12 +6,15 @@ import {
 } from "./physics-sim-scenarios.js";
 import { normalizeRoomId } from "./room.js";
 import {
+  REALTIME_ROOM_CLIENT_COUNT_MAX,
+  REALTIME_ROOM_CLIENT_COUNT_MIN,
   REALTIME_ROOM_DEFAULT_ID,
   REALTIME_ROOM_PRESETS,
   createDefaultRealtimeRoomId,
   createRealtimeRoomClients,
-  getRealtimeRoomPreset
-} from "./simulation-clients.js?v=realtime-room-sim-20260627";
+  getRealtimeRoomPreset,
+  normalizeRealtimeRoomClientCount
+} from "./simulation-clients.js?v=realtime-client-count-live-20260627";
 import {
   getPeerCollisionDistance,
   getPeerCollisionRadius
@@ -25,6 +28,8 @@ import {
 } from "./physics/repulsion.js?v=peer-collision-radius-20260627";
 import { SPACE_BOUNDS, clamp, vectorDistance } from "./physics/vector.js";
 
+const REALTIME_RELAUNCH_DELAY_MS = 350;
+
 const canvas = document.querySelector("#sim-canvas");
 const context = canvas.getContext("2d");
 const elements = {
@@ -36,6 +41,8 @@ const elements = {
   realtimePresetGrid: document.querySelector("#realtime-preset-grid"),
   realtimeRoom: document.querySelector("#realtime-room-input"),
   realtimeRoomOutput: document.querySelector("#realtime-room-output"),
+  realtimeClientCount: document.querySelector("#realtime-client-count-input"),
+  realtimeClientCountOutput: document.querySelector("#realtime-client-count-output"),
   launchRealtime: document.querySelector("#launch-realtime-button"),
   debugTitle: document.querySelector("#debug-title"),
   distanceLabel: document.querySelector("#metric-distance-label"),
@@ -64,6 +71,8 @@ let mode = "physics";
 let scenario = "cluster";
 let scenarioStartedAt = performance.now() / 1000;
 let realtimePreset = "mixed";
+let realtimeClientCount = REALTIME_ROOM_PRESETS.mixed.clients.length;
+let realtimeLaunchTimer = 0;
 let realtimeFrames = [];
 let realtimeClientStates = new Map();
 
@@ -108,6 +117,18 @@ function bindControls() {
     input.addEventListener("input", syncControlLabels);
   }
   elements.realtimeRoom.addEventListener("input", syncRealtimeRoomOutput);
+  elements.realtimeClientCount.min = String(REALTIME_ROOM_CLIENT_COUNT_MIN);
+  elements.realtimeClientCount.max = String(REALTIME_ROOM_CLIENT_COUNT_MAX);
+  elements.realtimeClientCount.addEventListener("input", () => {
+    const didChange = syncRealtimeClientCount({ writeValue: false });
+    if (didChange) {
+      scheduleRealtimeRoomLaunch();
+    }
+  });
+  elements.realtimeClientCount.addEventListener("change", () => {
+    syncRealtimeClientCount();
+    scheduleRealtimeRoomLaunch({ immediate: true });
+  });
   elements.launchRealtime.addEventListener("click", launchRealtimeRoom);
   window.addEventListener("message", handleRealtimeClientMessage);
   window.addEventListener("resize", resizeCanvas);
@@ -449,7 +470,11 @@ function setMode(nextMode) {
 }
 
 function setRealtimePreset(nextPreset) {
-  realtimePreset = getRealtimeRoomPreset(nextPreset).id;
+  const preset = getRealtimeRoomPreset(nextPreset);
+  realtimePreset = preset.id;
+  realtimeClientCount = normalizeRealtimeRoomClientCount(preset.clients.length, preset.clients.length);
+  elements.realtimeClientCount.value = String(realtimeClientCount);
+  syncRealtimeClientCount();
   syncRealtimePresetButtons();
 }
 
@@ -460,20 +485,47 @@ function syncRealtimePresetButtons() {
 }
 
 function launchRealtimeRoom() {
+  clearScheduledRealtimeRoomLaunch();
   const roomId = normalizeRoomId(elements.realtimeRoom.value) ?? REALTIME_ROOM_DEFAULT_ID;
   elements.realtimeRoom.value = roomId;
   syncRealtimeRoomOutput();
+  syncRealtimeClientCount();
 
   const baseUrl = new URL("./index.html", window.location.href);
   const clients = createRealtimeRoomClients({
     presetId: realtimePreset,
     roomId,
-    baseUrl
+    baseUrl,
+    clientCount: realtimeClientCount
   });
   realtimeClientStates = new Map();
   realtimeFrames = clients.map(createRealtimeFrame);
   elements.roomGrid.replaceChildren(...realtimeFrames.map((frame) => frame.element));
   renderRealtimeMetrics();
+}
+
+function scheduleRealtimeRoomLaunch({ immediate = false } = {}) {
+  if (mode !== "realtime") {
+    return;
+  }
+
+  clearScheduledRealtimeRoomLaunch();
+  if (immediate) {
+    launchRealtimeRoom();
+    return;
+  }
+
+  realtimeLaunchTimer = window.setTimeout(() => {
+    realtimeLaunchTimer = 0;
+    launchRealtimeRoom();
+  }, REALTIME_RELAUNCH_DELAY_MS);
+}
+
+function clearScheduledRealtimeRoomLaunch() {
+  if (realtimeLaunchTimer) {
+    window.clearTimeout(realtimeLaunchTimer);
+    realtimeLaunchTimer = 0;
+  }
 }
 
 function createRealtimeFrame(client) {
@@ -587,6 +639,19 @@ function renderRealtimeMetrics() {
 function syncRealtimeRoomOutput() {
   elements.realtimeRoomOutput.textContent =
     normalizeRoomId(elements.realtimeRoom.value) ?? REALTIME_ROOM_DEFAULT_ID;
+}
+
+function syncRealtimeClientCount({ writeValue = true } = {}) {
+  const previousCount = realtimeClientCount;
+  realtimeClientCount = normalizeRealtimeRoomClientCount(
+    elements.realtimeClientCount.value,
+    realtimeClientCount
+  );
+  if (writeValue) {
+    elements.realtimeClientCount.value = String(realtimeClientCount);
+  }
+  elements.realtimeClientCountOutput.textContent = String(realtimeClientCount);
+  return realtimeClientCount !== previousCount;
 }
 
 function getClientBehaviorLabel(client) {

@@ -3,6 +3,8 @@ import { normalizeRoomId } from "./room.js";
 import { SPACE_BOUNDS, clamp, clampVector, planeDistance } from "./physics/vector.js";
 
 export const REALTIME_ROOM_DEFAULT_ID = "lumen-webrtc-sim";
+export const REALTIME_ROOM_CLIENT_COUNT_MIN = 1;
+export const REALTIME_ROOM_CLIENT_COUNT_MAX = 8;
 
 export const REALTIME_ROOM_PRESETS = Object.freeze({
   mixed: Object.freeze({
@@ -67,12 +69,15 @@ export function getRealtimeRoomPreset(presetId) {
 export function createRealtimeRoomClients({
   presetId = "mixed",
   roomId = REALTIME_ROOM_DEFAULT_ID,
-  baseUrl = "./index.html"
+  baseUrl = "./index.html",
+  clientCount
 } = {}) {
   const preset = getRealtimeRoomPreset(presetId);
   const normalizedRoomId = normalizeRoomId(roomId) ?? REALTIME_ROOM_DEFAULT_ID;
-  return preset.clients.map((client, index) => {
-    const config = normalizePresetClient(client, index, preset.clients.length);
+  const count = normalizeRealtimeRoomClientCount(clientCount, preset.clients.length);
+  return Array.from({ length: count }, (_, index) => {
+    const client = createRepeatedPresetClient(preset.clients, index);
+    const config = normalizePresetClient(client, index, count);
     return {
       ...config,
       roomId: normalizedRoomId,
@@ -80,6 +85,17 @@ export function createRealtimeRoomClients({
       url: createSimulationClientUrl(baseUrl, normalizedRoomId, preset.id, config)
     };
   });
+}
+
+export function normalizeRealtimeRoomClientCount(value, fallback = REALTIME_ROOM_PRESETS.mixed.clients.length) {
+  const numericValue = Number(value);
+  const numericFallback = Number(fallback);
+  const count = Number.isFinite(numericValue) ? numericValue : numericFallback;
+  const roundedCount = Math.round(Number.isFinite(count) ? count : REALTIME_ROOM_PRESETS.mixed.clients.length);
+  return Math.max(
+    REALTIME_ROOM_CLIENT_COUNT_MIN,
+    Math.min(REALTIME_ROOM_CLIENT_COUNT_MAX, roundedCount)
+  );
 }
 
 export function createDefaultRealtimeRoomId(now = Date.now()) {
@@ -195,6 +211,22 @@ function createPresetClient(name, color, behavior, options = {}) {
   });
 }
 
+function createRepeatedPresetClient(clients, index) {
+  const sourceIndex = index % clients.length;
+  const cycle = Math.floor(index / clients.length);
+  const client = clients[sourceIndex];
+  if (cycle === 0) {
+    return client;
+  }
+
+  return {
+    ...client,
+    name: createRepeatedClientName(client.name, index),
+    color: COLORS[index % COLORS.length],
+    phase: readFiniteNumber(client.phase, sourceIndex * 0.57) + cycle * 0.43
+  };
+}
+
 function normalizePresetClient(client, index, count) {
   const config = {
     name: normalizeClientName(client.name, `Sim ${index + 1}`),
@@ -212,6 +244,12 @@ function normalizePresetClient(client, index, count) {
     ...config,
     startPosition: getSimulationClientStartPosition(config)
   };
+}
+
+function createRepeatedClientName(name, index) {
+  const suffix = ` ${index + 1}`;
+  const base = normalizeClientName(name, `Sim ${index + 1}`);
+  return `${base.slice(0, Math.max(1, 18 - suffix.length))}${suffix}`;
 }
 
 function createSimulationClientUrl(baseUrl, roomId, roomPreset, config) {

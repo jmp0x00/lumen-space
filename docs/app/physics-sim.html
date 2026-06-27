@@ -123,6 +123,19 @@
           </label>
           <input id="realtime-room-input" type="text" value="lumen-webrtc-sim">
 
+          <label for="realtime-client-count-input">
+            Clients
+            <output id="realtime-client-count-output" for="realtime-client-count-input">6</output>
+          </label>
+          <input
+            id="realtime-client-count-input"
+            type="number"
+            min="1"
+            max="8"
+            step="1"
+            value="6"
+          >
+
           <div
             class="realtime-preset-grid"
             id="realtime-preset-grid"
@@ -141,6 +154,6 @@
       </aside>
     </main>
 
-    <script type="module" src="./src/physics-sim.js?v=realtime-room-sim-20260627"></script>
+    <script type="module" src="./src/physics-sim.js?v=realtime-client-count-live-20260627"></script>
   </body>
 </html>
