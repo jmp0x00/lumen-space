@@ -1,6 +1,7 @@
 import { DEFAULT_COLOR, hslToHex, mixHexColors } from "../colors.js";
 import { normalizeRoomId } from "../room.js";
 import { createPulse } from "./pulses.js";
+import { getPeerStarCollisionDistance } from "./collision.js?v=peer-collision-radius-20260627";
 import { SPACE_BOUNDS, clamp, planeDistance } from "./vector.js";
 
 export const TOUCH_STAR_COUNT = 7;
@@ -18,7 +19,7 @@ export function collectTouchStarPulses(
   now = Date.now(),
   options = {}
 ) {
-  const radius = options.radius ?? TOUCH_STAR_RADIUS;
+  const starRadius = options.starRadius ?? TOUCH_STAR_RADIUS;
   const cooldownMs = options.cooldownMs ?? TOUCH_STAR_COOLDOWN_MS;
   const touchedIds = new Set();
   const pulses = [];
@@ -36,7 +37,12 @@ export function collectTouchStarPulses(
         continue;
       }
 
-      if (planeDistance(participant.position, star.position) > radius) {
+      const collisionDistance = getPeerStarCollisionDistance(
+        participant,
+        star.collisionRadius ?? starRadius,
+        options
+      );
+      if (planeDistance(participant.position, star.position) > collisionDistance) {
         continue;
       }
 
@@ -132,6 +138,7 @@ function createTouchStar(roomSeed, index, generation = 0, availableAt = 0, touch
       z: scaleBetween(seededText(seed, "z"), -0.9, 0.4)
     },
     color: hslToHex(hue, saturation, lightness),
+    collisionRadius: TOUCH_STAR_RADIUS,
     phase: seededText(seed, "phase") * Math.PI * 2,
     availableAt: Number(availableAt) || 0
   };

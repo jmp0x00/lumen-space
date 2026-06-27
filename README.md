@@ -10,10 +10,11 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Fresh rooms start with a generated funny name that can be edited or regenerated.
 - Create or join a room link.
 - Move your light by moving the pointer.
+- Nearby lights use a small size-based collision radius, with local lumes slightly larger and bots smaller.
 - Drift through small colorful touch stars to release pulses that blend star and lumen colors.
 - Send pulses that expand through the shared space.
 - When different players' pulse fronts meet, they create a brief resonance flash.
-- Add or remove local bots when you want extra ambient lights in the room.
+- Rooms start with passive AI-driven local bots that seek touch stars, and you can add or remove more bots.
 - Rooms are peer-to-peer and ephemeral; no account, backend server, or database is used.
 - If realtime networking is unavailable, the app keeps retrying while the visual room stays usable.
 
@@ -44,6 +45,9 @@ npm run serve
 
 Open `http://localhost:4173/`.
 
+To inspect peer collision scenarios without joining a room manually, open
+`http://localhost:4173/physics-sim.html`.
+
 ## Test
 
 ```bash
@@ -51,13 +55,14 @@ npm test
 ```
 
 Manual browser validation is documented in [docs/testing/manual-smoke-test.md](docs/testing/manual-smoke-test.md).
-For physics tuning, double-click the room label in the room to toggle a hidden debug readout with lume positions and velocities.
+For physics tuning, double-click the room label in the room to toggle a hidden debug readout with lume positions, velocities, and bot AI target state.
 
 ## Project Structure
 
 - `docs/app/`: static playable app intended for GitDocs hosting.
+- `docs/app/physics-sim.html`: automated physics inspection app with cluster, orbit, and crossing-route scenarios.
 - `docs/app/src/domain.js`: pure domain facade for identity, presence, debug rows, and compatibility exports.
-- `docs/app/src/physics/`: focused pure physics modules for vectors, local motion, bot drift, touch stars, pulses, and resonance.
+- `docs/app/src/physics/`: focused pure physics modules for vectors, local motion, peer collision/repulsion, AI-driven bot motion, touch stars, pulses, and resonance.
 - `docs/app/src/network.js`: Trystero/WebRTC room connection.
 - `docs/app/src/scene.js`: Three.js WebGL scene.
 - `docs/app/src/app.js`: UI orchestration.

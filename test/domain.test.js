@@ -116,12 +116,18 @@ test("formatParticipantDebugRows returns rounded lume state for the debug panel"
         id: "bot-1",
         name: "Bot",
         position: { x: 99, y: -99, z: 10 },
+        targetPosition: { x: 7.8, y: -4, z: 0 },
         velocity: { x: 3, y: 4, z: 0 },
+        botTargetStarId: "touch-star-2",
+        botTargetBestDistance: 1.234,
+        botTargetIdleSince: 3_500,
+        botSkippedStarId: "touch-star-0",
+        botSkippedStarUntil: 6_200,
         isBot: true
       },
       null
     ],
-    { digits: 1 }
+    { digits: 1, now: 5_000 }
   );
 
   assert.deepEqual(rows, [
@@ -139,9 +145,41 @@ test("formatParticipantDebugRows returns rounded lume state for the debug panel"
       kind: "bot",
       position: { x: SPACE_BOUNDS.x[1], y: SPACE_BOUNDS.y[0], z: SPACE_BOUNDS.z[1] },
       velocity: { x: 3, y: 4, z: 0 },
-      speed: 5
+      speed: 5,
+      ai: {
+        targetStarId: "touch-star-2",
+        targetDistance: 1.3,
+        bestDistance: 1.2,
+        idleMs: 1_500,
+        skippedStarId: "touch-star-0",
+        skipMs: 1_200
+      }
     }
   ]);
+});
+
+test("formatParticipantDebugRows keeps empty bot AI timings neutral", () => {
+  const rows = formatParticipantDebugRows(
+    [
+      {
+        id: "bot-2",
+        name: "Fresh Bot",
+        position: { x: 1, y: 2, z: 0 },
+        velocity: { x: 0, y: 0, z: 0 },
+        isBot: true
+      }
+    ],
+    { digits: 1, now: 5_000 }
+  );
+
+  assert.deepEqual(rows[0].ai, {
+    targetStarId: "drift",
+    targetDistance: null,
+    bestDistance: null,
+    idleMs: 0,
+    skippedStarId: null,
+    skipMs: 0
+  });
 });
 
 test("reducePresence accepts newer presence and preserves smooth current position", () => {

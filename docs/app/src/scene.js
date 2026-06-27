@@ -1,4 +1,4 @@
-import { getPulseRadius } from "./domain.js";
+import { getPeerVisualScale, getPulseRadius } from "./domain.js?v=peer-collision-radius-20260627";
 
 const THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js";
 
@@ -92,7 +92,7 @@ export async function createSpaceScene({
         participant.position.y,
         participant.position.z
       );
-      mesh.group.scale.setScalar(participant.isLocal ? 1.18 : participant.isBot ? 0.74 : 1);
+      mesh.group.scale.setScalar(getPeerVisualScale(participant));
       mesh.group.userData.name = participant.name;
       mesh.group.userData.isBot = participant.isBot;
 

@@ -5,6 +5,7 @@ import {
   SPACE_BOUNDS,
   STALE_PEER_MS,
   addPulse,
+  applyPeerRepulsionToParticipants,
   clampVector,
   collectDueBotPulses,
   collectTouchStarPulses,
@@ -27,10 +28,10 @@ import {
   updatePulseResonances,
   updatePulses,
   updateBotParticipants
-} from "./domain.js";
+} from "./domain.js?v=peer-collision-radius-20260627";
 import { connectToRoom } from "./network.js";
 import { generateDisplayName, generateDisplayNameSync } from "./names.js";
-import { createSpaceScene } from "./scene.js";
+import { createSpaceScene } from "./scene.js?v=peer-collision-radius-20260627";
 
 const elements = {
   lobby: document.querySelector("#lobby"),
@@ -59,6 +60,7 @@ const elements = {
 };
 
 const storageKey = "lumen-space.identity";
+const DEFAULT_ROOM_BOT_COUNT = 2;
 const savedIdentity = loadSavedIdentity();
 const initialRoomId = getRoomIdFromLocation(window.location);
 const hasSavedIdentity = Boolean(savedIdentity);
@@ -206,6 +208,7 @@ async function enterRoom() {
   };
   pointerTarget = localParticipant.position;
   touchStars = createTouchStars(roomId);
+  botParticipants = createInitialBotParticipants(Date.now());
   setDebugVisible(false);
   updatePeopleList();
   setStatus("Starting room", "pending");
@@ -375,7 +378,14 @@ function startSimulationLoop() {
     );
 
     if (botParticipants.length > 0) {
-      botParticipants = updateBotParticipants(botParticipants, nowMs);
+      botParticipants = updateBotParticipants(botParticipants, nowMs, deltaSeconds, {
+        touchStars
+      });
+    }
+
+    applyParticipantRepulsion(deltaSeconds);
+
+    if (botParticipants.length > 0) {
       const botPulseResult = collectDueBotPulses(botParticipants, nowMs);
       botParticipants = botPulseResult.participants;
       for (const pulse of botPulseResult.pulses) {
@@ -385,7 +395,8 @@ function startSimulationLoop() {
 
     pulses = updatePulses(pulses, nowMs);
     touchStars = suppressTouchStarsFromPulses(touchStars, pulses, nowMs);
-    const starTouchResult = collectTouchStarPulses(touchStars, [localParticipant], nowMs);
+    const starTouchParticipants = [localParticipant, ...botParticipants];
+    const starTouchResult = collectTouchStarPulses(touchStars, starTouchParticipants, nowMs);
     touchStars = starTouchResult.touchStars;
     for (const pulse of starTouchResult.pulses) {
       const message = createPulseMessage(pulse);
@@ -403,6 +414,19 @@ function startSimulationLoop() {
 function getParticipants() {
   const liveParticipants = [localParticipant, ...Object.values(peers)];
   return [...liveParticipants, ...botParticipants];
+}
+
+function applyParticipantRepulsion(deltaSeconds) {
+  const repelledParticipants = applyPeerRepulsionToParticipants(getParticipants(), deltaSeconds);
+  const repelledById = new Map(
+    repelledParticipants.map((participant) => [participant.id, participant])
+  );
+
+  localParticipant = repelledById.get(localParticipant.id) ?? localParticipant;
+  peers = Object.fromEntries(
+    Object.entries(peers).map(([peerId, peer]) => [peerId, repelledById.get(peerId) ?? peer])
+  );
+  botParticipants = botParticipants.map((bot) => repelledById.get(bot.id) ?? bot);
 }
 
 function sendPresence() {
@@ -511,16 +535,25 @@ function updateDebugPanel() {
     return;
   }
 
-  const rows = formatParticipantDebugRows(getParticipants(), { digits: 2 });
+  const rows = formatParticipantDebugRows(getParticipants(), { digits: 2, now: Date.now() });
   elements.debugOutput.textContent = rows
-    .map(
-      (row) =>
+    .map((row) => {
+      const botAiText = row.ai ? ` ${formatBotAiDebug(row.ai)}` : "";
+      return (
         `${row.kind.padEnd(5)} ${row.name.padEnd(18)} ` +
         `p(${formatDebugVector(row.position)}) ` +
         `v(${formatDebugVector(row.velocity)}) ` +
-        `s=${formatDebugNumber(row.speed)}`
-    )
+        `s=${formatDebugNumber(row.speed)}` +
+        botAiText
+      );
+    })
     .join("\n");
+}
+
+function formatBotAiDebug(ai) {
+  const target = ai.targetStarId ?? "drift";
+  const distance = formatDebugNullableNumber(ai.targetDistance);
+  return `ai(target=${target} d=${distance})`;
 }
 
 function formatDebugVector(vector) {
@@ -533,6 +566,10 @@ function formatDebugVector(vector) {
 
 function formatDebugNumber(value) {
   return Number(value).toFixed(2).padStart(6, " ");
+}
+
+function formatDebugNullableNumber(value) {
+  return value === null || value === undefined ? "--" : Number(value).toFixed(2);
 }
 
 function updatePeopleList() {
@@ -588,7 +625,7 @@ function chooseStartPosition(seedText) {
   return clampVector({ x, y, z: 0 });
 }
 
-async function createBotParticipant(index, createdAt = Date.now()) {
+function createBotParticipant(index, createdAt = Date.now()) {
   const botPositions = [
     { color: "#f0abfc", basePosition: { x: SPACE_BOUNDS.x[0] * 0.42, y: 1.6, z: -0.6 } },
     { color: "#fcd34d", basePosition: { x: SPACE_BOUNDS.x[1] * 0.36, y: -1.4, z: -0.8 } },
@@ -598,7 +635,7 @@ async function createBotParticipant(index, createdAt = Date.now()) {
   ];
   const template = botPositions[index % botPositions.length];
   const driftSeed = 2.4 + index * 1.7;
-  const name = await generateDisplayName(`bot-${roomId}-${index}-${createdAt}`);
+  const name = generateDisplayNameSync(`bot-${roomId}-${index}-${createdAt}`);
 
   return {
     id: `bot-${index + 1}-${createdAt}`,
@@ -606,10 +643,18 @@ async function createBotParticipant(index, createdAt = Date.now()) {
     color: template.color,
     basePosition: template.basePosition,
     position: template.basePosition,
+    targetPosition: template.basePosition,
+    velocity: { x: 0, y: 0, z: 0 },
     driftSeed,
     pulseEveryMs: 4_500 + (index % 5) * 650,
     nextPulseAt: createdAt + 900 + (index % 5) * 520,
     pulseStrength: 0.72 + (index % 3) * 0.08,
     isBot: true
   };
+}
+
+function createInitialBotParticipants(createdAt = Date.now()) {
+  return Array.from({ length: DEFAULT_ROOM_BOT_COUNT }, (_, index) =>
+    createBotParticipant(index, createdAt + index)
+  );
 }

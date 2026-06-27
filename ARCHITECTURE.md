@@ -13,18 +13,21 @@
 
 The app is split into pure domain/physics modules and browser adapters.
 
-- `domain.js` is the public domain facade. It owns identity sanitization, debug row formatting, presence reduction, and stale-peer pruning, while re-exporting stable room and physics APIs for existing callers.
+- `domain.js` is the public domain facade. It owns identity sanitization, debug row formatting including bot AI target state, presence reduction, and stale-peer pruning, while re-exporting stable room and physics APIs for existing callers.
 - `room.js` owns room ID normalization, room ID generation, room extraction from URLs, and invite URL creation.
 - `colors.js` owns color constants, hex color normalization, and color mixing utilities used by identity and pulse logic.
 - `physics/vector.js` owns vector sanitization, clamping, interpolation, and distance helpers.
 - `physics/motion.js` owns pointer-driven local lume motion with inertia, damping, speed caps, and bounds.
-- `physics/bots.js` owns deterministic bot drift and bot pulse scheduling.
-- `physics/touch-stars.js` owns deterministic touch-star placement, plane-distance collision, cooldown, respawn, and remote suppression.
+- `physics/collision.js` owns size-derived peer collision radii and shared peer/peer plus peer/star collision-distance helpers.
+- `physics/repulsion.js` owns bounded peer-to-peer velocity nudges and visible movement-plane separation correction using pair collision distances from `physics/collision.js`.
+- `physics/bots.js` owns deterministic bot AI target generation toward the closest available touch star, shared motion integration for bot participants, and bot pulse scheduling.
+- `physics/touch-stars.js` owns deterministic touch-star placement, peer-radius-aware plane-distance collision, cooldown, respawn, and remote suppression.
 - `physics/pulses.js` owns pulse normalization, progression, radius calculation, deduplication, expiry, and resonance detection.
 - `network.js` dynamically imports Trystero and exposes a small room adapter with `sendPresence`, `sendPulse`, and `leave`.
 - `names.js` dynamically imports Unique Names Generator and falls back to a small deterministic local generator if the CDN is unavailable.
 - `scene.js` dynamically imports Three.js and renders participants, labels, star field, touch stars, pulse rings, and resonance flashes.
 - `app.js` coordinates lobby state, local storage, URL updates, realtime connection, simulation ticks, UI controls, and the hidden physics debug overlay.
+- `physics-sim.html`, `physics-sim.css`, and `physics-sim.js` form a separate static inspection app that runs scripted peers against the same pure physics modules.
 
 This shape keeps network and rendering side effects away from the logic covered by unit tests, and makes each physics behavior independently testable.
 
@@ -34,15 +37,20 @@ This shape keeps network and rendering side effects away from the logic covered 
 2. `app.js` sanitizes identity, stores it in `localStorage`, and writes the room to the URL.
 3. `scene.js` starts the WebGL scene and maps pointer positions to world-space targets.
 4. `app.js` updates local motion on each animation frame through `physics/motion.js`.
-5. When the debug overlay is visible, `app.js` asks the domain layer for rounded participant position, velocity, and speed rows each frame.
-6. `network.js` broadcasts throttled `presence` messages through Trystero.
-7. Remote `presence` messages are reduced into peer state and interpolated by the simulation loop.
-8. `physics/touch-stars.js` creates deterministic random-looking touch stars from the room ID.
-9. Crossing an available touch star emits a pulse whose color blends the star and lumen colors, with optional `trigger`, `starId`, and `starGeneration` metadata.
-10. Other clients suppress and respawn the matching touch star when that star-touch pulse arrives.
-11. Local and remote `pulse` messages are normalized, deduplicated, rendered, and expired by `physics/pulses.js`.
-12. `physics/pulses.js` derives resonance events when different pulse fronts meet; no extra network message is sent.
-13. User-added bots drift and emit scheduled pulses from the same pulse pipeline as people.
+5. `physics/collision.js` derives each participant's collision radius from the same visual scale used by the renderer, and `physics/repulsion.js` applies nudges when peer collision circles overlap.
+6. When the debug overlay is visible, `app.js` asks the domain layer for rounded participant position, velocity, speed, and bot AI target/distance rows each frame.
+7. `network.js` broadcasts throttled `presence` messages through Trystero.
+8. Remote `presence` messages are reduced into peer state and interpolated by the simulation loop.
+9. `physics/touch-stars.js` creates deterministic random-looking touch stars from the room ID.
+10. Crossing an available touch star emits a pulse when the peer collision circle overlaps the star collision circle; the pulse color blends the star and lumen colors, with optional `trigger`, `starId`, and `starGeneration` metadata.
+11. Other clients suppress and respawn the matching touch star when that star-touch pulse arrives.
+12. Local and remote `pulse` messages are normalized, deduplicated, rendered, and expired by `physics/pulses.js`.
+13. `physics/pulses.js` derives resonance events when different pulse fronts meet; no extra network message is sent.
+14. Local bots choose the closest available touch star on each update, ignore cooling stars, move through the same `physics/motion.js` integration as a player-driven lume, preserve existing velocity, consume stars through the same touch-star pulse pipeline as the player, and emit scheduled pulses.
+
+## Physics Simulator
+
+The physics simulator is a developer-facing static page at `physics-sim.html`. It uses the same `physics/motion.js`, `physics/collision.js`, `physics/repulsion.js`, color constants, and world bounds as the main app, but replaces WebRTC and Three.js with a deterministic 2D canvas harness. `physics-sim-scenarios.js` defines reusable scenario metadata for clustered peers, orbiting peers, and a two-peer crossing-route case whose scripted targets intersect at the center. The canvas shows routes, collision circles, repulsion vectors, closest distance, average repulsion, average speed, and per-peer coordinates continuously.
 
 ## Message Interfaces
 

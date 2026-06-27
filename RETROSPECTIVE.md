@@ -20,6 +20,19 @@
 - Refactored the monolithic domain file into smaller pure modules for room IDs, color helpers, vector math, local motion, bot physics, touch-star physics, and pulse/resonance physics.
 - Kept `domain.js` as a compatibility facade so the browser app did not need a broad import migration while the internal architecture became easier to test and tune.
 - Added focused unit tests under `test/physics/` for vector helpers, motion integration, bot drift and pulse timing, touch-star collision/suppression, pulse lifecycle, and resonance detection.
+- Added a dedicated peer repulsion physics module so overlapping lumes receive deterministic bounded velocity nudges, then covered direction, cancellation, no-op, overlap, and participant-list behavior with unit tests.
+- Tuned repulsion after visual review showed the first pass was too subtle: the separation correction now avoids an extra `dt` multiplier so peers visibly affect one another.
+- Added a separate automated physics simulator page because visual tuning in the full multiplayer room made it too hard to tell whether peers were actually influencing one another.
+- Expanded the simulator into named scenarios, including a two-peer route-intersection case, so a specific physics question can be inspected without manually arranging the scene.
+- Corrected repulsion to use the visible movement plane by default after bot testing revealed that depth-based distance could make overlapping lumes look unaffected.
+- Refactored bots from scripted-position entities into AI-target-driven participants that use the same motion integration as player movement, so repulsion changes persist across frames.
+- Redirected bot AI from ambient paths to star-seeking targets, while keeping push effects in velocity so player contact can still bend the bot's route without rewriting its objective.
+- Started rooms with visible local bots and let bots consume touch stars through the same pulse pipeline as players.
+- Found that equal-strength peer repulsion could let two bots orbit just outside a shared star's touch radius; moved the fix into bot AI instead of core physics by tracking target progress and switching stalled bots to the next nearest available star.
+- Expanded the hidden debug overlay with bot AI target and distance state after visual observation still made some bots look motionless without explaining their intent.
+- Tried fixing bot target thrashing with sticky target selection and idle-based target skipping, but visual testing showed the behavior was still too complex for the current bot model.
+- Rolled back the sticky/idle bot targeting experiment after visual testing showed target churn and wall jams were still too hard to reason about; bots now simply chase the closest available star every update, and live peer collisions are kept small enough to avoid broad repulsion jams.
+- Replaced the single repulsion radius with a shared size-based collision radius, so local lumes, remote lumes, and bots have different collision footprints and star touches use peer-radius plus star-radius contact instead of point overlap.
 
 ## AI Tools Used
 
@@ -38,6 +51,7 @@
 - The planning phase helped avoid accidentally building a default card game.
 - Separating pure logic from WebRTC/WebGL kept tests straightforward.
 - Splitting physics into focused modules made behavior-specific tests easier to read without changing the playable browser surface.
+- Building a small inspection harness around the pure physics modules made movement tuning faster than repeatedly staging multiplayer scenarios by hand.
 - Adding a small hidden debug readout made multiplayer movement easier to reason about while preserving the simple player-facing interface.
 - A static app shape matched the GitDocs sharing goal and avoided backend credentials.
 

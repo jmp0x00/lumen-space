@@ -3,8 +3,27 @@ import {
   BOT_PULSE_DEFAULT_INTERVAL_MS,
   collectDueBotPulses,
   updateBotParticipants
-} from "./physics/bots.js";
+} from "./physics/bots.js?v=peer-collision-radius-20260627";
+import {
+  BOT_PEER_VISUAL_SCALE,
+  LOCAL_PEER_VISUAL_SCALE,
+  PEER_COLLISION_RADIUS,
+  REMOTE_PEER_VISUAL_SCALE,
+  getPeerCollisionDistance,
+  getPeerCollisionRadius,
+  getPeerStarCollisionDistance,
+  getPeerVisualScale
+} from "./physics/collision.js?v=peer-collision-radius-20260627";
 import { updateMotion } from "./physics/motion.js";
+import {
+  REPULSION_MAX_SPEED,
+  REPULSION_MAX_VELOCITY_DELTA,
+  REPULSION_POSITION_RESPONSE_SECONDS,
+  REPULSION_STRENGTH,
+  applyPeerRepulsion,
+  applyPeerRepulsionToParticipants,
+  calculatePeerRepulsionVelocityDelta
+} from "./physics/repulsion.js?v=peer-collision-radius-20260627";
 import {
   MAX_ACTIVE_RESONANCES,
   PULSE_BASE_RADIUS,
@@ -27,12 +46,13 @@ import {
   collectTouchStarPulses,
   createTouchStars,
   suppressTouchStarsFromPulses
-} from "./physics/touch-stars.js";
+} from "./physics/touch-stars.js?v=peer-collision-radius-20260627";
 import {
   SPACE_BOUNDS,
   clamp,
   clampVector,
   lerpVector,
+  planeDistance,
   sanitizeVector
 } from "./physics/vector.js";
 
@@ -47,7 +67,26 @@ export {
   normalizeRoomId
 } from "./room.js";
 export { SPACE_BOUNDS, clamp, sanitizeVector, clampVector, lerpVector };
+export {
+  BOT_PEER_VISUAL_SCALE,
+  LOCAL_PEER_VISUAL_SCALE,
+  PEER_COLLISION_RADIUS,
+  REMOTE_PEER_VISUAL_SCALE,
+  getPeerCollisionDistance,
+  getPeerCollisionRadius,
+  getPeerStarCollisionDistance,
+  getPeerVisualScale
+};
 export { updateMotion };
+export {
+  REPULSION_MAX_SPEED,
+  REPULSION_MAX_VELOCITY_DELTA,
+  REPULSION_POSITION_RESPONSE_SECONDS,
+  REPULSION_STRENGTH,
+  applyPeerRepulsion,
+  applyPeerRepulsionToParticipants,
+  calculatePeerRepulsionVelocityDelta
+};
 export {
   BOT_PULSE_DEFAULT_INTERVAL_MS,
   collectDueBotPulses,
@@ -95,12 +134,13 @@ export function sanitizeIdentity(raw = {}) {
 
 export function formatParticipantDebugRows(participants, options = {}) {
   const digits = clamp(Math.floor(Number(options.digits ?? 2)), 0, 4);
+  const now = normalizeDebugTimestamp(options.now);
   return (Array.isArray(participants) ? participants : [])
     .filter(isObject)
     .map((participant) => {
       const position = clampVector(participant.position);
       const velocity = sanitizeVector(participant.velocity);
-      return {
+      const row = {
         id: String(participant.id ?? "unknown"),
         name: String(participant.name ?? "Unknown").slice(0, NAME_MAX_LENGTH),
         kind: participant.isLocal ? "local" : participant.isBot ? "bot" : "peer",
@@ -108,6 +148,10 @@ export function formatParticipantDebugRows(participants, options = {}) {
         velocity: roundVector(velocity, digits),
         speed: roundNumber(Math.hypot(velocity.x, velocity.y, velocity.z), digits)
       };
+      if (participant.isBot) {
+        row.ai = formatBotDebugState(participant, position, now, digits);
+      }
+      return row;
     });
 }
 
@@ -194,6 +238,52 @@ function roundVector(vector, digits) {
     y: roundNumber(safeVector.y, digits),
     z: roundNumber(safeVector.z, digits)
   };
+}
+
+function formatBotDebugState(participant, position, now, digits) {
+  const targetPosition = isObject(participant.targetPosition)
+    ? clampVector(participant.targetPosition)
+    : null;
+  const idleSince = normalizeNullableTimestamp(participant.botTargetIdleSince);
+  const skippedUntil = normalizeNullableTimestamp(participant.botSkippedStarUntil);
+
+  return {
+    targetStarId: normalizeDebugText(participant.botTargetStarId, "drift"),
+    targetDistance:
+      targetPosition === null ? null : roundNumber(planeDistance(position, targetPosition), digits),
+    bestDistance: roundNullableNumber(participant.botTargetBestDistance, digits),
+    idleMs: idleSince === null ? 0 : Math.max(0, Math.round(now - idleSince)),
+    skippedStarId: normalizeDebugText(participant.botSkippedStarId, null),
+    skipMs: skippedUntil === null ? 0 : Math.max(0, Math.round(skippedUntil - now))
+  };
+}
+
+function normalizeDebugTimestamp(value) {
+  const timestamp = Number(value);
+  return Number.isFinite(timestamp) ? timestamp : Date.now();
+}
+
+function normalizeNullableTimestamp(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const timestamp = Number(value);
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function normalizeDebugText(value, fallback) {
+  const text = String(value ?? "").trim();
+  return text || fallback;
+}
+
+function roundNullableNumber(value, digits) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? roundNumber(numeric, digits) : null;
 }
 
 function roundNumber(value, digits) {

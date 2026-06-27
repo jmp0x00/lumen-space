@@ -11,6 +11,7 @@ import {
   createPulseMessage,
   normalizePulseMessage
 } from "../../docs/app/src/physics/pulses.js";
+import { getPeerCollisionRadius } from "../../docs/app/src/physics/collision.js";
 import { SPACE_BOUNDS } from "../../docs/app/src/physics/vector.js";
 
 test("touch-star fields are deterministic per room and stay inside bounds", () => {
@@ -80,6 +81,51 @@ test("touch-star collisions use movement-plane distance instead of rendered dept
 
   assert.equal(touched.pulses.length, 1);
   assert.equal(touched.pulses[0].starId, "touch-star-depth");
+});
+
+test("touch-star collisions include peer collision radius", () => {
+  const touchStars = [
+    {
+      id: "touch-star-edge",
+      position: { x: 0, y: 0, z: 0 },
+      color: "#f0abfc",
+      collisionRadius: 0.48,
+      phase: 0,
+      availableAt: 0
+    }
+  ];
+  const participant = {
+    id: "local",
+    color: "#7dd3fc",
+    position: { x: 0.48 + getPeerCollisionRadius({ isLocal: true }) - 0.01, y: 0, z: 0 },
+    isLocal: true
+  };
+
+  const touched = collectTouchStarPulses(touchStars, [participant], 2_000);
+  const withoutPeerRadius = collectTouchStarPulses(touchStars, [participant], 2_000, {
+    collisionRadius: 0
+  });
+
+  assert.equal(touched.pulses.length, 1);
+  assert.deepEqual(withoutPeerRadius.pulses, []);
+});
+
+test("bot touch-star collisions emit a bot-strength star pulse", () => {
+  const touchStars = createTouchStars("lumen-bot-touch", 1);
+  const participant = {
+    id: "bot-1",
+    color: "#86efac",
+    position: touchStars[0].position,
+    isBot: true
+  };
+
+  const touched = collectTouchStarPulses(touchStars, [participant], 2_000);
+
+  assert.equal(touched.pulses.length, 1);
+  assert.equal(touched.pulses[0].sourceId, "bot-1");
+  assert.equal(touched.pulses[0].trigger, "star-touch");
+  assert.equal(touched.pulses[0].strength, 0.84);
+  assert.equal(touched.touchStars[0].availableAt, 2_000 + TOUCH_STAR_COOLDOWN_MS);
 });
 
 test("remote star-touch pulses suppress and respawn the matching star deterministically", () => {
