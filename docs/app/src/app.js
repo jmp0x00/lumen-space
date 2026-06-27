@@ -417,12 +417,23 @@ function getParticipants() {
 }
 
 function applyParticipantRepulsion(deltaSeconds) {
-  const repelledParticipants = applyPeerRepulsionToParticipants(getParticipants(), deltaSeconds);
+  const participants = [
+    { ...localParticipant, targetPosition: pointerTarget },
+    ...Object.values(peers),
+    ...botParticipants
+  ];
+  const repelledParticipants = applyPeerRepulsionToParticipants(participants, deltaSeconds);
   const repelledById = new Map(
     repelledParticipants.map((participant) => [participant.id, participant])
   );
 
-  localParticipant = repelledById.get(localParticipant.id) ?? localParticipant;
+  const repelledLocalParticipant = repelledById.get(localParticipant.id);
+  if (repelledLocalParticipant) {
+    pointerTarget = repelledLocalParticipant.targetPosition ?? pointerTarget;
+    const { targetPosition, ...nextLocalParticipant } = repelledLocalParticipant;
+    localParticipant = nextLocalParticipant;
+  }
+
   peers = Object.fromEntries(
     Object.entries(peers).map(([peerId, peer]) => [peerId, repelledById.get(peerId) ?? peer])
   );

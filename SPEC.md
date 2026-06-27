@@ -47,6 +47,7 @@ Out of scope:
 - Remote peer motion must interpolate smoothly instead of snapping.
 - Live-room lumes must derive collision radius from participant visual size, with local lumes slightly larger than remote lumes and bots smaller.
 - Peer collision radius must be used for peer-to-peer repulsion and peer-to-star touch detection.
+- Peer-to-peer repulsion must carry the participant's current movement target with the collision displacement so idle lumes settle where they were pushed instead of returning to a stale target.
 - The peer-repulsion physics module must remain deterministic and tunable for simulator experiments.
 - The physics simulator must run scripted peers automatically and expose collision radius, strength, and separation controls.
 - The physics simulator must include multiple scenarios, including a two-peer crossing-route scenario where route targets intersect at the center.
@@ -72,6 +73,7 @@ Out of scope:
 - Two browser tabs using the same room show each other as separate colored lights.
 - Pointer movement updates the local light and propagates to peers.
 - Nearby lumes and bots use size-based collision contact while remaining inside the playable bounds, and bots continuously pursue the closest available star instead of keeping sticky or skipped targets.
+- When a moving participant pushes an idle peer, the idle peer remains at the pushed resting position until new input or presence data moves it again.
 - Opening `physics-sim.html` starts an automated peer simulation that visibly shows repulsion without requiring network setup.
 - In `physics-sim.html`, selecting the crossing scenario shows two peers following intersecting routes through the center.
 - Touching an environmental star emits a blended-color pulse and temporarily hides that star.

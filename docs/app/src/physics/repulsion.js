@@ -40,14 +40,24 @@ export function applyPeerRepulsion(peer, peers, deltaSeconds, options = {}) {
     },
     maxSpeed
   );
+  const nextPosition = clampVector({
+    x: position.x + delta.x * positionResponseSeconds,
+    y: position.y + delta.y * positionResponseSeconds,
+    z: position.z + delta.z * positionResponseSeconds
+  });
 
   return {
     ...peer,
-    position: clampVector({
-      x: position.x + delta.x * positionResponseSeconds,
-      y: position.y + delta.y * positionResponseSeconds,
-      z: position.z + delta.z * positionResponseSeconds
-    }),
+    position: nextPosition,
+    ...(hasVector(peer?.targetPosition)
+      ? {
+          targetPosition: carryTargetWithPositionDelta(
+            peer.targetPosition,
+            position,
+            nextPosition
+          )
+        }
+      : {}),
     velocity: nextVelocity
   };
 }
@@ -126,6 +136,18 @@ export function calculatePeerRepulsionVelocityDelta(peer, peers, deltaSeconds, o
 
 export { PEER_COLLISION_RADIUS };
 
+export function carryTargetWithPositionDelta(target, previousPosition, nextPosition) {
+  const safeTarget = clampVector(target);
+  const previous = clampVector(previousPosition);
+  const next = clampVector(nextPosition);
+
+  return clampVector({
+    x: safeTarget.x + next.x - previous.x,
+    y: safeTarget.y + next.y - previous.y,
+    z: safeTarget.z + next.z - previous.z
+  });
+}
+
 function normalizeDeltaSeconds(deltaSeconds, options) {
   const maxDeltaSeconds = readNonNegative(options.maxDeltaSeconds, 0.08);
   return clamp(deltaSeconds, 0, maxDeltaSeconds);
@@ -173,6 +195,10 @@ function getPeerId(peer) {
 
 function hasPosition(peer) {
   return typeof peer.position === "object" && peer.position !== null;
+}
+
+function hasVector(value) {
+  return typeof value === "object" && value !== null;
 }
 
 function seededUnit(value) {

@@ -20,6 +20,7 @@ The app is split into pure domain/physics modules and browser adapters.
 - `physics/motion.js` owns pointer-driven local lume motion with inertia, damping, speed caps, and bounds.
 - `physics/collision.js` owns size-derived peer collision radii and shared peer/peer plus peer/star collision-distance helpers.
 - `physics/repulsion.js` owns bounded peer-to-peer velocity nudges and visible movement-plane separation correction using pair collision distances from `physics/collision.js`.
+- Peer repulsion also carries each participant's current movement target by the same displacement, preventing idle local or remote lumes from easing back to stale targets after a push.
 - `physics/bots.js` owns deterministic bot AI target generation toward the closest available touch star, shared motion integration for bot participants, and bot pulse scheduling.
 - `physics/touch-stars.js` owns deterministic touch-star placement, peer-radius-aware plane-distance collision, cooldown, respawn, and remote suppression.
 - `physics/pulses.js` owns pulse normalization, progression, radius calculation, deduplication, expiry, and resonance detection.
@@ -37,7 +38,7 @@ This shape keeps network and rendering side effects away from the logic covered 
 2. `app.js` sanitizes identity, stores it in `localStorage`, and writes the room to the URL.
 3. `scene.js` starts the WebGL scene and maps pointer positions to world-space targets.
 4. `app.js` updates local motion on each animation frame through `physics/motion.js`.
-5. `physics/collision.js` derives each participant's collision radius from the same visual scale used by the renderer, and `physics/repulsion.js` applies nudges when peer collision circles overlap.
+5. `physics/collision.js` derives each participant's collision radius from the same visual scale used by the renderer, and `physics/repulsion.js` applies nudges when peer collision circles overlap while carrying any saved movement target along with the pushed position.
 6. When the debug overlay is visible, `app.js` asks the domain layer for rounded participant position, velocity, speed, and bot AI target/distance rows each frame.
 7. `network.js` broadcasts throttled `presence` messages through Trystero.
 8. Remote `presence` messages are reduced into peer state and interpolated by the simulation loop.

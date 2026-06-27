@@ -11,6 +11,7 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Create or join a room link.
 - Move your light by moving the pointer.
 - Nearby lights use a small size-based collision radius, with local lumes slightly larger and bots smaller.
+- Pushed idle lights keep the displaced resting spot until fresh pointer or presence input moves them again.
 - Drift through small colorful touch stars to release pulses that blend star and lumen colors.
 - Send pulses that expand through the shared space.
 - When different players' pulse fronts meet, they create a brief resonance flash.

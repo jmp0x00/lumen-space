@@ -39,6 +39,27 @@ test("peer repulsion pushes a peer away from a nearby peer without mutating inpu
   assert.deepEqual(otherPeer.position, { x: 0.5, y: 0, z: 0 });
 });
 
+test("peer repulsion carries an idle movement target with the pushed position", () => {
+  const peer = {
+    id: "idle-peer",
+    position: { x: 0, y: 0, z: 0 },
+    targetPosition: { x: 0, y: 0, z: 0 },
+    velocity: { x: 0, y: 0, z: 0 }
+  };
+  const pushingPeer = {
+    id: "pushing-peer",
+    position: { x: 0.5, y: 0, z: 0 },
+    velocity: { x: 0, y: 0, z: 0 }
+  };
+
+  const next = applyPeerRepulsion(peer, [peer, pushingPeer], 0.1, testRepulsionOptions);
+
+  assert.deepEqual(next.position, { x: -0.07, y: 0, z: 0 });
+  assert.deepEqual(next.targetPosition, { x: -0.07, y: 0, z: 0 });
+  assert.deepEqual(next.velocity, { x: -0.5, y: 0, z: 0 });
+  assert.deepEqual(peer.targetPosition, { x: 0, y: 0, z: 0 });
+});
+
 test("default peer repulsion uses size-based collision radius", () => {
   const peer = {
     id: "peer-a",
