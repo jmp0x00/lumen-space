@@ -216,8 +216,8 @@ function renderSoundControl(elements, sound) {
   const isAvailable = Boolean(sound?.available);
   const isEnabled = Boolean(sound?.enabled);
   elements.soundButton.hidden = !isAvailable;
-  elements.soundButton.textContent = isEnabled ? "Sound On" : "Sound Off";
-  elements.soundButton.title = isEnabled ? "Mute sound effects" : "Unmute sound effects";
+  elements.soundButton.textContent = isEnabled ? "Lo-Fi On" : "Lo-Fi Off";
+  elements.soundButton.title = isEnabled ? "Mute lo-fi room music" : "Unmute lo-fi room music";
   elements.soundButton.setAttribute("aria-label", elements.soundButton.title);
   elements.soundButton.setAttribute("aria-pressed", String(isEnabled));
 }

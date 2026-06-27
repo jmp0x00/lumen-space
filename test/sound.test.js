@@ -1,14 +1,36 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  createLofiLoopPattern,
   collectNewSoundCues,
   createPulseSoundCue,
   createResonanceSoundCue,
   createSoundCueSnapshot,
+  LOFI_LOOP_BPM,
   SOUND_CUE_MEMORY_LIMIT
 } from "../docs/app/src/sound.js";
 
-test("createPulseSoundCue maps local manual pulses to soft falling tones", () => {
+test("createLofiLoopPattern describes the procedural lo-fi room song", () => {
+  const pattern = createLofiLoopPattern();
+
+  assert.equal(pattern.type, "lofi-loop");
+  assert.equal(pattern.bpm, LOFI_LOOP_BPM);
+  assert.equal(pattern.bars, 4);
+  assert.equal(pattern.stepsPerBar, 16);
+  assert.equal(pattern.stepSeconds, 0.1923);
+  assert.deepEqual(
+    pattern.chords.map((chord) => `${chord.name}@${chord.step}`),
+    ["Am9@0", "Fmaj7@16", "Cmaj7@32", "G6@48"]
+  );
+  assert.deepEqual(
+    pattern.drums.filter((drum) => drum.type === "snare").map((drum) => drum.step),
+    [16, 48]
+  );
+  assert.equal(pattern.bass.length, 8);
+  assert.equal(pattern.melody.length, 6);
+});
+
+test("createPulseSoundCue maps local manual pulses to mellow lo-fi accent notes", () => {
   const cue = createPulseSoundCue(
     {
       id: "manual-1",
@@ -24,17 +46,23 @@ test("createPulseSoundCue maps local manual pulses to soft falling tones", () =>
     id: "pulse:manual-1",
     type: "pulse",
     color: "#7dd3fc",
-    frequency: 333.13,
-    endFrequency: 166.56,
-    gain: 0.063,
-    duration: 0.434,
+    frequency: 329.63,
+    endFrequency: 237.33,
+    gain: 0.048,
+    duration: 0.519,
     pan: 0.5,
     wave: "sine",
-    sparkle: false
+    sparkle: false,
+    filterFrequency: 1118,
+    delay: {
+      time: 0.19,
+      feedback: 0.22,
+      mix: 0.2
+    }
   });
 });
 
-test("createPulseSoundCue gives star-touch pulses a brighter cue", () => {
+test("createPulseSoundCue gives star-touch pulses a brighter musical accent", () => {
   const cue = createPulseSoundCue({
     id: "star-1",
     sourceId: "client-local",
@@ -50,7 +78,8 @@ test("createPulseSoundCue gives star-touch pulses a brighter cue", () => {
   assert.equal(cue.color, "#fcd34d");
   assert.equal(cue.pan, -0.72);
   assert.ok(cue.frequency > cue.endFrequency);
-  assert.ok(cue.gain > 0.06);
+  assert.equal(cue.delay.feedback, 0.16);
+  assert.ok(cue.filterFrequency > 1_800);
 });
 
 test("createResonanceSoundCue maps resonance intensity to a chord cue", () => {

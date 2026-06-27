@@ -25,13 +25,13 @@ import {
   normalizePulseEventMessage,
   createClientId
 } from "./protocol.js";
-import { createRuntimeConfig } from "./runtime-config.js?v=sound-toggle-20260627";
+import { createRuntimeConfig } from "./runtime-config.js?v=lofi-audio-20260627";
 import { createSpaceScene } from "./scene.js?v=peer-collision-radius-20260627";
 import {
   collectNewSoundCues,
   createPulseSoundPlayer,
   createSoundCueSnapshot
-} from "./sound.js?v=sound-toggle-20260627";
+} from "./sound.js?v=lofi-audio-20260627";
 
 const storageKey = "lumen-space.identity";
 const runtimeConfig = createRuntimeConfig(window.location);
@@ -218,6 +218,7 @@ async function enterRoom() {
       bindPointerControls();
     }
   } catch (error) {
+    pulseAudio.stopMusic();
     dispatch({
       type: "status/set",
       text: "Visual engine unavailable",
@@ -473,6 +474,7 @@ async function copyInviteLink() {
 
 function leaveRoom() {
   resetSoundCues();
+  pulseAudio.stopMusic();
   connectionAttempt += 1;
   connection?.leave();
   connection = null;

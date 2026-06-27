@@ -2,11 +2,11 @@ import {
   getSimulationClientConfig,
   getSimulationClientStartPosition,
   getSimulationTarget
-} from "./simulation-clients.js?v=sound-toggle-20260627";
+} from "./simulation-clients.js?v=lofi-audio-20260627";
 import {
   createDefaultAppUi,
   createSceneOnlyAppUi
-} from "./app-ui.js?v=ui-generator-20260627";
+} from "./app-ui.js?v=lofi-audio-20260627";
 import { clampVector } from "./physics/vector.js";
 
 export function createRuntimeConfig(locationLike) {

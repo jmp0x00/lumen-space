@@ -15,8 +15,8 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Drift through small colorful touch stars to release pulses that blend star and lumen colors.
 - Send pulses that expand through the shared space.
 - When different players' pulse fronts meet, they create a brief resonance flash.
-- Hear soft synthesized pulse sounds for manual pulses, brighter star-touch pulses, and resonance flashes after the browser unlocks audio through interaction.
-- Use the room sound control to mute or unmute pulse sound effects.
+- Hear a gentle procedural lo-fi loop after the browser unlocks audio through interaction, with manual pulses, star-touch pulses, and resonance flashes layered in as musical accents.
+- Use the room Lo-Fi control to mute or unmute the loop and pulse accents.
 - Rooms start with passive AI-driven local bots that seek touch stars, and you can add or remove more bots.
 - Rooms are peer-to-peer and ephemeral; no account, backend server, or database is used.
 - If realtime networking is unavailable, the app keeps retrying while the visual room stays usable.
@@ -54,7 +54,7 @@ To inspect peer collision scenarios without joining a room manually, open
 `http://localhost:4173/physics-sim.html`. The simulator includes a pure physics
 canvas mode and a realtime mode that embeds multiple scene-only no-bot app
 clients in the same WebRTC room with scripted user presets and a live 1-8
-client count control. Realtime simulator audio is controlled by one simulator
+client count control. Realtime simulator lo-fi audio is controlled by one simulator
 button and is routed through a single designated embedded client.
 
 ## Test
@@ -77,7 +77,7 @@ For physics tuning, double-click the room label in the room to toggle a hidden d
 - `docs/app/src/protocol.js`: v2 peer protocol creators and validators for hello, presence, and pulse events.
 - `docs/app/src/core/`: canonical game state, event reducer, simulation step, and scene/UI selectors.
 - `docs/app/src/physics/`: focused pure physics modules for vectors, local motion, peer collision/repulsion, AI-driven bot motion, touch stars, pulses, and resonance.
-- `docs/app/src/sound.js`: deterministic pulse/resonance sound cue planning plus the Web Audio performer.
+- `docs/app/src/sound.js`: deterministic lo-fi loop and pulse/resonance cue planning plus the Web Audio performer.
 - `docs/app/src/network.js`: Trystero/WebRTC room connection.
 - `docs/app/src/scene.js`: Three.js WebGL scene.
 - `docs/app/src/app.js`: browser adapter for UI, scene, realtime transport, timers, storage, and core effects.

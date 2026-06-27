@@ -14,7 +14,7 @@ import {
   createRealtimeRoomClients,
   getRealtimeRoomPreset,
   normalizeRealtimeRoomClientCount
-} from "./simulation-clients.js?v=sound-toggle-20260627";
+} from "./simulation-clients.js?v=lofi-audio-20260627";
 import {
   getPeerCollisionDistance,
   getPeerCollisionRadius
@@ -587,11 +587,11 @@ function setRealtimeSoundEnabled(nextEnabled, { broadcast = false } = {}) {
 
 function syncRealtimeSoundButton() {
   elements.realtimeSound.textContent = realtimeSoundEnabled
-    ? "Simulation Sound On"
-    : "Simulation Sound Off";
+    ? "Simulation Lo-Fi On"
+    : "Simulation Lo-Fi Off";
   elements.realtimeSound.title = realtimeSoundEnabled
-    ? "Mute simulator sound source"
-    : "Unmute simulator sound source";
+    ? "Mute simulator lo-fi source"
+    : "Unmute simulator lo-fi source";
   elements.realtimeSound.setAttribute("aria-label", elements.realtimeSound.title);
   elements.realtimeSound.setAttribute("aria-pressed", String(realtimeSoundEnabled));
 }

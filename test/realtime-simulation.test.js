@@ -219,7 +219,7 @@ test("runtime config uses the full default UI outside scripted clients", () => {
   assert.equal(config.createUi.name, "createDefaultAppUi");
 });
 
-test("runtime config can disable normal room sound effects", () => {
+test("runtime config can disable normal room audio", () => {
   const config = createRuntimeConfig("http://localhost:4173/index.html?room=test-room&sound=0");
 
   assert.equal(config.soundEffects, false);

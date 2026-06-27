@@ -11,8 +11,8 @@ Lumen Space is a social visual game without scoring or winners. The goal is to c
 5. Touching a small environmental star emits a pulse from the local light, colored by blending the star and lumen colors.
 6. Pressing `Send Pulse`, pressing Space, or double-clicking the scene emits a colored pulse from the local light.
 7. When pulse fronts from different sources meet, they create a brief resonance flash.
-8. New pulses play soft local sound effects after browser audio is unlocked by user interaction; star-touch pulses sound brighter, and resonance flashes use a short chord.
-9. The player can mute or unmute local pulse sound effects.
+8. After browser audio is unlocked by user interaction, the room plays a gentle procedural lo-fi loop; manual pulses, star-touch pulses, and resonance flashes layer in as musical accents.
+9. The player can mute or unmute the local lo-fi room audio.
 10. Other players in the same room see the player's latest position and pulses.
 11. Rooms are ephemeral. When all players leave, no room state remains.
 
@@ -65,12 +65,12 @@ Out of scope:
 - Stale peers must be removed after the heartbeat timeout.
 - Duplicate pulse messages must not create duplicate visuals.
 - Pulse fronts from different sources must create a short-lived resonance visual when they meet.
-- Newly observed pulses and resonances must create local synthesized sound cues using the Web Audio API after a user gesture unlocks audio.
+- Local room audio must use the Web Audio API to synthesize a gentle lo-fi loop plus newly observed pulse and resonance accents after a user gesture unlocks audio.
 - Manual pulses, star-touch pulses, and resonance flashes must have distinct cue shapes while staying soft enough for repeated play.
-- The default room UI must expose a mute/unmute sound control.
-- Muted sound must not replay old pulse or resonance cues when unmuted again.
+- The default room UI must expose a mute/unmute Lo-Fi control.
+- Muted room audio must stop the loop and must not replay old pulse or resonance cues when unmuted again.
 - Scripted realtime simulator clients must use a single designated sound-source client so many iframe clients do not play over one another.
-- The realtime simulator parent must expose one mute/unmute sound control instead of a separate control in every embedded client.
+- The realtime simulator parent must expose one mute/unmute Lo-Fi control instead of a separate control in every embedded client.
 - Malformed network messages and non-v2 Lumen Space protocol messages must be ignored safely.
 - If realtime connection fails, the app must keep retrying without switching into a separate offline mode.
 - Rooms must start with visible local bots, and users must be able to add and remove local bots.
@@ -90,10 +90,11 @@ Out of scope:
 - In `physics-sim.html`, selecting the crossing scenario shows two peers following intersecting routes through the center.
 - In `physics-sim.html`, selecting realtime mode launches the selected number of scene-only embedded app clients in the same no-bot WebRTC room; changing the client count in realtime mode relaunches the embedded room with that count, and each client screen shows scripted movement through the normal app/WebRTC runtime.
 - Touching an environmental star emits a blended-color pulse and temporarily hides that star.
-- Manual pulse actions create a soft local pulse sound after browser audio is unlocked.
-- Star-touch pulses create a brighter local pulse sound, and pulse resonances create a short local chord.
-- The room sound control can mute and unmute local pulse sounds without replaying old cues.
-- In realtime simulator mode, only one embedded client is configured as the audio source, and the simulator shell provides the only sound control.
+- Entering or interacting with a room starts a soft procedural lo-fi loop after browser audio is unlocked.
+- Manual pulse actions create mellow local musical accents after browser audio is unlocked.
+- Star-touch pulses create brighter accents, and pulse resonances create a short local chord.
+- The room Lo-Fi control can mute and unmute local room audio without replaying old cues.
+- In realtime simulator mode, only one embedded client is configured as the audio source, and the simulator shell provides the only Lo-Fi control.
 - Pulse events appear locally and remotely.
 - Peers exchange only v2 `hello`, `presence`, and pulse `event` messages; old v1 presence/pulse payloads are ignored safely.
 - Overlapping pulse fronts from different sources create a resonance flash without a separate network message.

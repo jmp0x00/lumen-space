@@ -43,8 +43,10 @@
 - Added a client-count control to realtime simulator mode so the same WebRTC harness can validate smaller and larger rooms without editing presets by hand.
 - Tightened the realtime simulator count control after manual use showed it felt inert: changing the count now relaunches the embedded room directly instead of only affecting the next explicit launch.
 - Replaced the default Python static server with a tiny no-cache development server after browser caching repeatedly hid local HTML and module changes during simulator validation.
-- Added local synthesized pulse sound effects with a pure cue-planning layer and a Web Audio adapter, while keeping realtime simulator iframes silent to avoid turning validation into overlapping audio noise.
+- Added local synthesized pulse audio with a pure cue-planning layer and a Web Audio adapter, while keeping realtime simulator iframes silent to avoid turning validation into overlapping audio noise.
 - Added explicit mute/unmute controls and refined simulator audio to use one shell-level control plus one designated source iframe, which better matches how multi-client validation is actually used.
+- Iterated on audio after the first pass felt like isolated sound effects: kept the asset-free Web Audio approach but added a deterministic four-bar lo-fi loop with chords, bass, sparse drums, melody, vinyl-style noise, and pulse accents that sit inside the music.
+- Updated tests around the pure lo-fi pattern and cue-planning data, preserving deterministic validation even though the final playback is browser-only and subjective.
 
 ## AI Tools Used
 
@@ -65,6 +67,7 @@
 - Splitting physics into focused modules made behavior-specific tests easier to read without changing the playable browser surface.
 - Building a small inspection harness around the pure physics modules made movement tuning faster than repeatedly staging multiplayer scenarios by hand.
 - Adding a small hidden debug readout made multiplayer movement easier to reason about while preserving the simple player-facing interface.
+- Keeping audio planning separate from Web Audio playback made it possible to evolve sound design from effects into music without losing unit-test coverage.
 - A static app shape matched the GitDocs sharing goal and avoided backend credentials.
 
 ## What Did Not Work Well
