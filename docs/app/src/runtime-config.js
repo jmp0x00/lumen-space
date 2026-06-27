@@ -12,9 +12,10 @@ import { clampVector } from "./physics/vector.js";
 export function createRuntimeConfig(locationLike) {
   const params = getSearchParams(locationLike);
   const uiMode = normalizeUiMode(params.get("appUi"), "default");
+  const soundEffects = normalizeSoundEffects(params.get("sound"));
   const scriptedClient = getSimulationClientConfig(locationLike);
   if (!scriptedClient) {
-    return createDefaultRuntimeConfig(uiMode);
+    return createDefaultRuntimeConfig(uiMode, { soundEffects });
   }
 
   const scriptedUiMode = normalizeUiMode(params.get("appUi"), "scene-only");
@@ -26,6 +27,7 @@ export function createRuntimeConfig(locationLike) {
     autoEnter: true,
     persistIdentity: false,
     usePointerInput: false,
+    soundEffects: false,
     initialBotCount: scriptedClient.disableBots ? 0 : 2,
     uiMode: scriptedUiMode,
     createUi: getUiGenerator(scriptedUiMode),
@@ -63,12 +65,13 @@ export function createRuntimeConfig(locationLike) {
   };
 }
 
-function createDefaultRuntimeConfig(uiMode) {
+function createDefaultRuntimeConfig(uiMode, { soundEffects = true } = {}) {
   return {
     identity: null,
     autoEnter: false,
     persistIdentity: true,
     usePointerInput: true,
+    soundEffects,
     initialBotCount: 2,
     uiMode,
     createUi: getUiGenerator(uiMode),
@@ -94,6 +97,11 @@ function normalizeUiMode(value, fallback) {
 
 function getUiGenerator(uiMode) {
   return uiMode === "scene-only" ? createSceneOnlyAppUi : createDefaultAppUi;
+}
+
+function normalizeSoundEffects(value) {
+  const raw = String(value ?? "").trim().toLowerCase();
+  return !["0", "false", "off", "muted"].includes(raw);
 }
 
 function getSearchParams(locationLike) {

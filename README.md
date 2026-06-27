@@ -15,6 +15,7 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Drift through small colorful touch stars to release pulses that blend star and lumen colors.
 - Send pulses that expand through the shared space.
 - When different players' pulse fronts meet, they create a brief resonance flash.
+- Hear soft synthesized pulse sounds for manual pulses, brighter star-touch pulses, and resonance flashes after the browser unlocks audio through interaction.
 - Rooms start with passive AI-driven local bots that seek touch stars, and you can add or remove more bots.
 - Rooms are peer-to-peer and ephemeral; no account, backend server, or database is used.
 - If realtime networking is unavailable, the app keeps retrying while the visual room stays usable.
@@ -74,6 +75,7 @@ For physics tuning, double-click the room label in the room to toggle a hidden d
 - `docs/app/src/protocol.js`: v2 peer protocol creators and validators for hello, presence, and pulse events.
 - `docs/app/src/core/`: canonical game state, event reducer, simulation step, and scene/UI selectors.
 - `docs/app/src/physics/`: focused pure physics modules for vectors, local motion, peer collision/repulsion, AI-driven bot motion, touch stars, pulses, and resonance.
+- `docs/app/src/sound.js`: deterministic pulse/resonance sound cue planning plus the Web Audio performer.
 - `docs/app/src/network.js`: Trystero/WebRTC room connection.
 - `docs/app/src/scene.js`: Three.js WebGL scene.
 - `docs/app/src/app.js`: browser adapter for UI, scene, realtime transport, timers, storage, and core effects.

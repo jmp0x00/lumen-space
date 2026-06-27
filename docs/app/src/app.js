@@ -25,8 +25,13 @@ import {
   normalizePulseEventMessage,
   createClientId
 } from "./protocol.js";
-import { createRuntimeConfig } from "./runtime-config.js?v=runtime-config-20260627";
+import { createRuntimeConfig } from "./runtime-config.js?v=pulse-sounds-20260627";
 import { createSpaceScene } from "./scene.js?v=peer-collision-radius-20260627";
+import {
+  collectNewSoundCues,
+  createPulseSoundPlayer,
+  createSoundCueSnapshot
+} from "./sound.js?v=pulse-sounds-20260627";
 
 const storageKey = "lumen-space.identity";
 const runtimeConfig = createRuntimeConfig(window.location);
@@ -58,6 +63,12 @@ let connectionAttempt = 0;
 let pointerAbortController = null;
 let nameWasEdited = false;
 let manualNameSequence = 0;
+let soundCueSnapshot = createSoundCueSnapshot();
+const pulseAudio = createPulseSoundPlayer({
+  window,
+  enabled: runtimeConfig.soundEffects,
+  volume: 0.82
+});
 
 const ui = runtimeConfig.createUi({
   document,
@@ -158,6 +169,7 @@ async function joinRoomFromLobby({ name, roomId: requestedRoomId }) {
   if (runtimeConfig.persistIdentity) {
     saveIdentity(identity);
   }
+  unlockPulseAudio();
   await enterRoom();
 }
 
@@ -166,6 +178,7 @@ function setLobbyNote(message) {
 }
 
 async function enterRoom() {
+  resetSoundCues();
   window.history.replaceState({}, "", createInviteUrl(window.location.href, game.roomId));
   dispatch({
     type: "room/enter",
@@ -214,6 +227,9 @@ function bindPointerControls() {
   pointerAbortController?.abort();
   pointerAbortController = new AbortController();
   const updateTarget = (event) => {
+    if (event.type === "pointerdown") {
+      unlockPulseAudio();
+    }
     dispatch(
       {
         type: "pointer/target",
@@ -387,6 +403,7 @@ function sendLocalPulse() {
   if (game.phase !== "room") {
     return;
   }
+  unlockPulseAudio();
   dispatch({ type: "pulse/local-request", now: Date.now(), trigger: "manual" }, { render: false });
 }
 
@@ -436,6 +453,7 @@ async function copyInviteLink() {
 }
 
 function leaveRoom() {
+  resetSoundCues();
   connectionAttempt += 1;
   connection?.leave();
   connection = null;
@@ -451,6 +469,7 @@ function leaveRoom() {
 function handleKeydown(event) {
   if (event.code === "Space" && !event.repeat) {
     event.preventDefault();
+    unlockPulseAudio();
     sendLocalPulse();
   }
 }
@@ -466,6 +485,7 @@ function dispatch(event, options = {}) {
 function applyCoreResult(result, { render = true } = {}) {
   game = result.state;
   executeEffects(result.effects);
+  playNewSoundCues();
   if (render) {
     renderUi();
   }
@@ -485,6 +505,28 @@ function executeEffects(effects = []) {
       publishRuntimeState(effect.now);
     }
   }
+}
+
+function unlockPulseAudio() {
+  if (runtimeConfig.soundEffects) {
+    void pulseAudio.unlock();
+  }
+}
+
+function playNewSoundCues() {
+  if (!runtimeConfig.soundEffects || game.phase !== "room") {
+    return;
+  }
+
+  const result = collectNewSoundCues(soundCueSnapshot, game, {
+    localClientId: game.clientId
+  });
+  soundCueSnapshot = result.snapshot;
+  pulseAudio.playCues(result.cues);
+}
+
+function resetSoundCues() {
+  soundCueSnapshot = createSoundCueSnapshot();
 }
 
 function showToast(message) {

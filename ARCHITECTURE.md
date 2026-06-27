@@ -7,6 +7,7 @@
 - Three.js `0.185.0` via CDN for WebGL rendering.
 - Trystero `0.25.2` via CDN for WebRTC peer rooms and public relay-based signaling.
 - Unique Names Generator `4.7.1` via CDN for generated player and bot names.
+- Web Audio API for local synthesized pulse and resonance sound effects.
 - Node.js built-in test runner for unit tests.
 
 ## Architecture Overview
@@ -39,6 +40,7 @@ The preferred long-term game-core model is documented in
 - `app-ui.js` owns default DOM rendering for the lobby, room chrome, participants, actions, toast, and debug overlay, plus a scene-only generator for embedded clients.
 - `runtime-config.js` owns app runtime hooks and UI generator selection, defaulting to the full lobby and room UI while allowing embedded clients to render scene-only.
 - `simulation-clients.js` owns realtime simulator presets, no-bot client URL generation, scripted movement target selection, and deterministic target helpers for tests.
+- `sound.js` owns deterministic mapping from pulse/resonance state to sound cues and the browser-only Web Audio performer.
 - `physics-sim.html`, `physics-sim.css`, and `physics-sim.js` form a separate static inspection app that runs scripted peers against the same pure physics modules.
 - `scripts/serve-no-cache.mjs` is the local static development server used by `npm run serve`; it serves `docs/app` with no-store cache headers so iterative browser validation does not reuse stale HTML or module files.
 
@@ -56,7 +58,8 @@ This shape keeps network and rendering side effects away from the logic covered 
 8. Peer pulse events are event-like: they carry stable `eventId` values, are deduplicated before entering state, and then progress/expire through `physics/pulses.js`.
 9. Touch-star pulse events include `trigger`, `starId`, and `starGeneration` so other clients suppress and respawn the matching deterministic star.
 10. `physics/pulses.js` derives resonance events locally when different pulse fronts meet; no extra network message is sent.
-11. Local bots remain local-only participants. They choose the closest available touch star, move through the same motion integration as user-driven lumes, preserve velocity, consume stars through the same pulse pipeline, and emit local scheduled pulses.
+11. `app.js` compares the current pulse/resonance IDs with a local sound snapshot, then asks `sound.js` to play newly observed cues after browser audio has been unlocked by a user gesture.
+12. Local bots remain local-only participants. They choose the closest available touch star, move through the same motion integration as user-driven lumes, preserve velocity, consume stars through the same pulse pipeline, and emit local scheduled pulses.
 
 ## Physics Simulator
 
@@ -135,6 +138,7 @@ For presence, `position` is the authoritative peer snapshot for remote interpola
 - Keep `domain.js` as a facade while moving physics internals into smaller modules, preserving current browser imports while improving test focus.
 - Use `hello`, `presence`, and `event` Trystero actions so identity/capability snapshots, replaceable movement snapshots, and deduplicated gameplay events remain distinct.
 - Keep rooms ephemeral to avoid storage, privacy, and cleanup concerns.
+- Generate pulse sounds locally with Web Audio instead of shipping audio files, and keep scripted simulator iframes silent so validation remains readable.
 - Treat the project as a social visual game, matching the challenge while preserving the desired creative direction.
 
 ## AI Tooling Used

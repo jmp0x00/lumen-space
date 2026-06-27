@@ -43,6 +43,7 @@
 - Added a client-count control to realtime simulator mode so the same WebRTC harness can validate smaller and larger rooms without editing presets by hand.
 - Tightened the realtime simulator count control after manual use showed it felt inert: changing the count now relaunches the embedded room directly instead of only affecting the next explicit launch.
 - Replaced the default Python static server with a tiny no-cache development server after browser caching repeatedly hid local HTML and module changes during simulator validation.
+- Added local synthesized pulse sound effects with a pure cue-planning layer and a Web Audio adapter, while keeping realtime simulator iframes silent to avoid turning validation into overlapping audio noise.
 
 ## AI Tools Used
 

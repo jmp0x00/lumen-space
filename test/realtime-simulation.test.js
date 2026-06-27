@@ -146,9 +146,16 @@ test("runtime config uses the full default UI outside scripted clients", () => {
   assert.equal(config.autoEnter, false);
   assert.equal(config.persistIdentity, true);
   assert.equal(config.usePointerInput, true);
+  assert.equal(config.soundEffects, true);
   assert.equal(config.initialBotCount, 2);
   assert.equal(config.uiMode, "default");
   assert.equal(config.createUi.name, "createDefaultAppUi");
+});
+
+test("runtime config can disable normal room sound effects", () => {
+  const config = createRuntimeConfig("http://localhost:4173/index.html?room=test-room&sound=0");
+
+  assert.equal(config.soundEffects, false);
 });
 
 test("runtime config selects generic UI generators instead of UI part lists", () => {
@@ -171,6 +178,7 @@ test("runtime config drives scripted clients through app-level configuration", (
   assert.equal(config.autoEnter, true);
   assert.equal(config.persistIdentity, false);
   assert.equal(config.usePointerInput, false);
+  assert.equal(config.soundEffects, false);
   assert.equal(config.initialBotCount, 0);
   assert.equal(config.identity.name, "Ada Star");
   assert.equal(config.identity.color, "#7dd3fc");
