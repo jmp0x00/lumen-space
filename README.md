@@ -47,7 +47,9 @@ npm run serve
 Open `http://localhost:4173/`.
 
 To inspect peer collision scenarios without joining a room manually, open
-`http://localhost:4173/physics-sim.html`.
+`http://localhost:4173/physics-sim.html`. The simulator includes a pure physics
+canvas mode and a realtime mode that embeds multiple scene-only no-bot app
+clients in the same WebRTC room with scripted user presets.
 
 ## Test
 
@@ -62,10 +64,13 @@ For physics tuning, double-click the room label in the room to toggle a hidden d
 
 - `docs/app/`: static playable app intended for GitDocs hosting.
 - `docs/app/physics-sim.html`: automated physics inspection app with cluster, orbit, and crossing-route scenarios.
+- `docs/app/src/simulation-clients.js`: realtime room simulator presets and scripted client target selection.
+- `docs/app/src/runtime-config.js`: app runtime configuration, including the selected UI generator and scene-only embedded clients.
+- `docs/app/src/app-ui.js`: default and scene-only UI generators that render app state into DOM.
 - `docs/app/src/domain.js`: pure domain facade for identity, presence, debug rows, and compatibility exports.
 - `docs/app/src/physics/`: focused pure physics modules for vectors, local motion, peer collision/repulsion, AI-driven bot motion, touch stars, pulses, and resonance.
 - `docs/app/src/network.js`: Trystero/WebRTC room connection.
 - `docs/app/src/scene.js`: Three.js WebGL scene.
-- `docs/app/src/app.js`: UI orchestration.
+- `docs/app/src/app.js`: game runtime orchestration.
 - `test/`: Node unit tests for the pure domain and physics layers.
 - `SPEC.md`, `ARCHITECTURE.md`, `RETROSPECTIVE.md`: challenge deliverables.

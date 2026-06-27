@@ -31,42 +31,18 @@ import {
 } from "./domain.js?v=peer-collision-radius-20260627";
 import { connectToRoom } from "./network.js";
 import { generateDisplayName, generateDisplayNameSync } from "./names.js";
+import { createRuntimeConfig } from "./runtime-config.js?v=runtime-config-20260627";
 import { createSpaceScene } from "./scene.js?v=peer-collision-radius-20260627";
 
-const elements = {
-  lobby: document.querySelector("#lobby"),
-  joinForm: document.querySelector("#join-form"),
-  nameInput: document.querySelector("#name-input"),
-  generateNameButton: document.querySelector("#generate-name-button"),
-  roomInput: document.querySelector("#room-input"),
-  colorGrid: document.querySelector("#color-grid"),
-  lobbyNote: document.querySelector("#lobby-note"),
-  createRoomButton: document.querySelector("#create-room-button"),
-  space: document.querySelector("#space"),
-  sceneHost: document.querySelector("#scene-host"),
-  roomLabel: document.querySelector("#room-label"),
-  roomTitle: document.querySelector("#room-title"),
-  connectionStatus: document.querySelector("#connection-status"),
-  peopleList: document.querySelector("#people-list"),
-  peerCount: document.querySelector("#peer-count"),
-  copyLinkButton: document.querySelector("#copy-link-button"),
-  addBotButton: document.querySelector("#add-bot-button"),
-  removeBotButton: document.querySelector("#remove-bot-button"),
-  pulseButton: document.querySelector("#pulse-button"),
-  leaveButton: document.querySelector("#leave-button"),
-  debugPanel: document.querySelector("#debug-panel"),
-  debugOutput: document.querySelector("#debug-output"),
-  toast: document.querySelector("#toast")
-};
-
 const storageKey = "lumen-space.identity";
-const DEFAULT_ROOM_BOT_COUNT = 2;
-const savedIdentity = loadSavedIdentity();
+const defaultLobbyNote = "Room links are ephemeral and peer-to-peer.";
+const runtimeConfig = createRuntimeConfig(window.location);
+const savedIdentity = runtimeConfig.persistIdentity ? loadSavedIdentity() : null;
 const initialRoomId = getRoomIdFromLocation(window.location);
 const hasSavedIdentity = Boolean(savedIdentity);
 const generatedIdentity = sanitizeIdentity({
-  name: generateDisplayNameSync(`player-${Date.now()}`),
-  color: DEFAULT_COLOR
+  name: runtimeConfig.identity?.name ?? generateDisplayNameSync(`player-${Date.now()}`),
+  color: runtimeConfig.identity?.color ?? DEFAULT_COLOR
 });
 
 let selectedColor = (savedIdentity ?? generatedIdentity).color;
@@ -79,11 +55,13 @@ let pruneTimer = 0;
 let reconnectTimer = 0;
 let animationFrame = 0;
 let lastFrameAt = performance.now();
+let roomLoopStartedAt = performance.now();
+let nextRuntimePulseAt = 0;
+let runtimeStatePostedAt = 0;
 let pulseSequence = 0;
 let connectionAttempt = 0;
 let isRoomActive = false;
 let isDebugVisible = false;
-let roomControlsBound = false;
 let pointerAbortController = null;
 let peers = {};
 let pulses = [];
@@ -103,122 +81,138 @@ let localParticipant = {
 let botParticipants = [];
 let nameWasEdited = false;
 let manualNameSequence = 0;
+let lobbyNote = defaultLobbyNote;
+let statusText = "Starting";
+let statusState = "pending";
+
+const ui = runtimeConfig.createUi({
+  document,
+  window,
+  colors: COLORS,
+  actions: {
+    onNameEdited: handleNameEdited,
+    onGenerateName: replaceNameWithGenerated,
+    onCreateRoom: createRoomFromLobby,
+    onJoinRoom: joinRoomFromLobby,
+    onSelectColor: selectColor,
+    onCopyInvite: copyInviteLink,
+    onAddBot: addBot,
+    onRemoveBot: removeBot,
+    onPulse: sendLocalPulse,
+    onLeaveRoom: leaveRoom,
+    onToggleDebug: toggleDebugPanel
+  }
+});
 
 initLobby();
 
 function initLobby() {
-  elements.nameInput.value = identity.name;
-  elements.roomInput.value = roomId;
-  renderColorChoices();
+  renderUi();
   refreshGeneratedLobbyName();
 
-  elements.nameInput.addEventListener("input", () => {
-    nameWasEdited = true;
-  });
-
-  elements.generateNameButton.addEventListener("click", replaceNameWithGenerated);
-
-  elements.createRoomButton.addEventListener("click", () => {
-    roomId = createRoomId();
-    elements.roomInput.value = roomId;
-    elements.lobbyNote.textContent = "New room ready.";
-  });
-
-  elements.joinForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const normalizedRoom = normalizeRoomId(elements.roomInput.value);
-    if (!normalizedRoom) {
-      elements.lobbyNote.textContent = "Use at least three letters or numbers for the room.";
-      return;
-    }
-
-    identity = sanitizeIdentity({
-      name: elements.nameInput.value,
-      color: selectedColor
-    });
-    saveIdentity(identity);
-    roomId = normalizedRoom;
-    await enterRoom();
-  });
+  if (runtimeConfig.autoEnter) {
+    setLobbyNote("Joining room client.");
+    window.setTimeout(() => {
+      void enterRoom();
+    }, 0);
+  }
 }
 
 async function refreshGeneratedLobbyName() {
-  if (hasSavedIdentity) {
+  if (hasSavedIdentity || runtimeConfig.identity) {
     return;
   }
 
   const generatedName = await generateDisplayName(`player-${roomId}-${Date.now()}`);
   if (!nameWasEdited && !isRoomActive) {
     identity = sanitizeIdentity({ ...identity, name: generatedName });
-    elements.nameInput.value = identity.name;
+    renderUi();
   }
 }
 
 function replaceNameWithGenerated() {
   nameWasEdited = true;
-  elements.generateNameButton.disabled = true;
+  ui.setGenerateNameBusy(true);
   try {
     const generatedName = generateDisplayNameSync(
       `manual-${roomId}-${Date.now()}-${manualNameSequence++}`
     );
     identity = sanitizeIdentity({ ...identity, name: generatedName, color: selectedColor });
-    elements.nameInput.value = identity.name;
-    elements.nameInput.focus();
-    elements.nameInput.select();
-    elements.lobbyNote.textContent = "New name ready.";
+    lobbyNote = "New name ready.";
+    renderUi();
+    ui.focusName();
   } catch {
-    elements.lobbyNote.textContent = "Could not generate a name. Try typing one.";
+    setLobbyNote("Could not generate a name. Try typing one.");
   } finally {
-    elements.generateNameButton.disabled = false;
+    ui.setGenerateNameBusy(false);
   }
 }
 
-function renderColorChoices() {
-  elements.colorGrid.replaceChildren();
-  for (const color of COLORS) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "color-choice";
-    button.style.setProperty("--choice-color", color);
-    button.setAttribute("aria-label", `Use color ${color}`);
-    button.setAttribute("aria-pressed", String(color === selectedColor));
-    button.addEventListener("click", () => {
-      selectedColor = color;
-      renderColorChoices();
-    });
-    elements.colorGrid.appendChild(button);
+function handleNameEdited() {
+  nameWasEdited = true;
+}
+
+function selectColor(color) {
+  selectedColor = color;
+  renderUi();
+}
+
+function createRoomFromLobby() {
+  roomId = createRoomId();
+  setLobbyNote("New room ready.");
+}
+
+async function joinRoomFromLobby({ name, roomId: requestedRoomId }) {
+  const normalizedRoom = normalizeRoomId(requestedRoomId);
+  if (!normalizedRoom) {
+    setLobbyNote("Use at least three letters or numbers for the room.");
+    return;
   }
+
+  identity = sanitizeIdentity({
+    name,
+    color: selectedColor
+  });
+  if (runtimeConfig.persistIdentity) {
+    saveIdentity(identity);
+  }
+  roomId = normalizedRoom;
+  await enterRoom();
+}
+
+function setLobbyNote(message) {
+  lobbyNote = message;
+  renderUi();
 }
 
 async function enterRoom() {
   isRoomActive = true;
-  elements.lobby.hidden = true;
-  elements.space.hidden = false;
-  elements.roomLabel.textContent = `Room ${roomId}`;
-  elements.roomTitle.textContent = identity.name;
   window.history.replaceState({}, "", createInviteUrl(window.location.href, roomId));
 
   localParticipant = {
     ...localParticipant,
     name: identity.name,
     color: identity.color,
-    position: chooseStartPosition(identity.name),
+    position: runtimeConfig.getStartPosition?.() ?? chooseStartPosition(identity.name),
     velocity: { x: 0, y: 0, z: 0 },
     lastSeen: Date.now()
   };
   pointerTarget = localParticipant.position;
   touchStars = createTouchStars(roomId);
-  botParticipants = createInitialBotParticipants(Date.now());
+  botParticipants = createInitialBotParticipants(Date.now(), runtimeConfig.initialBotCount);
+  roomLoopStartedAt = performance.now();
+  nextRuntimePulseAt = runtimeConfig.pulseEveryMs
+    ? Date.now() + Math.max(1_000, runtimeConfig.pulseEveryMs)
+    : 0;
   setDebugVisible(false);
-  updatePeopleList();
   setStatus("Starting room", "pending");
+  window.addEventListener("keydown", handleKeydown);
 
-  bindRoomControls();
-  startSimulationLoop();
+  startRoomLoop();
 
   try {
     sceneController = await createSpaceScene({
-      container: elements.sceneHost,
+      container: ui.sceneHost,
       getParticipants,
       getPulses: () => pulses,
       getResonances: () => resonances,
@@ -226,7 +220,9 @@ async function enterRoom() {
       onPulse: sendLocalPulse
     });
     sceneController.start();
-    bindPointerControls();
+    if (runtimeConfig.usePointerInput) {
+      bindPointerControls();
+    }
   } catch (error) {
     setStatus("Visual engine unavailable", "error");
     showToast(error.message || "Unable to start WebGL.");
@@ -234,21 +230,6 @@ async function enterRoom() {
   }
 
   connectRealtime();
-}
-
-function bindRoomControls() {
-  if (roomControlsBound) {
-    return;
-  }
-  roomControlsBound = true;
-  elements.copyLinkButton.addEventListener("click", copyInviteLink);
-  elements.addBotButton.addEventListener("click", addBot);
-  elements.removeBotButton.addEventListener("click", removeBot);
-  elements.pulseButton.addEventListener("click", sendLocalPulse);
-  elements.leaveButton.addEventListener("click", leaveRoom);
-  elements.roomLabel.addEventListener("dblclick", handleDebugLabelDoubleClick);
-  elements.roomTitle.addEventListener("dblclick", handleDebugLabelDoubleClick);
-  window.addEventListener("keydown", handleKeydown);
 }
 
 function bindPointerControls() {
@@ -274,7 +255,7 @@ function startPresenceLoop() {
     const before = Object.keys(peers).length;
     peers = pruneStalePeers(peers, Date.now(), STALE_PEER_MS);
     if (Object.keys(peers).length !== before) {
-      updatePeopleList();
+      renderUi();
     }
   }, 1_000);
 }
@@ -312,17 +293,17 @@ async function connectRealtime() {
           }),
           Date.now()
         );
-        updatePeopleList();
+        renderUi();
         setStatus("Online", "online");
         sendPresence();
       },
       onPeerLeave(peerId) {
         peers = removePeer(peers, peerId);
-        updatePeopleList();
+        renderUi();
       },
       onPresence(peerId, data) {
         peers = reducePresence(peers, peerId, data, Date.now());
-        updatePeopleList();
+        renderUi();
       },
       onPulse(peerId, data) {
         pulses = addPulse(pulses, data, peerId, Date.now());
@@ -353,12 +334,22 @@ async function connectRealtime() {
   }
 }
 
-function startSimulationLoop() {
+function startRoomLoop() {
   const tick = (now) => {
     const deltaSeconds = (now - lastFrameAt) / 1000;
     lastFrameAt = now;
 
     const nowMs = Date.now();
+    if (runtimeConfig.getTarget) {
+      pointerTarget = runtimeConfig.getTarget({
+        localParticipant,
+        peers: Object.values(peers),
+        touchStars,
+        elapsedSeconds: Math.max(0, (now - roomLoopStartedAt) / 1000),
+        now: nowMs
+      });
+    }
+
     const motion = updateMotion(localParticipant, pointerTarget, deltaSeconds);
     localParticipant = {
       ...localParticipant,
@@ -403,8 +394,10 @@ function startSimulationLoop() {
       pulses = addPulse(pulses, message, pulse.sourceId, nowMs);
       connection?.sendPulse(message);
     }
+    maybeSendRuntimePulse(nowMs);
     resonances = updatePulseResonances(resonances, pulses, nowMs);
     updateDebugPanel();
+    publishRuntimeState(nowMs);
     animationFrame = window.requestAnimationFrame(tick);
   };
 
@@ -414,6 +407,29 @@ function startSimulationLoop() {
 function getParticipants() {
   const liveParticipants = [localParticipant, ...Object.values(peers)];
   return [...liveParticipants, ...botParticipants];
+}
+
+function renderUi() {
+  const participants = getParticipants();
+  ui.render({
+    uiMode: runtimeConfig.uiMode,
+    phase: isRoomActive ? "room" : "lobby",
+    identity,
+    selectedColor,
+    roomId,
+    lobbyNote,
+    status: {
+      text: statusText,
+      state: statusState
+    },
+    participants,
+    debug: {
+      visible: isDebugVisible,
+      rows: isDebugVisible
+        ? formatParticipantDebugRows(participants, { digits: 2, now: Date.now() })
+        : []
+    }
+  });
 }
 
 function applyParticipantRepulsion(deltaSeconds) {
@@ -465,10 +481,42 @@ function sendLocalPulse() {
   connection?.sendPulse(createPulseMessage(pulse));
 }
 
+function maybeSendRuntimePulse(nowMs) {
+  if (!runtimeConfig.pulseEveryMs || !connection || nowMs < nextRuntimePulseAt) {
+    return;
+  }
+
+  sendLocalPulse();
+  nextRuntimePulseAt = nowMs + runtimeConfig.pulseEveryMs;
+}
+
+function publishRuntimeState(nowMs) {
+  if (!runtimeConfig.createState) {
+    return;
+  }
+
+  const state = runtimeConfig.createState({
+    roomId,
+    identity,
+    status: statusText,
+    peerCount: getParticipants().length,
+    botCount: botParticipants.length,
+    position: localParticipant.position,
+    target: pointerTarget,
+    now: nowMs
+  });
+  window.__lumenSpaceClientState = state;
+
+  if (window.parent !== window && nowMs - runtimeStatePostedAt >= 500) {
+    runtimeStatePostedAt = nowMs;
+    window.parent.postMessage(state, window.location.origin);
+  }
+}
+
 async function addBot() {
   const bot = await createBotParticipant(botParticipants.length, Date.now());
   botParticipants = [...botParticipants, bot];
-  updatePeopleList();
+  renderUi();
   showToast(`${bot.name} joined as a bot.`);
 }
 
@@ -479,7 +527,7 @@ function removeBot() {
     return;
   }
   botParticipants = botParticipants.slice(0, -1);
-  updatePeopleList();
+  renderUi();
   showToast(`${removedBot.name} removed.`);
 }
 
@@ -504,8 +552,6 @@ function leaveRoom() {
   stopPresenceLoop();
   window.cancelAnimationFrame(animationFrame);
   window.removeEventListener("keydown", handleKeydown);
-  elements.space.hidden = true;
-  elements.lobby.hidden = false;
   peers = {};
   pulses = [];
   resonances = [];
@@ -522,23 +568,13 @@ function handleKeydown(event) {
   }
 }
 
-function handleDebugLabelDoubleClick(event) {
-  event.preventDefault();
-  toggleDebugPanel();
-}
-
 function toggleDebugPanel() {
   setDebugVisible(!isDebugVisible);
 }
 
 function setDebugVisible(nextVisible) {
-  isDebugVisible = Boolean(nextVisible);
-  elements.debugPanel.hidden = !isDebugVisible;
-  if (!isDebugVisible) {
-    elements.debugOutput.textContent = "";
-    return;
-  }
-  updateDebugPanel();
+  isDebugVisible = ui.canShowDebug && Boolean(nextVisible);
+  renderUi();
 }
 
 function updateDebugPanel() {
@@ -546,74 +582,17 @@ function updateDebugPanel() {
     return;
   }
 
-  const rows = formatParticipantDebugRows(getParticipants(), { digits: 2, now: Date.now() });
-  elements.debugOutput.textContent = rows
-    .map((row) => {
-      const botAiText = row.ai ? ` ${formatBotAiDebug(row.ai)}` : "";
-      return (
-        `${row.kind.padEnd(5)} ${row.name.padEnd(18)} ` +
-        `p(${formatDebugVector(row.position)}) ` +
-        `v(${formatDebugVector(row.velocity)}) ` +
-        `s=${formatDebugNumber(row.speed)}` +
-        botAiText
-      );
-    })
-    .join("\n");
-}
-
-function formatBotAiDebug(ai) {
-  const target = ai.targetStarId ?? "drift";
-  const distance = formatDebugNullableNumber(ai.targetDistance);
-  return `ai(target=${target} d=${distance})`;
-}
-
-function formatDebugVector(vector) {
-  return [
-    formatDebugNumber(vector.x),
-    formatDebugNumber(vector.y),
-    formatDebugNumber(vector.z)
-  ].join(", ");
-}
-
-function formatDebugNumber(value) {
-  return Number(value).toFixed(2).padStart(6, " ");
-}
-
-function formatDebugNullableNumber(value) {
-  return value === null || value === undefined ? "--" : Number(value).toFixed(2);
-}
-
-function updatePeopleList() {
-  const participants = getParticipants();
-  elements.peerCount.textContent = String(participants.length);
-  elements.peopleList.replaceChildren();
-
-  for (const participant of participants) {
-    const row = document.createElement("li");
-    row.className = "person-row";
-    row.innerHTML = `
-      <span class="person-swatch" style="--person-color: ${participant.color}"></span>
-      <span class="person-name"></span>
-      <span class="person-meta">${participant.isLocal ? "you" : participant.isBot ? "bot" : "live"}</span>
-    `;
-    row.querySelector(".person-name").textContent = participant.name;
-    elements.peopleList.appendChild(row);
-  }
+  renderUi();
 }
 
 function setStatus(text, state) {
-  elements.connectionStatus.textContent = text;
-  elements.connectionStatus.dataset.state = state;
-  updatePeopleList();
+  statusText = text;
+  statusState = state;
+  renderUi();
 }
 
 function showToast(message) {
-  elements.toast.textContent = message;
-  elements.toast.hidden = false;
-  window.clearTimeout(showToast.timeout);
-  showToast.timeout = window.setTimeout(() => {
-    elements.toast.hidden = true;
-  }, 3200);
+  ui.showToast(message);
 }
 
 function loadSavedIdentity() {
@@ -664,8 +643,8 @@ function createBotParticipant(index, createdAt = Date.now()) {
   };
 }
 
-function createInitialBotParticipants(createdAt = Date.now()) {
-  return Array.from({ length: DEFAULT_ROOM_BOT_COUNT }, (_, index) =>
+function createInitialBotParticipants(createdAt = Date.now(), count = 2) {
+  return Array.from({ length: Math.max(0, Number(count) || 0) }, (_, index) =>
     createBotParticipant(index, createdAt + index)
   );
 }

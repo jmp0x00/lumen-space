@@ -14,6 +14,14 @@
     <main class="sim-shell">
       <section class="sim-stage" aria-label="Automated physics simulation">
         <canvas id="sim-canvas" width="1280" height="720"></canvas>
+        <section
+          class="realtime-stage"
+          id="realtime-stage"
+          aria-label="Realtime WebRTC room simulation"
+          hidden
+        >
+          <div class="room-grid" id="room-grid"></div>
+        </section>
       </section>
 
       <aside class="sim-panel" aria-label="Physics simulation controls and metrics">
@@ -25,17 +33,26 @@
           </div>
         </header>
 
+        <div class="mode-grid" aria-label="Simulation mode">
+          <button class="mode-button" type="button" data-mode="physics">
+            Physics
+          </button>
+          <button class="mode-button" type="button" data-mode="realtime">
+            Realtime
+          </button>
+        </div>
+
         <div class="status-grid" aria-label="Simulation metrics">
           <div>
-            <span>Closest</span>
+            <span id="metric-distance-label">Closest</span>
             <strong id="metric-distance">0.00</strong>
           </div>
           <div>
-            <span>Repulsion</span>
+            <span id="metric-repulsion-label">Repulsion</span>
             <strong id="metric-repulsion">0.00</strong>
           </div>
           <div>
-            <span>Speed</span>
+            <span id="metric-speed-label">Speed</span>
             <strong id="metric-speed">0.00</strong>
           </div>
         </div>
@@ -45,7 +62,7 @@
           <button id="reset-button" type="button" title="Reset current scenario">↺</button>
         </div>
 
-        <div class="scenario-grid" aria-label="Simulation scenarios">
+        <div class="scenario-grid physics-controls" aria-label="Simulation scenarios">
           <button class="scenario-button" type="button" data-scenario="cluster">
             Cluster
           </button>
@@ -57,31 +74,73 @@
           </button>
         </div>
 
-        <label for="collision-input">
+        <label class="physics-controls" for="collision-input">
           Collision
           <output id="collision-output" for="collision-input">0.42</output>
         </label>
-        <input id="collision-input" type="range" min="0" max="1.2" step="0.01" value="0.42">
+        <input
+          class="physics-controls"
+          id="collision-input"
+          type="range"
+          min="0"
+          max="1.2"
+          step="0.01"
+          value="0.42"
+        >
 
-        <label for="strength-input">
+        <label class="physics-controls" for="strength-input">
           Strength
           <output id="strength-output" for="strength-input">24</output>
         </label>
-        <input id="strength-input" type="range" min="0" max="42" step="1" value="24">
+        <input
+          class="physics-controls"
+          id="strength-input"
+          type="range"
+          min="0"
+          max="42"
+          step="1"
+          value="24"
+        >
 
-        <label for="response-input">
+        <label class="physics-controls" for="response-input">
           Separation
           <output id="response-output" for="response-input">0.18</output>
         </label>
-        <input id="response-input" type="range" min="0" max="0.32" step="0.01" value="0.18">
+        <input
+          class="physics-controls"
+          id="response-input"
+          type="range"
+          min="0"
+          max="0.32"
+          step="0.01"
+          value="0.18"
+        >
+
+        <section class="realtime-controls" id="realtime-controls" hidden>
+          <label for="realtime-room-input">
+            Room
+            <output id="realtime-room-output" for="realtime-room-input">lumen-webrtc-sim</output>
+          </label>
+          <input id="realtime-room-input" type="text" value="lumen-webrtc-sim">
+
+          <div
+            class="realtime-preset-grid"
+            id="realtime-preset-grid"
+            aria-label="Realtime user presets"
+          ></div>
+
+          <button class="launch-button" id="launch-realtime-button" type="button">
+            Launch Room
+          </button>
+        </section>
 
         <section class="debug-list" aria-label="Peer state">
-          <div class="debug-title">Peers</div>
+          <div class="debug-title" id="debug-title">Peers</div>
           <div id="peer-debug"></div>
         </section>
       </aside>
     </main>
 
-    <script type="module" src="./src/physics-sim.js?v=peer-collision-radius-20260627"></script>
+    <script type="module" src="./src/physics-sim.js?v=realtime-room-sim-20260627"></script>
   </body>
 </html>

@@ -27,7 +27,10 @@ The app is split into pure domain/physics modules and browser adapters.
 - `network.js` dynamically imports Trystero and exposes a small room adapter with `sendPresence`, `sendPulse`, and `leave`.
 - `names.js` dynamically imports Unique Names Generator and falls back to a small deterministic local generator if the CDN is unavailable.
 - `scene.js` dynamically imports Three.js and renders participants, labels, star field, touch stars, pulse rings, and resonance flashes.
-- `app.js` coordinates lobby state, local storage, URL updates, realtime connection, simulation ticks, UI controls, and the hidden physics debug overlay.
+- `app.js` coordinates lobby state, local storage, URL updates, realtime connection, room animation, and action callbacks while exposing app state to a pluggable UI generator.
+- `app-ui.js` owns default DOM rendering for the lobby, room chrome, participants, actions, toast, and debug overlay, plus a scene-only generator for embedded clients.
+- `runtime-config.js` owns app runtime hooks and UI generator selection, defaulting to the full lobby and room UI while allowing embedded clients to render scene-only.
+- `simulation-clients.js` owns realtime simulator presets, no-bot client URL generation, scripted movement target selection, and deterministic target helpers for tests.
 - `physics-sim.html`, `physics-sim.css`, and `physics-sim.js` form a separate static inspection app that runs scripted peers against the same pure physics modules.
 
 This shape keeps network and rendering side effects away from the logic covered by unit tests, and makes each physics behavior independently testable.
@@ -35,11 +38,11 @@ This shape keeps network and rendering side effects away from the logic covered 
 ## Data Flow
 
 1. The player submits lobby identity and room.
-2. `app.js` sanitizes identity, stores it in `localStorage`, and writes the room to the URL.
+2. The selected UI generator emits action callbacks; `app.js` sanitizes identity, stores it in `localStorage`, and writes the room to the URL.
 3. `scene.js` starts the WebGL scene and maps pointer positions to world-space targets.
 4. `app.js` updates local motion on each animation frame through `physics/motion.js`.
 5. `physics/collision.js` derives each participant's collision radius from the same visual scale used by the renderer, and `physics/repulsion.js` applies nudges when peer collision circles overlap while carrying any saved movement target along with the pushed position.
-6. When the debug overlay is visible, `app.js` asks the domain layer for rounded participant position, velocity, speed, and bot AI target/distance rows each frame.
+6. `app.js` passes a view model to the selected UI generator. When debug is visible, that view model includes rounded participant position, velocity, speed, and bot AI target/distance rows from the domain layer.
 7. `network.js` broadcasts throttled `presence` messages through Trystero.
 8. Remote `presence` messages are reduced into peer state and interpolated by the simulation loop.
 9. `physics/touch-stars.js` creates deterministic random-looking touch stars from the room ID.
@@ -51,7 +54,9 @@ This shape keeps network and rendering side effects away from the logic covered 
 
 ## Physics Simulator
 
-The physics simulator is a developer-facing static page at `physics-sim.html`. It uses the same `physics/motion.js`, `physics/collision.js`, `physics/repulsion.js`, color constants, and world bounds as the main app, but replaces WebRTC and Three.js with a deterministic 2D canvas harness. `physics-sim-scenarios.js` defines reusable scenario metadata for clustered peers, orbiting peers, and a two-peer crossing-route case whose scripted targets intersect at the center. The canvas shows routes, collision circles, repulsion vectors, closest distance, average repulsion, average speed, and per-peer coordinates continuously.
+The physics simulator is a developer-facing static page at `physics-sim.html`. In physics mode, it uses the same `physics/motion.js`, `physics/collision.js`, `physics/repulsion.js`, color constants, and world bounds as the main app, but replaces WebRTC and Three.js with a deterministic 2D canvas harness. `physics-sim-scenarios.js` defines reusable scenario metadata for clustered peers, orbiting peers, and a two-peer crossing-route case whose scripted targets intersect at the center. The canvas shows routes, collision circles, repulsion vectors, closest distance, average repulsion, average speed, and per-peer coordinates continuously.
+
+Realtime mode keeps WebRTC in the loop by embedding multiple `index.html` app instances as same-origin iframes. Each iframe receives URL parameters for identity, room ID, app-level no-bot startup, scene-only UI generator selection, and a scripted behavior preset. The embedded client still runs normal `app.js`, `runtime-config.js`, `app-ui.js`, `scene.js`, `network.js`, Trystero presence/pulse messages, touch-star handling, and repulsion; only its runtime target is generated from the realtime preset. The simulator parent monitors each iframe through same-origin state and `postMessage` updates.
 
 ## Message Interfaces
 

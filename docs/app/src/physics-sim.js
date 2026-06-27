@@ -4,6 +4,14 @@ import {
   getScenarioRouteSegments,
   getScenarioTargetPosition
 } from "./physics-sim-scenarios.js";
+import { normalizeRoomId } from "./room.js";
+import {
+  REALTIME_ROOM_DEFAULT_ID,
+  REALTIME_ROOM_PRESETS,
+  createDefaultRealtimeRoomId,
+  createRealtimeRoomClients,
+  getRealtimeRoomPreset
+} from "./simulation-clients.js?v=realtime-room-sim-20260627";
 import {
   getPeerCollisionDistance,
   getPeerCollisionRadius
@@ -20,6 +28,19 @@ import { SPACE_BOUNDS, clamp, vectorDistance } from "./physics/vector.js";
 const canvas = document.querySelector("#sim-canvas");
 const context = canvas.getContext("2d");
 const elements = {
+  realtimeStage: document.querySelector("#realtime-stage"),
+  roomGrid: document.querySelector("#room-grid"),
+  modeButtons: document.querySelectorAll(".mode-button"),
+  physicsControls: document.querySelectorAll(".physics-controls"),
+  realtimeControls: document.querySelector("#realtime-controls"),
+  realtimePresetGrid: document.querySelector("#realtime-preset-grid"),
+  realtimeRoom: document.querySelector("#realtime-room-input"),
+  realtimeRoomOutput: document.querySelector("#realtime-room-output"),
+  launchRealtime: document.querySelector("#launch-realtime-button"),
+  debugTitle: document.querySelector("#debug-title"),
+  distanceLabel: document.querySelector("#metric-distance-label"),
+  repulsionLabel: document.querySelector("#metric-repulsion-label"),
+  speedLabel: document.querySelector("#metric-speed-label"),
   distance: document.querySelector("#metric-distance"),
   repulsion: document.querySelector("#metric-repulsion"),
   speed: document.querySelector("#metric-speed"),
@@ -39,25 +60,45 @@ let participants = [];
 let repulsionDeltas = new Map();
 let lastFrameAt = performance.now();
 let paused = false;
+let mode = "physics";
 let scenario = "cluster";
 let scenarioStartedAt = performance.now() / 1000;
+let realtimePreset = "mixed";
+let realtimeFrames = [];
+let realtimeClientStates = new Map();
 
 bindControls();
 setScenario("cluster");
+setRealtimePreset("mixed");
+elements.realtimeRoom.value = createDefaultRealtimeRoomId();
+syncRealtimeRoomOutput();
+setMode("physics");
 resizeCanvas();
 requestAnimationFrame(tick);
 
 function bindControls() {
   elements.pause.setAttribute("aria-pressed", "false");
   elements.pause.addEventListener("click", () => {
+    if (mode !== "physics") {
+      return;
+    }
     paused = !paused;
     elements.pause.textContent = paused ? "▶" : "Ⅱ";
     elements.pause.setAttribute("aria-pressed", String(paused));
   });
 
   elements.reset.addEventListener("click", () => {
+    if (mode === "realtime") {
+      launchRealtimeRoom();
+      return;
+    }
     resetScenario();
   });
+  for (const button of elements.modeButtons) {
+    button.addEventListener("click", () => {
+      setMode(button.dataset.mode);
+    });
+  }
   for (const button of elements.scenarioButtons) {
     button.addEventListener("click", () => {
       setScenario(button.dataset.scenario);
@@ -66,7 +107,11 @@ function bindControls() {
   for (const input of [elements.collision, elements.strength, elements.response]) {
     input.addEventListener("input", syncControlLabels);
   }
+  elements.realtimeRoom.addEventListener("input", syncRealtimeRoomOutput);
+  elements.launchRealtime.addEventListener("click", launchRealtimeRoom);
+  window.addEventListener("message", handleRealtimeClientMessage);
   window.addEventListener("resize", resizeCanvas);
+  renderRealtimePresetButtons();
   syncControlLabels();
 }
 
@@ -74,12 +119,17 @@ function tick(now) {
   const deltaSeconds = Math.min(0.05, Math.max(0, (now - lastFrameAt) / 1000));
   lastFrameAt = now;
 
-  if (!paused) {
+  if (mode === "physics" && !paused) {
     stepSimulation(now / 1000, deltaSeconds);
   }
 
-  draw(now / 1000);
-  renderMetrics();
+  if (mode === "physics") {
+    draw(now / 1000);
+    renderMetrics();
+  } else {
+    pollRealtimeFrames();
+    renderRealtimeMetrics();
+  }
   requestAnimationFrame(tick);
 }
 
@@ -336,6 +386,223 @@ function renderMetrics() {
       return row;
     })
   );
+}
+
+function renderRealtimePresetButtons() {
+  elements.realtimePresetGrid.replaceChildren(
+    ...Object.values(REALTIME_ROOM_PRESETS).map((preset) => {
+      const button = document.createElement("button");
+      button.className = "realtime-preset-button";
+      button.type = "button";
+      button.dataset.preset = preset.id;
+      button.innerHTML = `
+        ${preset.label}
+        <span></span>
+      `;
+      button.querySelector("span").textContent = preset.description;
+      button.addEventListener("click", () => {
+        setRealtimePreset(preset.id);
+        if (mode === "realtime") {
+          launchRealtimeRoom();
+        }
+      });
+      return button;
+    })
+  );
+  syncRealtimePresetButtons();
+}
+
+function setMode(nextMode) {
+  mode = nextMode === "realtime" ? "realtime" : "physics";
+  canvas.hidden = mode !== "physics";
+  elements.realtimeStage.hidden = mode !== "realtime";
+  elements.realtimeControls.hidden = mode !== "realtime";
+  for (const control of elements.physicsControls) {
+    control.hidden = mode !== "physics";
+  }
+  for (const button of elements.modeButtons) {
+    button.setAttribute("aria-pressed", String(button.dataset.mode === mode));
+  }
+
+  if (mode === "physics") {
+    elements.pause.disabled = false;
+    elements.pause.textContent = paused ? "▶" : "Ⅱ";
+    elements.debugTitle.textContent = "Peers";
+    elements.distanceLabel.textContent = "Closest";
+    elements.repulsionLabel.textContent = "Repulsion";
+    elements.speedLabel.textContent = "Speed";
+    resizeCanvas();
+    renderMetrics();
+    return;
+  }
+
+  elements.pause.disabled = true;
+  elements.pause.textContent = "Ⅱ";
+  elements.debugTitle.textContent = "Clients";
+  elements.distanceLabel.textContent = "Clients";
+  elements.repulsionLabel.textContent = "Online";
+  elements.speedLabel.textContent = "Room";
+  if (realtimeFrames.length === 0) {
+    launchRealtimeRoom();
+  }
+  renderRealtimeMetrics();
+}
+
+function setRealtimePreset(nextPreset) {
+  realtimePreset = getRealtimeRoomPreset(nextPreset).id;
+  syncRealtimePresetButtons();
+}
+
+function syncRealtimePresetButtons() {
+  for (const button of elements.realtimePresetGrid.querySelectorAll(".realtime-preset-button")) {
+    button.setAttribute("aria-pressed", String(button.dataset.preset === realtimePreset));
+  }
+}
+
+function launchRealtimeRoom() {
+  const roomId = normalizeRoomId(elements.realtimeRoom.value) ?? REALTIME_ROOM_DEFAULT_ID;
+  elements.realtimeRoom.value = roomId;
+  syncRealtimeRoomOutput();
+
+  const baseUrl = new URL("./index.html", window.location.href);
+  const clients = createRealtimeRoomClients({
+    presetId: realtimePreset,
+    roomId,
+    baseUrl
+  });
+  realtimeClientStates = new Map();
+  realtimeFrames = clients.map(createRealtimeFrame);
+  elements.roomGrid.replaceChildren(...realtimeFrames.map((frame) => frame.element));
+  renderRealtimeMetrics();
+}
+
+function createRealtimeFrame(client) {
+  const element = document.createElement("article");
+  element.className = "client-frame";
+  element.dataset.clientName = client.name;
+
+  const header = document.createElement("header");
+  header.className = "client-frame-header";
+  header.innerHTML = `
+    <span class="peer-swatch" style="--peer-color: ${client.color}"></span>
+    <span class="client-title">
+      <strong></strong>
+      <span></span>
+    </span>
+    <span class="client-status" data-state="pending">Loading</span>
+  `;
+  header.querySelector("strong").textContent = client.name;
+  header.querySelector(".client-title span").textContent = getClientBehaviorLabel(client);
+
+  const frame = {
+    client,
+    element,
+    iframe: document.createElement("iframe"),
+    statusElement: header.querySelector(".client-status")
+  };
+  frame.iframe.title = `${client.name} screen`;
+  frame.iframe.loading = "eager";
+  frame.iframe.addEventListener("load", () => {
+    const state = realtimeClientStates.get(client.name);
+    if (!state) {
+      setRealtimeFrameStatus(frame, "Loaded", "pending");
+    }
+  });
+  frame.iframe.src = client.url;
+
+  element.append(header, frame.iframe);
+  return frame;
+}
+
+function handleRealtimeClientMessage(event) {
+  if (event.origin !== window.location.origin || event.data?.type !== "lumen-sim-client-state") {
+    return;
+  }
+
+  realtimeClientStates.set(event.data.name, event.data);
+  updateRealtimeFrameState(event.data);
+}
+
+function pollRealtimeFrames() {
+  for (const frame of realtimeFrames) {
+    try {
+      const state = frame.iframe.contentWindow?.__lumenSpaceClientState;
+      if (state?.type === "lumen-sim-client-state") {
+        realtimeClientStates.set(state.name, state);
+        updateRealtimeFrameState(state);
+      }
+    } catch {
+      setRealtimeFrameStatus(frame, "Unavailable", "error");
+    }
+  }
+}
+
+function updateRealtimeFrameState(state) {
+  const frame = realtimeFrames.find((candidate) => candidate.client.name === state.name);
+  if (!frame) {
+    return;
+  }
+
+  const statusText = state.status || "Starting";
+  setRealtimeFrameStatus(
+    frame,
+    `${statusText} · ${state.peerCount}`,
+    statusText === "Online" ? "online" : statusText.includes("Retrying") ? "pending" : "pending"
+  );
+}
+
+function setRealtimeFrameStatus(frame, text, state) {
+  frame.statusElement.textContent = text;
+  frame.statusElement.dataset.state = state;
+}
+
+function renderRealtimeMetrics() {
+  const onlineCount = [...realtimeClientStates.values()].filter(
+    (state) => state.status === "Online"
+  ).length;
+  const roomId = normalizeRoomId(elements.realtimeRoom.value) ?? REALTIME_ROOM_DEFAULT_ID;
+  elements.distance.textContent = String(realtimeFrames.length);
+  elements.repulsion.textContent = String(onlineCount);
+  elements.speed.textContent = roomId;
+
+  elements.debug.replaceChildren(
+    ...realtimeFrames.map((frame) => {
+      const state = realtimeClientStates.get(frame.client.name);
+      const row = document.createElement("div");
+      row.className = "peer-row";
+      row.innerHTML = `
+        <span class="peer-swatch" style="--peer-color: ${frame.client.color}"></span>
+        <span class="peer-name"></span>
+        <span class="peer-value"></span>
+      `;
+      row.querySelector(".peer-name").textContent = frame.client.name;
+      row.querySelector(".peer-value").textContent = state
+        ? `${state.behavior} ${formatVector(state.position)}`
+        : "starting";
+      return row;
+    })
+  );
+}
+
+function syncRealtimeRoomOutput() {
+  elements.realtimeRoomOutput.textContent =
+    normalizeRoomId(elements.realtimeRoom.value) ?? REALTIME_ROOM_DEFAULT_ID;
+}
+
+function getClientBehaviorLabel(client) {
+  if (client.behavior === "chase") {
+    return `chase ${client.targetName || "peer"}`;
+  }
+
+  if (client.behavior === "path") {
+    return `${client.path} path`;
+  }
+
+  if (client.behavior === "star") {
+    return "chase stars";
+  }
+
+  return client.behavior;
 }
 
 function getClosestDistance() {

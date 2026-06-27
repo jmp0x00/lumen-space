@@ -21,6 +21,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   width: 100%;
@@ -67,6 +71,13 @@ input:focus-visible {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.realtime-stage {
+  width: 100%;
+  height: 100vh;
+  padding: 16px;
+  overflow: auto;
 }
 
 .sim-panel {
@@ -154,7 +165,9 @@ label,
 }
 
 .control-row,
-.scenario-grid {
+.scenario-grid,
+.mode-grid,
+.realtime-preset-grid {
   display: grid;
   gap: 8px;
 }
@@ -163,12 +176,19 @@ label,
   grid-template-columns: repeat(2, 1fr);
 }
 
-.scenario-grid {
+.scenario-grid,
+.mode-grid {
   grid-template-columns: repeat(3, 1fr);
 }
 
+.mode-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .control-row button,
-.scenario-button {
+.scenario-button,
+.mode-button,
+.launch-button {
   display: grid;
   min-height: 42px;
   place-items: center;
@@ -181,7 +201,47 @@ label,
 }
 
 .control-row button[aria-pressed="true"],
-.scenario-button[aria-pressed="true"] {
+.scenario-button[aria-pressed="true"],
+.mode-button[aria-pressed="true"],
+.realtime-preset-button[aria-pressed="true"] {
+  color: #041016;
+  background: linear-gradient(135deg, var(--cyan), var(--green));
+}
+
+.realtime-controls {
+  display: grid;
+  gap: 14px;
+}
+
+.realtime-preset-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.realtime-preset-button {
+  display: grid;
+  min-height: 52px;
+  align-content: center;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: 900;
+  text-align: left;
+}
+
+.realtime-preset-button span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.launch-button {
+  width: 100%;
   color: #041016;
   background: linear-gradient(135deg, var(--cyan), var(--green));
 }
@@ -201,6 +261,17 @@ output {
 input[type="range"] {
   width: 100%;
   accent-color: var(--cyan);
+}
+
+input[type="text"] {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  outline: none;
 }
 
 .debug-list {
@@ -247,6 +318,80 @@ input[type="range"] {
 
 .peer-value {
   color: var(--muted);
+}
+
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+  min-height: 100%;
+  align-content: start;
+}
+
+.client-frame {
+  display: grid;
+  min-height: clamp(320px, 47vh, 520px);
+  grid-template-rows: auto minmax(260px, 1fr);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(7, 10, 18, 0.92);
+  box-shadow: 0 18px 46px var(--shadow);
+}
+
+.client-frame-header {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(18, 23, 35, 0.94);
+}
+
+.client-title {
+  min-width: 0;
+}
+
+.client-title strong,
+.client-title span,
+.client-status {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.client-title strong {
+  font-size: 0.86rem;
+}
+
+.client-title span,
+.client-status {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.client-status[data-state="online"] {
+  color: var(--green);
+}
+
+.client-status[data-state="pending"] {
+  color: var(--amber);
+}
+
+.client-status[data-state="error"] {
+  color: var(--red);
+}
+
+.client-frame iframe {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  background: #05070d;
 }
 
 @media (max-width: 860px) {

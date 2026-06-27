@@ -34,6 +34,9 @@
 - Rolled back the sticky/idle bot targeting experiment after visual testing showed target churn and wall jams were still too hard to reason about; bots now simply chase the closest available star every update, and live peer collisions are kept small enough to avoid broad repulsion jams.
 - Replaced the single repulsion radius with a shared size-based collision radius, so local lumes, remote lumes, and bots have different collision footprints and star touches use peer-radius plus star-radius contact instead of point overlap.
 - Fixed idle-peer push behavior by carrying pointer/network target positions along with collision displacement, after observing that pushed idle lumes eased back to their previous spots.
+- Added a realtime simulator mode to the existing physics simulator after realizing the canvas harness was useful for deterministic physics but could not answer whether several real app clients behaved correctly through WebRTC.
+- Refactored simulator-specific app startup behavior behind `runtime-config.js`, so `app.js` stays focused on generic room orchestration while embedded clients can request scene-only UI and no bots through app-level configuration.
+- Replaced the temporary UI-part flag model with pluggable UI generators, so the app runtime now passes a view model and actions to default or scene-only UI adapters instead of knowing which panels or buttons should exist.
 
 ## AI Tools Used
 
