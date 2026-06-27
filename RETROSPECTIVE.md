@@ -37,6 +37,7 @@
 - Added a realtime simulator mode to the existing physics simulator after realizing the canvas harness was useful for deterministic physics but could not answer whether several real app clients behaved correctly through WebRTC.
 - Refactored simulator-specific app startup behavior behind `runtime-config.js`, so `app.js` stays focused on generic room orchestration while embedded clients can request scene-only UI and no bots through app-level configuration.
 - Replaced the temporary UI-part flag model with pluggable UI generators, so the app runtime now passes a view model and actions to default or scene-only UI adapters instead of knowing which panels or buttons should exist.
+- Captured the preferred core game architecture in `docs/core-game-architecture.md`: normalized local/network/bot inputs, pure state updates, tick-based simulation, and scene rendering as a derived projection rather than the source of gameplay truth.
 
 ## AI Tools Used
 

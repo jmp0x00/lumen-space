@@ -13,6 +13,9 @@
 
 The app is split into pure domain/physics modules and browser adapters.
 
+The preferred long-term game-core model is documented in
+[docs/core-game-architecture.md](docs/core-game-architecture.md). In short, local input, remote peer messages, bot decisions, and frame time should be normalized into validated events or snapshots; pure game-state logic should update the canonical state; and the UI plus Three.js scene should render derived projections of that state.
+
 - `domain.js` is the public domain facade. It owns identity sanitization, debug row formatting including bot AI target state, presence reduction, and stale-peer pruning, while re-exporting stable room and physics APIs for existing callers.
 - `room.js` owns room ID normalization, room ID generation, room extraction from URLs, and invite URL creation.
 - `colors.js` owns color constants, hex color normalization, and color mixing utilities used by identity and pulse logic.
