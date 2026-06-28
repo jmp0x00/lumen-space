@@ -50,11 +50,21 @@ test("sky projection keeps known constellations in plausible celestial-map posit
   const northPole = projectSkyToWorld([0, 90]);
   const southPole = projectSkyToWorld([0, -90]);
 
-  assert.ok(orion.labelPosition.x > 14 && orion.labelPosition.y > -1 && orion.labelPosition.y < 3);
-  assert.ok(taurus.labelPosition.x > 12 && taurus.labelPosition.y > orion.labelPosition.y);
-  assert.ok(scorpius.labelPosition.x < -18 && scorpius.labelPosition.y < -5);
-  assert.ok(northPole.y > 18);
-  assert.ok(southPole.y < -18);
+  assert.ok(
+    orion.labelPosition.x > SPACE_BOUNDS.x[1] * 0.35 &&
+      orion.labelPosition.y > 0 &&
+      orion.labelPosition.y < SPACE_BOUNDS.y[1] * 0.1
+  );
+  assert.ok(
+    taurus.labelPosition.x > SPACE_BOUNDS.x[1] * 0.3 &&
+      taurus.labelPosition.y > orion.labelPosition.y
+  );
+  assert.ok(
+    scorpius.labelPosition.x < SPACE_BOUNDS.x[0] * 0.5 &&
+      scorpius.labelPosition.y < SPACE_BOUNDS.y[0] * 0.25
+  );
+  assert.ok(northPole.y > SPACE_BOUNDS.y[1] * 0.95);
+  assert.ok(southPole.y < SPACE_BOUNDS.y[0] * 0.95);
 });
 
 test("touch-star placements enumerate concrete constellation nodes once", () => {

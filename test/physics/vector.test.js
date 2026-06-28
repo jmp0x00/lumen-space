@@ -15,7 +15,11 @@ test("vector sanitizing and clamping keep positions inside the playable space", 
     y: 8,
     z: -1
   });
-  assert.deepEqual(clampVector({ x: 99, y: -99, z: 4 }), {
+  assert.deepEqual(clampVector({
+    x: SPACE_BOUNDS.x[1] + 1,
+    y: SPACE_BOUNDS.y[0] - 1,
+    z: SPACE_BOUNDS.z[1] + 1
+  }), {
     x: SPACE_BOUNDS.x[1],
     y: SPACE_BOUNDS.y[0],
     z: SPACE_BOUNDS.z[1]

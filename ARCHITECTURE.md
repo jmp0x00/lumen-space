@@ -71,7 +71,7 @@ This shape keeps network and rendering side effects away from the logic covered 
 
 ## Constellation Data
 
-The constellation line coordinates are derived from `d3-celestial`'s constellation GeoJSON data. The source contains all recognized constellations, with Serpens represented as two separated line features; the app merges those two features into one official Serpens entry so the game catalogue has 88 constellations. Coordinates are projected into the game world with a simple equirectangular longitude/declination map, preserving broad real sky relationships while staying readable in the compact playable space. Source line segments that cross the longitude wrap are split at the map edge so they do not draw across the whole room.
+The constellation line coordinates are derived from `d3-celestial`'s constellation GeoJSON data. The source contains all recognized constellations, with Serpens represented as two separated line features; the app merges those two features into one official Serpens entry so the game catalogue has 88 constellations. Coordinates are projected into the game world with a simple equirectangular longitude/declination map, preserving broad real sky relationships while spreading nodes across a vast playable space. Source line segments that cross the longitude wrap are split at the map edge so they do not draw across the whole room.
 
 ## Simulator
 

@@ -79,7 +79,7 @@ Out of scope:
 - Each room must assign one deterministic color to each constellation, and every visible touch star on that constellation must use that color.
 - Each touch-star slot must map deterministically from room ID and star index to one constellation node; generation is retained only as pulse metadata compatibility and must not move the star.
 - After a touch, the star must stay visible at the same node, mark itself opened, and shine brighter for all players.
-- Unopened touch stars must visibly pulse so players can scan the enlarged map for where to go next.
+- Unopened touch stars must visibly pulse so players can scan the vast map for where to go next.
 - Star-touch progress must be monotonic: touching a node marks it discovered for the room and repeated touches must not remove progress.
 - Constellation progress must synchronize peer-to-peer through compact presence snapshots so late joiners can see already revealed constellations without a backend.
 - A constellation must reveal its line segments and name after all of its nodes have been touched.

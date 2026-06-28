@@ -32,10 +32,13 @@ test("simulator includes a passive constellation map observer configuration", ()
   assert.equal(SIMULATOR_CONFIG.mapTourSpeedMaxSeconds, 10);
 });
 
-test("space bounds are larger than one camera view", () => {
-  assert.deepEqual(SPACE_BOUNDS.x, [-36, 36]);
-  assert.deepEqual(SPACE_BOUNDS.y, [-20.25, 20.25]);
+test("space bounds spread constellation stars across a wide map", () => {
+  assert.deepEqual(SPACE_BOUNDS.x, [-270, 270]);
+  assert.deepEqual(SPACE_BOUNDS.y, [-151.875, 151.875]);
+  assert.deepEqual(SPACE_BOUNDS.z, [-6, 5]);
   assert.equal(SCENE_CONFIG.cameraDistance, 18);
-  assert.equal(SCENE_CONFIG.backgroundStarCount, 8_000);
+  assert.equal(SCENE_CONFIG.backgroundStarCount, 120_000);
+  assert.equal(SCENE_CONFIG.backgroundStarOverscanX, 550);
+  assert.equal(SCENE_CONFIG.backgroundStarOverscanY, 360);
   assert.equal(SCENE_CONFIG.cameraFollowLerp, 0.075);
 });

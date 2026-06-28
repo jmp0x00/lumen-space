@@ -74,9 +74,9 @@ export const NETWORK_CONFIG = Object.freeze({
 });
 
 export const SPACE_BOUNDS = Object.freeze({
-  x: Object.freeze([-36, 36]),
-  y: Object.freeze([-20.25, 20.25]),
-  z: Object.freeze([-4.2, 3.2])
+  x: Object.freeze([-270, 270]),
+  y: Object.freeze([-151.875, 151.875]),
+  z: Object.freeze([-6, 5])
 });
 
 export const MOTION_CONFIG = Object.freeze({
@@ -214,10 +214,10 @@ export const BOT_CONFIG = Object.freeze({
 
 export const SCENE_CONFIG = Object.freeze({
   threeUrl: "https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js",
-  backgroundStarCount: 8_000,
-  backgroundStarOverscanX: 74,
-  backgroundStarOverscanY: 48,
-  backgroundStarDepth: 56,
+  backgroundStarCount: 120_000,
+  backgroundStarOverscanX: 550,
+  backgroundStarOverscanY: 360,
+  backgroundStarDepth: 120,
   cameraDistance: 18,
   cameraFollowLerp: 0.075,
   maxPixelRatio: 2

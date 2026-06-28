@@ -71,7 +71,7 @@ test("presence messages carry replaceable snapshots with monotonic sequences", (
     clientId: "client-2",
     sequence: 7,
     identity: { name: "Lin", color: "#86efac" },
-    position: { x: 99, y: 1, z: 0 },
+    position: { x: SPACE_BOUNDS.x[1] + 1, y: 1, z: 0 },
     velocity: { x: 0.25, y: 0, z: 0 },
     targetPosition: { x: 2, y: 0, z: 0 },
     constellationProgress: { orion: 3, "Bad ID": 4, ignored: 0 },

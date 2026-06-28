@@ -86,6 +86,7 @@
 - Replaced the limited generated-star pool with a full 767-node visible catalogue so every constellation node can be discovered directly.
 - Added a passive constellation-map simulator mode after the all-sky data landed, because inspecting the projected map without playing is a faster way to validate placement, labels, colors, and line readability.
 - Changed star behavior to in-place opening: all constellation stars render at once, unopened nodes pulse as navigation beacons, opened nodes stay brighter, bots and scripted clients skip opened stars, and the enlarged map gives more travel distance between nodes.
+- Expanded the sky map again after play review showed the full 767-node catalogue still felt too tight; the projection now uses a 540 by 303.75 world-unit plane so constellation nodes require much more travel between touches.
 
 ## AI Tools Used
 

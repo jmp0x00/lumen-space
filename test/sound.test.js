@@ -14,6 +14,7 @@ import {
   ROOM_LOFI_SONG_SPACE,
   SOUND_CUE_MEMORY_LIMIT
 } from "../docs/app/src/sound.js";
+import { SPACE_BOUNDS } from "../docs/app/src/physics/vector.js";
 
 test("createLofiLoopPattern keeps the legacy four-bar lo-fi loop deterministic", () => {
   const pattern = createLofiLoopPattern();
@@ -73,7 +74,7 @@ test("createPulseSongReaction gives star-touch pulses a stronger song reaction",
     color: "#fcd34d",
     strength: 1.16,
     trigger: "star-touch",
-    origin: { x: -99, y: 0, z: 0 }
+    origin: { x: SPACE_BOUNDS.x[0], y: 0, z: 0 }
   });
 
   assert.deepEqual(reaction, {

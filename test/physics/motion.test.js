@@ -19,7 +19,7 @@ test("motion integration pulls a lume toward the pointer with inertia", () => {
 test("motion integration caps speed and clamps the next position to bounds", () => {
   const next = updateMotion(
     { position: { x: SPACE_BOUNDS.x[1], y: 0, z: 0 }, velocity: { x: 20, y: 0, z: 0 } },
-    { x: 99, y: 0, z: 0 },
+    { x: SPACE_BOUNDS.x[1] + 10, y: 0, z: 0 },
     0.05
   );
 
