@@ -15,8 +15,8 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Drift through small colorful touch stars to release pulses that blend star and lumen colors.
 - Send pulses that expand through the shared space.
 - When different players' pulse fronts meet, they create a brief resonance flash.
-- Hear a gentle procedural lo-fi loop after the browser unlocks audio through interaction, with manual pulses, star-touch pulses, and resonance flashes layered in as musical accents.
-- Use the room Lo-Fi control to mute or unmute the loop and pulse accents.
+- Hear the procedural space lo-fi song after the browser unlocks audio through interaction; manual pulses, star-touch pulses, and resonance flashes briefly and noticeably reshape the song's density, space, tone, and voices instead of playing as separate effects.
+- Use the room Lo-Fi control to mute or unmute the reactive song.
 - Rooms start with passive AI-driven local bots that seek touch stars, and you can add or remove more bots.
 - Rooms are peer-to-peer and ephemeral; no account, backend server, or database is used.
 - If realtime networking is unavailable, the app keeps retrying while the visual room stays usable.
@@ -53,8 +53,8 @@ HTML, CSS, and JavaScript modules during development.
 To inspect peer collision scenarios without joining a room manually, open
 `http://localhost:4173/simulator.html`. The simulator includes a pure physics
 canvas mode, a realtime mode that embeds multiple scene-only no-bot app clients
-in the same WebRTC room, and a song mode for a separate procedural space lo-fi
-infinite track with tempo, density, space, and volume controls. Realtime
+in the same WebRTC room, and a song mode for the shared procedural space lo-fi
+infinite track with tempo, density, space, volume, and reaction audition controls. Realtime
 simulator lo-fi audio is controlled by one simulator button and is routed
 through a single designated embedded client.
 
@@ -78,8 +78,8 @@ For physics tuning, double-click the room label in the room to toggle a hidden d
 - `docs/app/src/protocol.js`: v2 peer protocol creators and validators for hello, presence, and pulse events.
 - `docs/app/src/core/`: canonical game state, event reducer, simulation step, and scene/UI selectors.
 - `docs/app/src/physics/`: focused pure physics modules for vectors, local motion, peer collision/repulsion, AI-driven bot motion, touch stars, pulses, and resonance.
-- `docs/app/src/sound.js`: deterministic lo-fi loop and pulse/resonance cue planning plus the Web Audio performer.
-- `docs/app/src/space-lofi-song.js`: standalone procedural space lo-fi infinite song plan and Web Audio performer.
+- `docs/app/src/sound.js`: room audio glue, shared space lo-fi song preset, and pulse/resonance reaction planning plus the Web Audio performer.
+- `docs/app/src/space-lofi-song.js`: shared procedural space lo-fi infinite song plan, deterministic reaction model, reusable controller, and simulator Web Audio performer.
 - `docs/app/src/network.js`: Trystero/WebRTC room connection.
 - `docs/app/src/scene.js`: Three.js WebGL scene.
 - `docs/app/src/app.js`: browser adapter for UI, scene, realtime transport, timers, storage, and core effects.

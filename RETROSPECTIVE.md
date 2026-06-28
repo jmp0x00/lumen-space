@@ -46,7 +46,7 @@
 - Added local synthesized pulse audio with a pure cue-planning layer and a Web Audio adapter, while keeping realtime simulator iframes silent to avoid turning validation into overlapping audio noise.
 - Added explicit mute/unmute controls and refined simulator audio to use one shell-level control plus one designated source iframe, which better matches how multi-client validation is actually used.
 - Iterated on audio after the first pass felt like isolated sound effects: kept the asset-free Web Audio approach but added a deterministic four-bar lo-fi loop with chords, bass, sparse drums, melody, vinyl-style noise, and pulse accents that sit inside the music.
-- Updated tests around the pure lo-fi pattern and cue-planning data, preserving deterministic validation even though the final playback is browser-only and subjective.
+- Updated tests around the pure lo-fi pattern and reaction-planning data, preserving deterministic validation even though the final playback is browser-only and subjective.
 
 ### 2026-06-28
 
@@ -55,6 +55,9 @@
 - Added a simulator Song mode with a canvas visualization, start/stop audio control, seed regeneration, and live voice-state metrics so the generated music can be inspected and tested as part of the AI-native workflow.
 - Added simulator Song mode controls for tempo, density, space, and volume, which turned the generated music into a tunable artifact instead of a one-shot hidden behavior.
 - Refined the generated song after listening feedback revealed an unsettling periodic click; the likely cause was a looped raw noise bed, so the noise buffers now use softened edges and gentler noise-hit attacks.
+- Promoted the simulator's procedural space lo-fi song into the game room by exposing a reusable song controller, then softened pulse and resonance effects so interactions decorate the song instead of competing with it.
+- Reworked room audio again after the effects still felt too distinct: pulses and resonances now become deterministic song reactions that temporarily tune density, space, pad, bass, lead, dust, and kit softness, with simulator audition buttons for listening-based iteration.
+- Retuned the song reactions after environmental interactions became too hard to hear, removing accidental double-softening in the reaction mix and adding an immediate tone/wet-mix bloom on the existing song bus.
 
 ## AI Tools Used
 

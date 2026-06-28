@@ -1,8 +1,16 @@
 import { normalizeHexColor } from "./colors.js";
 import { clamp, SPACE_BOUNDS } from "./physics/vector.js";
+import {
+  createSpaceLofiSongController,
+  createSpaceLofiSongPlan
+} from "./space-lofi-song.js?v=audible-reactions-20260628";
 
 export const SOUND_CUE_MEMORY_LIMIT = 240;
 export const LOFI_LOOP_BPM = 78;
+export const ROOM_LOFI_SONG_SEED = "lumen-space-room";
+export const ROOM_LOFI_SONG_BPM = 72;
+export const ROOM_LOFI_SONG_DENSITY = 0.58;
+export const ROOM_LOFI_SONG_SPACE = 0.62;
 
 const LOFI_LOOP_BARS = 4;
 const LOFI_STEPS_PER_BAR = 16;
@@ -10,7 +18,6 @@ const LOFI_LOOP_STEPS = LOFI_LOOP_BARS * LOFI_STEPS_PER_BAR;
 const LOFI_SWING = 0.1;
 const LOFI_SCHEDULE_AHEAD_SECONDS = 0.9;
 const LOFI_SCHEDULER_INTERVAL_MS = 110;
-const LOFI_LEAD_SCALE = [220, 261.63, 293.66, 329.63, 392, 440];
 const LOFI_CHORDS = [
   { name: "Am9", rootFrequency: 55, frequencies: [220, 261.63, 329.63, 392, 493.88] },
   { name: "Fmaj7", rootFrequency: 43.65, frequencies: [174.61, 220, 261.63, 329.63] },
@@ -47,6 +54,18 @@ const LOFI_MELODY = [
   { step: 44, frequency: 329.63 },
   { step: 58, frequency: 220 }
 ];
+const ROOM_ACCENT_SCALE = [
+  220, 246.94, 261.63, 293.66, 329.63, 369.99, 392, 440, 493.88, 523.25
+];
+
+export function createRoomLofiSongPlan(options = {}) {
+  return createSpaceLofiSongPlan({
+    seed: options.seed ?? ROOM_LOFI_SONG_SEED,
+    bpm: options.bpm ?? ROOM_LOFI_SONG_BPM,
+    density: options.density ?? ROOM_LOFI_SONG_DENSITY,
+    space: options.space ?? ROOM_LOFI_SONG_SPACE
+  });
+}
 
 export function createLofiLoopPattern({ bpm = LOFI_LOOP_BPM } = {}) {
   const safeBpm = clamp(bpm, 54, 110);
@@ -91,7 +110,7 @@ export function collectNewSoundCues(snapshot, state, options = {}) {
     if (previousPulseIds.has(pulseId)) {
       continue;
     }
-    const cue = createPulseSoundCue(pulse, options);
+    const cue = createPulseSongReaction(pulse, options);
     if (cue) {
       cues.push(cue);
     }
@@ -106,7 +125,7 @@ export function collectNewSoundCues(snapshot, state, options = {}) {
     if (previousResonanceIds.has(resonanceId)) {
       continue;
     }
-    const cue = createResonanceSoundCue(resonance);
+    const cue = createResonanceSongReaction(resonance);
     if (cue) {
       cues.push(cue);
     }
@@ -118,6 +137,29 @@ export function collectNewSoundCues(snapshot, state, options = {}) {
       pulseIds: limitIds(nextPulseIds),
       resonanceIds: limitIds(nextResonanceIds)
     }
+  };
+}
+
+export function createPulseSongReaction(pulse, { localClientId = "" } = {}) {
+  const pulseId = String(pulse?.id ?? "");
+  if (!pulseId) {
+    return null;
+  }
+
+  const color = normalizeHexColor(pulse.color);
+  const strength = clamp(pulse.strength ?? 1, 0.2, 2.5);
+  const isStarTouch = pulse.trigger === "star-touch";
+  const isLocal =
+    localClientId !== "" && String(pulse.sourceId ?? "") === String(localClientId);
+  const baseIntensity = isStarTouch ? 0.76 : isLocal ? 0.56 : 0.42;
+
+  return {
+    id: `pulse:${pulseId}`,
+    type: "song-reaction",
+    interactionType: isStarTouch ? "star-touch" : "manual-pulse",
+    color,
+    intensity: roundNumber(clamp(baseIntensity + strength * 0.11, 0.24, isStarTouch ? 0.98 : 0.78), 3),
+    pan: getCuePan(pulse.origin)
   };
 }
 
@@ -134,28 +176,48 @@ export function createPulseSoundCue(pulse, { localClientId = "" } = {}) {
   const isLocal =
     localClientId !== "" && String(pulse.sourceId ?? "") === String(localClientId);
   const baseFrequency = selectLofiLeadFrequency(hue);
-  const startMultiplier = isStarTouch ? 1.5 : isLocal ? 1 : 0.75;
+  const startMultiplier = isStarTouch ? 1.25 : isLocal ? 1 : 0.75;
+  const endMultiplier = isStarTouch ? 1.005 : isLocal ? 0.94 : 0.84;
 
   return {
     id: `pulse:${pulseId}`,
     type: "pulse",
     color,
     frequency: roundNumber(baseFrequency * startMultiplier, 2),
-    endFrequency: roundNumber(baseFrequency * (isStarTouch ? 1.02 : 0.72), 2),
+    endFrequency: roundNumber(baseFrequency * endMultiplier, 2),
     gain: roundNumber(
-      clamp(0.018 + strength * 0.018 + (isLocal ? 0.01 : 0) + (isStarTouch ? 0.014 : 0), 0.018, 0.085),
+      clamp(0.012 + strength * 0.011 + (isLocal ? 0.005 : 0) + (isStarTouch ? 0.009 : 0), 0.012, 0.052),
       3
     ),
-    duration: roundNumber(clamp(0.42 + strength * 0.09 + (isStarTouch ? 0.11 : 0), 0.34, 0.82), 3),
+    duration: roundNumber(clamp(0.46 + strength * 0.08 + (isStarTouch ? 0.12 : 0), 0.36, 0.82), 3),
     pan: getCuePan(pulse.origin),
     wave: isStarTouch ? "triangle" : "sine",
     sparkle: isStarTouch,
-    filterFrequency: roundNumber((isStarTouch ? 1_700 : 920) + strength * 180, 2),
+    filterFrequency: roundNumber((isStarTouch ? 1_420 : 820) + strength * 120, 2),
     delay: {
-      time: 0.19,
-      feedback: isStarTouch ? 0.16 : 0.22,
-      mix: isStarTouch ? 0.16 : 0.2
+      time: 0.28,
+      feedback: isStarTouch ? 0.18 : 0.24,
+      mix: isStarTouch ? 0.14 : 0.18
     }
+  };
+}
+
+export function createResonanceSongReaction(resonance) {
+  const resonanceId = String(resonance?.id ?? "");
+  if (!resonanceId) {
+    return null;
+  }
+
+  const color = normalizeHexColor(resonance.color);
+  const intensity = clamp(resonance.intensity ?? 0.5, 0.15, 1);
+
+  return {
+    id: `resonance:${resonanceId}`,
+    type: "song-reaction",
+    interactionType: "resonance",
+    color,
+    intensity: roundNumber(clamp(0.62 + intensity * 0.32, 0.42, 0.96), 3),
+    pan: getCuePan(resonance.position)
   };
 }
 
@@ -168,7 +230,7 @@ export function createResonanceSoundCue(resonance) {
   const color = normalizeHexColor(resonance.color);
   const hue = getHexHue(color);
   const intensity = clamp(resonance.intensity ?? 0.5, 0.15, 1);
-  const baseFrequency = 210 + (hue / 360) * 230;
+  const baseFrequency = selectLofiLeadFrequency(hue) * 0.75;
 
   return {
     id: `resonance:${resonanceId}`,
@@ -179,8 +241,8 @@ export function createResonanceSoundCue(resonance) {
       roundNumber(baseFrequency * 1.25, 2),
       roundNumber(baseFrequency * 1.5, 2)
     ],
-    gain: roundNumber(clamp(0.024 + intensity * 0.052, 0.02, 0.09), 3),
-    duration: roundNumber(0.38 + intensity * 0.22, 3),
+    gain: roundNumber(clamp(0.016 + intensity * 0.032, 0.014, 0.052), 3),
+    duration: roundNumber(0.5 + intensity * 0.22, 3),
     pan: getCuePan(resonance.position)
   };
 }
@@ -237,7 +299,7 @@ export function createPulseSoundPlayer({
       }
 
       startLofiLoop();
-      scheduleCue(context, masterGain, cue);
+      scheduleSoundEvent(cue);
       return true;
     },
     playCues(cues = []) {
@@ -314,7 +376,7 @@ export function createPulseSoundPlayer({
 
     const cues = queuedCues.splice(0);
     for (const cue of cues) {
-      scheduleCue(audioContext, masterGain, cue);
+      scheduleSoundEvent(cue);
     }
   }
 
@@ -324,7 +386,10 @@ export function createPulseSoundPlayer({
     }
 
     if (!lofiLoop) {
-      lofiLoop = createLofiLoopController(audioContext, masterGain, createLofiLoopPattern());
+      lofiLoop = createSpaceLofiSongController(audioContext, masterGain, {
+        plan: createRoomLofiSongPlan(),
+        outputGain: 0.3
+      });
     }
     lofiLoop.start();
   }
@@ -332,6 +397,15 @@ export function createPulseSoundPlayer({
   function stopLofiLoop() {
     lofiLoop?.stop();
     lofiLoop = null;
+  }
+
+  function scheduleSoundEvent(cue) {
+    if (cue?.type === "song-reaction") {
+      startLofiLoop();
+      lofiLoop?.react(cue);
+      return;
+    }
+    scheduleCue(audioContext, masterGain, cue);
   }
 }
 
@@ -789,8 +863,8 @@ function getCuePan(position) {
 }
 
 function selectLofiLeadFrequency(hue) {
-  const index = Math.round((clamp(hue, 0, 360) / 360) * (LOFI_LEAD_SCALE.length - 1));
-  return LOFI_LEAD_SCALE[index] ?? LOFI_LEAD_SCALE[0];
+  const index = Math.round((clamp(hue, 0, 360) / 360) * (ROOM_ACCENT_SCALE.length - 1));
+  return ROOM_ACCENT_SCALE[index] ?? ROOM_ACCENT_SCALE[0];
 }
 
 function limitIds(ids) {

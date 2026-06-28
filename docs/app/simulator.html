@@ -8,7 +8,7 @@
       content="Automated Lumen Space simulator for physics, realtime rooms, and procedural audio."
     >
     <title>Lumen Space Simulator</title>
-    <link rel="stylesheet" href="./physics-sim.css">
+    <link rel="stylesheet" href="./physics-sim.css?v=audible-reactions-20260628">
   </head>
   <body>
     <main class="sim-shell">
@@ -233,6 +233,18 @@
             step="0.01"
             value="0.84"
           >
+
+          <div class="song-reaction-grid" aria-label="Song reactions">
+            <button class="song-reaction-button" type="button" data-song-reaction="manual-pulse">
+              Manual Pulse
+            </button>
+            <button class="song-reaction-button" type="button" data-song-reaction="star-touch">
+              Star Touch
+            </button>
+            <button class="song-reaction-button" type="button" data-song-reaction="resonance">
+              Resonance
+            </button>
+          </div>
         </section>
 
         <section class="debug-list" aria-label="Peer state">
@@ -242,6 +254,6 @@
       </aside>
     </main>
 
-    <script type="module" src="./src/physics-sim.js?v=space-song-20260628"></script>
+    <script type="module" src="./src/physics-sim.js?v=audible-reactions-20260628"></script>
   </body>
 </html>

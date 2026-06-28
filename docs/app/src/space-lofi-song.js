@@ -1,13 +1,17 @@
+import { normalizeHexColor } from "./colors.js";
+
 export const SPACE_LOFI_SONG_BPM = 72;
 export const SPACE_LOFI_DENSITY = 0.5;
 export const SPACE_LOFI_SPACE = 0.5;
 export const SPACE_LOFI_STEPS_PER_BAR = 16;
 export const SPACE_LOFI_SWING = 0.12;
+export const SPACE_LOFI_REACTION_MIX = 0.86;
 
-const SCHEDULE_AHEAD_SECONDS = 1.1;
-const SCHEDULER_INTERVAL_MS = 90;
+const SCHEDULE_AHEAD_SECONDS = 0.42;
+const SCHEDULER_INTERVAL_MS = 55;
 const NOISE_LOOP_FADE_SECONDS = 0.08;
 const DEFAULT_SEED = "lumen-space-song";
+const REACTION_TYPES = new Set(["manual-pulse", "star-touch", "resonance"]);
 const PROGRESSION = [
   {
     name: "Am9",
@@ -67,7 +71,8 @@ export function createSpaceLofiSongPlan({
   seed = DEFAULT_SEED,
   bpm = SPACE_LOFI_SONG_BPM,
   density = SPACE_LOFI_DENSITY,
-  space = SPACE_LOFI_SPACE
+  space = SPACE_LOFI_SPACE,
+  reactionMix = SPACE_LOFI_REACTION_MIX
 } = {}) {
   const normalizedSeed = normalizeSeed(seed);
   const safeBpm = clamp(Number(bpm) || SPACE_LOFI_SONG_BPM, 58, 92);
@@ -79,6 +84,7 @@ export function createSpaceLofiSongPlan({
     bpm: roundNumber(safeBpm, 2),
     density: roundNumber(safeDensity, 2),
     space: roundNumber(safeSpace, 2),
+    reactionMix: roundNumber(clamp(reactionMix, 0, 1), 2),
     stepsPerBar: SPACE_LOFI_STEPS_PER_BAR,
     stepSeconds: roundNumber(60 / safeBpm / 4, 4),
     swing: SPACE_LOFI_SWING,
@@ -98,7 +104,100 @@ export function createSpaceLofiSongPlan({
   };
 }
 
-export function getSpaceLofiSongStep(plan, absoluteStep = 0) {
+export function createSpaceLofiReaction(input = {}, { plan = null, startStep = 0 } = {}) {
+  const song = normalizePlan(plan);
+  const interactionType = normalizeReactionType(input.interactionType ?? input.type);
+  const intensity = clamp(
+    input.intensity ?? getDefaultReactionIntensity(interactionType),
+    0.05,
+    1
+  );
+  const color = normalizeHexColor(input.color);
+  const hue = getHexHue(color);
+  const safeStartStep = Math.max(0, Math.floor(Number(input.startStep ?? startStep) || 0));
+  const durationSteps = getReactionDurationSteps(interactionType, intensity, song);
+  const phase = Math.floor(seededUnit(`${song.seed}:${interactionType}:${color}:${safeStartStep}`) * 4);
+
+  return {
+    type: "space-lofi-reaction",
+    id: String(input.id || `${interactionType}-${safeStartStep}-${color.replace("#", "")}`),
+    interactionType,
+    color,
+    hue: roundNumber(hue, 2),
+    intensity: roundNumber(intensity, 3),
+    pan: roundNumber(clamp(input.pan ?? 0, -0.8, 0.8), 3),
+    startStep: safeStartStep,
+    endStep: safeStartStep + durationSteps,
+    durationSteps,
+    phase,
+    melodyShift: getReactionMelodyShift(interactionType, hue, intensity),
+    densityBoost: roundNumber(getReactionDensityBoost(interactionType, intensity, song), 3),
+    spaceBoost: roundNumber(getReactionSpaceBoost(interactionType, intensity, song), 3),
+    padLift: roundNumber(getReactionPadLift(interactionType, intensity, song), 3),
+    bassLift: roundNumber(getReactionBassLift(interactionType, intensity, song), 3),
+    leadLift: roundNumber(getReactionLeadLift(interactionType, intensity, song), 3),
+    dustLift: roundNumber(getReactionDustLift(interactionType, intensity, song), 3),
+    drumSoftening: roundNumber(getReactionDrumSoftening(interactionType, intensity, song), 3)
+  };
+}
+
+export function getSpaceLofiReactionState(plan, reactions = [], absoluteStep = 0) {
+  const song = normalizePlan(plan);
+  const stepIndex = Math.max(0, Math.floor(Number(absoluteStep) || 0));
+  const active = Array.isArray(reactions)
+    ? reactions
+        .map((reaction) => normalizeReaction(reaction, song))
+        .filter((reaction) => reaction && stepIndex >= reaction.startStep && stepIndex <= reaction.endStep)
+    : [];
+
+  if (active.length === 0) {
+    return createEmptyReactionState(song);
+  }
+
+  const mix = clamp(song.reactionMix ?? SPACE_LOFI_REACTION_MIX, 0, 1);
+  const state = createEmptyReactionState(song);
+  let weightedPan = 0;
+  let strongest = active[0];
+  let strongestWeight = 0;
+
+  for (const reaction of active) {
+    const envelope = getReactionEnvelope(reaction, stepIndex) * mix;
+    const weight = reaction.intensity * envelope;
+    state.activeCount += 1;
+    state.intensity += weight;
+    state.densityBoost += reaction.densityBoost * envelope;
+    state.spaceBoost += reaction.spaceBoost * envelope;
+    state.padLift += reaction.padLift * envelope;
+    state.bassLift += reaction.bassLift * envelope;
+    state.leadLift += reaction.leadLift * envelope;
+    state.dustLift += reaction.dustLift * envelope;
+    state.drumSoftening += reaction.drumSoftening * envelope;
+    weightedPan += reaction.pan * weight;
+    if (weight > strongestWeight) {
+      strongestWeight = weight;
+      strongest = reaction;
+    }
+  }
+
+  state.intensity = roundNumber(clamp(state.intensity, 0, 1), 3);
+  state.densityBoost = roundNumber(clamp(state.densityBoost, 0, 0.42), 3);
+  state.spaceBoost = roundNumber(clamp(state.spaceBoost, 0, 0.44), 3);
+  state.padLift = roundNumber(clamp(state.padLift, 0, 0.32), 3);
+  state.bassLift = roundNumber(clamp(state.bassLift, 0, 0.18), 3);
+  state.leadLift = roundNumber(clamp(state.leadLift, 0, 0.34), 3);
+  state.dustLift = roundNumber(clamp(state.dustLift, 0, 0.36), 3);
+  state.drumSoftening = roundNumber(clamp(state.drumSoftening, 0, 0.28), 3);
+  state.pan = roundNumber(state.intensity > 0 ? weightedPan / Math.max(state.intensity, 0.001) : 0, 3);
+  state.phase = strongest.phase;
+  state.melodyShift = strongest.melodyShift;
+  state.color = strongest.color;
+  state.interactionType = strongest.interactionType;
+  state.density = roundNumber(clamp(song.density + state.densityBoost, 0, 1), 2);
+  state.space = roundNumber(clamp(song.space + state.spaceBoost, 0, 1), 2);
+  return state;
+}
+
+export function getSpaceLofiSongStep(plan, absoluteStep = 0, options = {}) {
   const song = normalizePlan(plan);
   const stepIndex = Math.max(0, Math.floor(Number(absoluteStep) || 0));
   const bar = Math.floor(stepIndex / song.stepsPerBar);
@@ -106,28 +205,34 @@ export function getSpaceLofiSongStep(plan, absoluteStep = 0) {
   const phrase = Math.floor(bar / song.progression.length);
   const chord = song.progression[bar % song.progression.length];
   const stepSeed = `${song.seed}:${bar}:${step}`;
-  const bassStep = getBassStep(song, bar, step);
+  const reaction = options.reactionState ?? getSpaceLofiReactionState(song, options.reactions, stepIndex);
+  const reactiveSong = {
+    ...song,
+    density: reaction.density,
+    space: reaction.space
+  };
+  const bassStep = getBassStep(reactiveSong, bar, step);
   const motif = song.motif.find((event) => event.step === step);
-  const melody = motif
-    ? {
-        frequency: roundNumber(
-          LEAD_SCALE[
-            (motif.noteIndex + phrase + chord.bar) % LEAD_SCALE.length
-          ] * (motif.octave ? 2 : 1),
-          2
-        ),
-        gain: roundNumber((0.018 + seededUnit(`${stepSeed}:melody`) * 0.012) * getDensityGain(song), 3)
-      }
-    : null;
+  const reactiveLead = reaction.activeCount > 0 && step % 4 === reaction.phase;
+  const melody = createStepMelody({
+    song,
+    reactiveSong,
+    chord,
+    phrase,
+    stepSeed,
+    motif,
+    reaction,
+    reactiveLead
+  });
   const drums = [];
 
-  if (step === 0 || (step === 11 && seededUnit(`${stepSeed}:kick`) > getDensityThreshold(song, 0.52))) {
+  if (step === 0 || (step === 11 && seededUnit(`${stepSeed}:kick`) > getDensityThreshold(reactiveSong, 0.52))) {
     drums.push("kick");
   }
   if (step === 8) {
     drums.push("snare");
   }
-  if (step % 4 === 2 || (step % 8 === 6 && seededUnit(`${stepSeed}:hat`) > getDensityThreshold(song, 0.36))) {
+  if (step % 4 === 2 || (step % 8 === 6 && seededUnit(`${stepSeed}:hat`) > getDensityThreshold(reactiveSong, 0.36))) {
     drums.push("hat");
   }
 
@@ -146,8 +251,11 @@ export function getSpaceLofiSongStep(plan, absoluteStep = 0) {
       : null,
     melody,
     drums,
-    dust: seededUnit(`${stepSeed}:dust`) > getDensityThreshold(song, 0.9),
-    comet: step === 14 && seededUnit(`${song.seed}:${bar}:comet`) > getDensityThreshold(song, 0.42)
+    dust:
+      seededUnit(`${stepSeed}:dust`) > getDensityThreshold(reactiveSong, 0.9) ||
+      (reaction.dustLift > 0.08 && step % 4 === (reaction.phase + 2) % 4),
+    comet: step === 14 && seededUnit(`${song.seed}:${bar}:comet`) > getDensityThreshold(reactiveSong, 0.42),
+    reaction
   };
 }
 
@@ -157,26 +265,216 @@ export function getSpaceLofiStepDuration(plan, absoluteStep = 0) {
   return baseDuration * (absoluteStep % 2 === 0 ? 1 + song.swing : 1 - song.swing);
 }
 
+export function createSpaceLofiSongController(
+  context,
+  destination,
+  {
+    plan = null,
+    seed = DEFAULT_SEED,
+    bpm = SPACE_LOFI_SONG_BPM,
+    density = SPACE_LOFI_DENSITY,
+    space = SPACE_LOFI_SPACE,
+    reactionMix = SPACE_LOFI_REACTION_MIX,
+    outputGain = 0.36
+  } = {}
+) {
+  let songPlan = plan?.type === "space-lofi-infinite-song"
+    ? plan
+    : createSpaceLofiSongPlan({ seed, bpm, density, space, reactionMix });
+  let output = null;
+  let timer = 0;
+  let nextStep = 0;
+  let nextStepAt = 0;
+  let loopNodes = [];
+  let activeReactions = [];
+  let mixNodes = null;
+
+  return {
+    start({ reset = false } = {}) {
+      if (!context || !destination || output) {
+        return false;
+      }
+
+      const now = context.currentTime;
+      output = context.createGain();
+      const toneFilter = context.createBiquadFilter();
+      output.gain.setValueAtTime(0.0001, now);
+      output.gain.exponentialRampToValueAtTime(clamp(outputGain, 0.01, 1), now + 0.68);
+      toneFilter.type = "lowpass";
+      toneFilter.frequency.value = getBaseToneFrequency(songPlan);
+      toneFilter.Q.value = 0.55;
+      output.connect(toneFilter);
+      toneFilter.connect(destination);
+
+      const delay = context.createDelay(2.4);
+      const feedback = context.createGain();
+      const wetGain = context.createGain();
+      delay.delayTime.value = 0.36 + songPlan.space * 0.4;
+      feedback.gain.value = 0.16 + songPlan.space * 0.24;
+      wetGain.gain.value = 0.1 + songPlan.space * 0.2;
+      toneFilter.connect(delay);
+      delay.connect(feedback);
+      feedback.connect(delay);
+      delay.connect(wetGain);
+      wetGain.connect(destination);
+      mixNodes = { output, toneFilter, feedback, wetGain };
+
+      loopNodes = [
+        output,
+        toneFilter,
+        delay,
+        feedback,
+        wetGain,
+        ...startSpaceBed(context, output, songPlan, now)
+      ];
+      if (reset) {
+        nextStep = 0;
+      }
+      nextStepAt = now + 0.045;
+      scheduleAhead();
+      return true;
+    },
+    stop() {
+      stopLoop();
+    },
+    react(input = {}) {
+      const reaction = createSpaceLofiReaction(input, {
+        plan: songPlan,
+        startStep: Math.max(0, nextStep)
+      });
+      activeReactions = [...activeReactions.filter((item) => item.endStep >= nextStep), reaction].slice(-12);
+      applyImmediateReaction(reaction);
+      return reaction;
+    },
+    update(options = {}) {
+      const wasPlaying = Boolean(output);
+      if (wasPlaying) {
+        stopLoop();
+      }
+      songPlan = createSpaceLofiSongPlan({
+        seed: options.seed ?? songPlan.seed,
+        bpm: options.bpm ?? songPlan.bpm,
+        density: options.density ?? songPlan.density,
+        space: options.space ?? songPlan.space,
+        reactionMix: options.reactionMix ?? songPlan.reactionMix
+      });
+      activeReactions = [];
+      if (wasPlaying) {
+        this.start({ reset: true });
+      }
+      return songPlan;
+    },
+    get plan() {
+      return songPlan;
+    },
+    get isPlaying() {
+      return Boolean(output);
+    }
+  };
+
+  function stopLoop() {
+    globalThis.clearTimeout(timer);
+    timer = 0;
+    const staleNodes = loopNodes;
+    const staleOutput = output;
+    output = null;
+    mixNodes = null;
+    loopNodes = [];
+    activeReactions = [];
+    for (const node of staleNodes) {
+      if (typeof node.stop === "function") {
+        try {
+          node.stop();
+        } catch {
+          // Source nodes can already be stopped by the browser.
+        }
+      }
+    }
+
+    if (!context || !staleOutput) {
+      for (const node of staleNodes) {
+        disconnectNode(node);
+      }
+      return;
+    }
+
+    const now = context.currentTime;
+    staleOutput.gain.cancelScheduledValues(now);
+    staleOutput.gain.setTargetAtTime(0.0001, now, 0.1);
+    globalThis.setTimeout(() => {
+      for (const node of staleNodes) {
+        disconnectNode(node);
+      }
+    }, 520);
+  }
+
+  function scheduleAhead() {
+    if (!output) {
+      return;
+    }
+
+    while (nextStepAt < context.currentTime + SCHEDULE_AHEAD_SECONDS) {
+      activeReactions = activeReactions.filter((reaction) => reaction.endStep >= nextStep);
+      scheduleSongStep(context, output, songPlan, nextStep, nextStepAt, activeReactions);
+      nextStepAt += getSpaceLofiStepDuration(songPlan, nextStep);
+      nextStep += 1;
+    }
+    timer = globalThis.setTimeout(scheduleAhead, SCHEDULER_INTERVAL_MS);
+  }
+
+  function applyImmediateReaction(reaction) {
+    if (!mixNodes || !output || !context) {
+      return;
+    }
+
+    const now = context.currentTime;
+    const mix = clamp(songPlan.reactionMix ?? SPACE_LOFI_REACTION_MIX, 0, 1);
+    const lift = reaction.intensity * mix;
+    const release = 0.9 + reaction.durationSteps * getSpaceLofiStepDuration(songPlan, reaction.startStep) * 0.28;
+    const baseWet = 0.1 + songPlan.space * 0.2;
+    const baseFeedback = 0.16 + songPlan.space * 0.24;
+    const baseTone = getBaseToneFrequency(songPlan);
+    const targetOutput = clamp(outputGain + lift * 0.085, 0.01, 1);
+    const targetWet = clamp(baseWet + reaction.spaceBoost * 0.72 + lift * 0.04, 0.02, 0.62);
+    const targetFeedback = clamp(baseFeedback + reaction.spaceBoost * 0.38, 0.02, 0.62);
+    const targetTone = getReactionToneFrequency(reaction, songPlan);
+    const targetQ = clamp(0.52 + lift * (reaction.interactionType === "resonance" ? 0.74 : 0.42), 0.35, 1.25);
+
+    mixNodes.output.gain.cancelScheduledValues(now);
+    mixNodes.output.gain.setTargetAtTime(targetOutput, now, 0.08);
+    mixNodes.output.gain.setTargetAtTime(outputGain, now + release, 0.42);
+    mixNodes.toneFilter.frequency.cancelScheduledValues(now);
+    mixNodes.toneFilter.frequency.setTargetAtTime(targetTone, now, 0.045);
+    mixNodes.toneFilter.frequency.setTargetAtTime(baseTone, now + release * 0.72, 0.5);
+    mixNodes.toneFilter.Q.cancelScheduledValues(now);
+    mixNodes.toneFilter.Q.setTargetAtTime(targetQ, now, 0.07);
+    mixNodes.toneFilter.Q.setTargetAtTime(0.55, now + release * 0.72, 0.45);
+    mixNodes.wetGain.gain.cancelScheduledValues(now);
+    mixNodes.wetGain.gain.setTargetAtTime(targetWet, now, 0.1);
+    mixNodes.wetGain.gain.setTargetAtTime(baseWet, now + release, 0.5);
+    mixNodes.feedback.gain.cancelScheduledValues(now);
+    mixNodes.feedback.gain.setTargetAtTime(targetFeedback, now, 0.12);
+    mixNodes.feedback.gain.setTargetAtTime(baseFeedback, now + release, 0.55);
+  }
+}
+
 export function createSpaceLofiSongPlayer({
   window: windowLike = globalThis.window,
   seed = DEFAULT_SEED,
   bpm = SPACE_LOFI_SONG_BPM,
   density = SPACE_LOFI_DENSITY,
   space = SPACE_LOFI_SPACE,
+  reactionMix = SPACE_LOFI_REACTION_MIX,
   enabled = true,
   volume = 1
 } = {}) {
   let audioContext = null;
   let masterGain = null;
-  let output = null;
-  let timer = 0;
-  let nextStep = 0;
-  let nextStepAt = 0;
-  let loopNodes = [];
+  let songLoop = null;
   let isEnabled = Boolean(enabled);
   let disposed = false;
   let masterVolume = clamp(volume, 0, 1);
-  let plan = createSpaceLofiSongPlan({ seed, bpm, density, space });
+  let plan = createSpaceLofiSongPlan({ seed, bpm, density, space, reactionMix });
 
   return {
     async start({ reset = false } = {}) {
@@ -207,6 +505,12 @@ export function createSpaceLofiSongPlayer({
     stop() {
       stopLoop();
     },
+    react(input = {}) {
+      if (!songLoop?.isPlaying) {
+        return null;
+      }
+      return songLoop.react(input);
+    },
     setEnabled(nextEnabled) {
       isEnabled = Boolean(nextEnabled);
       if (!isEnabled) {
@@ -219,7 +523,8 @@ export function createSpaceLofiSongPlayer({
         seed: options.seed ?? `${plan.seed}-next`,
         bpm: options.bpm ?? plan.bpm,
         density: options.density ?? plan.density,
-        space: options.space ?? plan.space
+        space: options.space ?? plan.space,
+        reactionMix: options.reactionMix ?? plan.reactionMix
       });
       return plan;
     },
@@ -240,7 +545,7 @@ export function createSpaceLofiSongPlayer({
       return plan;
     },
     get isPlaying() {
-      return Boolean(output);
+      return Boolean(songLoop?.isPlaying);
     },
     get isSupported() {
       return Boolean(getAudioContextConstructor());
@@ -278,81 +583,22 @@ export function createSpaceLofiSongPlayer({
   }
 
   function startLoop(reset) {
-    if (!audioContext || !masterGain || output) {
+    if (!audioContext || !masterGain) {
       return;
     }
 
-    const now = audioContext.currentTime;
-    output = audioContext.createGain();
-    output.gain.setValueAtTime(0.0001, now);
-    output.gain.exponentialRampToValueAtTime(0.36, now + 0.68);
-    output.connect(masterGain);
-
-    const delay = audioContext.createDelay(2.4);
-    const feedback = audioContext.createGain();
-    const wetGain = audioContext.createGain();
-    delay.delayTime.value = 0.36 + plan.space * 0.4;
-    feedback.gain.value = 0.16 + plan.space * 0.24;
-    wetGain.gain.value = 0.1 + plan.space * 0.2;
-    output.connect(delay);
-    delay.connect(feedback);
-    feedback.connect(delay);
-    delay.connect(wetGain);
-    wetGain.connect(masterGain);
-
-    loopNodes = [output, delay, feedback, wetGain, ...startSpaceBed(audioContext, output, plan, now)];
-    if (reset) {
-      nextStep = 0;
+    if (!songLoop) {
+      songLoop = createSpaceLofiSongController(audioContext, masterGain, {
+        plan,
+        outputGain: 0.36
+      });
     }
-    nextStepAt = now + 0.045;
-    scheduleAhead();
+    songLoop.start({ reset });
   }
 
   function stopLoop() {
-    globalThis.clearTimeout(timer);
-    timer = 0;
-    const staleNodes = loopNodes;
-    const staleOutput = output;
-    output = null;
-    loopNodes = [];
-    for (const node of staleNodes) {
-      if (typeof node.stop === "function") {
-        try {
-          node.stop();
-        } catch {
-          // Source nodes can already be stopped by the browser.
-        }
-      }
-    }
-
-    if (!audioContext || !staleOutput) {
-      for (const node of staleNodes) {
-        disconnectNode(node);
-      }
-      return;
-    }
-
-    const now = audioContext.currentTime;
-    staleOutput.gain.cancelScheduledValues(now);
-    staleOutput.gain.setTargetAtTime(0.0001, now, 0.1);
-    globalThis.setTimeout(() => {
-      for (const node of staleNodes) {
-        disconnectNode(node);
-      }
-    }, 520);
-  }
-
-  function scheduleAhead() {
-    if (!audioContext || !output) {
-      return;
-    }
-
-    while (nextStepAt < audioContext.currentTime + SCHEDULE_AHEAD_SECONDS) {
-      scheduleSongStep(audioContext, output, plan, nextStep, nextStepAt);
-      nextStepAt += getSpaceLofiStepDuration(plan, nextStep);
-      nextStep += 1;
-    }
-    timer = globalThis.setTimeout(scheduleAhead, SCHEDULER_INTERVAL_MS);
+    songLoop?.stop();
+    songLoop = null;
   }
 }
 
@@ -380,30 +626,31 @@ function getBassStep(song, bar, step) {
   return null;
 }
 
-function scheduleSongStep(context, destination, plan, stepIndex, startAt) {
-  const step = getSpaceLofiSongStep(plan, stepIndex);
+function scheduleSongStep(context, destination, plan, stepIndex, startAt, reactions = []) {
+  const step = getSpaceLofiSongStep(plan, stepIndex, { reactions });
+  const reaction = step.reaction;
 
   if (step.pad) {
-    schedulePad(context, destination, step.chord, startAt);
+    schedulePad(context, destination, step.chord, startAt, reaction);
   }
   if (step.bass) {
-    scheduleBass(context, destination, step.bass, startAt);
+    scheduleBass(context, destination, step.bass, startAt, reaction);
   }
   if (step.melody) {
-    scheduleSatelliteLead(context, destination, step.melody, startAt, step.chord.hue);
+    scheduleSatelliteLead(context, destination, step.melody, startAt, step.chord.hue, reaction);
   }
   for (const drum of step.drums) {
-    scheduleDrum(context, destination, drum, startAt);
+    scheduleDrum(context, destination, drum, startAt, reaction);
   }
   if (step.dust) {
-    scheduleDust(context, destination, startAt, step.stepIndex);
+    scheduleDust(context, destination, startAt, step.stepIndex, reaction);
   }
   if (step.comet) {
     scheduleComet(context, destination, step, startAt);
   }
 }
 
-function schedulePad(context, destination, chord, startAt) {
+function schedulePad(context, destination, chord, startAt, reaction = createEmptyReactionState()) {
   const duration = 7.2;
   const filter = context.createBiquadFilter();
   const gain = context.createGain();
@@ -422,14 +669,14 @@ function schedulePad(context, destination, chord, startAt) {
   });
 
   filter.type = "lowpass";
-  filter.frequency.setValueAtTime(470, startAt);
-  filter.frequency.exponentialRampToValueAtTime(760, startAt + 2.2);
-  filter.frequency.exponentialRampToValueAtTime(380, startAt + duration);
+  filter.frequency.setValueAtTime(470 + reaction.padLift * 1_100, startAt);
+  filter.frequency.exponentialRampToValueAtTime(760 + reaction.padLift * 1_800, startAt + 2.2);
+  filter.frequency.exponentialRampToValueAtTime(380 + reaction.padLift * 480, startAt + duration);
   filter.Q.value = 0.8;
   gain.gain.setValueAtTime(0.0001, startAt);
-  const space = clamp(chord.space ?? SPACE_LOFI_SPACE, 0, 1);
-  gain.gain.exponentialRampToValueAtTime(0.058 + space * 0.028, startAt + 0.62);
-  gain.gain.setTargetAtTime(0.028 + space * 0.016, startAt + 1.4, 1.6);
+  const space = clamp((chord.space ?? SPACE_LOFI_SPACE) + reaction.spaceBoost, 0, 1);
+  gain.gain.exponentialRampToValueAtTime(0.058 + space * 0.028 + reaction.padLift * 0.064, startAt + 0.62);
+  gain.gain.setTargetAtTime(0.028 + space * 0.016 + reaction.padLift * 0.034, startAt + 1.4, 1.6);
   gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
 
   filter.connect(panner);
@@ -438,7 +685,7 @@ function schedulePad(context, destination, chord, startAt) {
   scheduleCleanup(context, [...oscillators, filter, panner, gain], startAt + duration + 0.2);
 }
 
-function scheduleBass(context, destination, bass, startAt) {
+function scheduleBass(context, destination, bass, startAt, reaction = createEmptyReactionState()) {
   const duration = 0.62;
   const oscillator = context.createOscillator();
   const filter = context.createBiquadFilter();
@@ -451,10 +698,10 @@ function scheduleBass(context, destination, bass, startAt) {
     startAt + duration
   );
   filter.type = "lowpass";
-  filter.frequency.setValueAtTime(210, startAt);
+  filter.frequency.setValueAtTime(210 + reaction.bassLift * 420, startAt);
   filter.Q.value = 0.9;
   gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.exponentialRampToValueAtTime(0.115, startAt + 0.024);
+  gain.gain.exponentialRampToValueAtTime(0.115 + reaction.bassLift * 0.09, startAt + 0.024);
   gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
 
   oscillator.connect(filter);
@@ -465,12 +712,13 @@ function scheduleBass(context, destination, bass, startAt) {
   scheduleCleanup(context, [oscillator, filter, gain], startAt + duration + 0.08);
 }
 
-function scheduleSatelliteLead(context, destination, melody, startAt, hue) {
+function scheduleSatelliteLead(context, destination, melody, startAt, hue, reaction = createEmptyReactionState()) {
   const duration = 0.44;
   const oscillator = context.createOscillator();
   const filter = context.createBiquadFilter();
   const gain = context.createGain();
-  const panner = createPanner(context, Math.sin((startAt + hue) * 0.9) * 0.42);
+  const pan = clamp(Math.sin((startAt + hue) * 0.9) * 0.34 + reaction.pan * 0.32, -0.72, 0.72);
+  const panner = createPanner(context, pan);
 
   oscillator.type = "sine";
   oscillator.frequency.setValueAtTime(Math.max(80, melody.frequency), startAt);
@@ -479,10 +727,10 @@ function scheduleSatelliteLead(context, destination, melody, startAt, hue) {
     startAt + duration
   );
   filter.type = "lowpass";
-  filter.frequency.setValueAtTime(1_200 + hue * 2.5, startAt);
-  filter.Q.value = 1.1;
+  filter.frequency.setValueAtTime(1_200 + hue * 2.5 + reaction.leadLift * 1_200, startAt);
+  filter.Q.value = 1.1 + reaction.leadLift * 1.6;
   gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.exponentialRampToValueAtTime(melody.gain, startAt + 0.03);
+  gain.gain.exponentialRampToValueAtTime(melody.gain + reaction.leadLift * 0.055, startAt + 0.03);
   gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
 
   oscillator.connect(filter);
@@ -494,14 +742,14 @@ function scheduleSatelliteLead(context, destination, melody, startAt, hue) {
   scheduleCleanup(context, [oscillator, filter, panner, gain], startAt + duration + 0.08);
 }
 
-function scheduleDrum(context, destination, drum, startAt) {
+function scheduleDrum(context, destination, drum, startAt, reaction = createEmptyReactionState()) {
   if (drum === "kick") {
-    scheduleKick(context, destination, startAt);
+    scheduleKick(context, destination, startAt, reaction);
   } else if (drum === "snare") {
     scheduleNoiseHit(context, destination, {
       startAt,
       duration: 0.18,
-      gain: 0.045,
+      gain: 0.045 * (1 - reaction.drumSoftening),
       type: "bandpass",
       frequency: 1_180,
       q: 0.75,
@@ -511,7 +759,7 @@ function scheduleDrum(context, destination, drum, startAt) {
     scheduleNoiseHit(context, destination, {
       startAt,
       duration: 0.055,
-      gain: 0.014,
+      gain: 0.014 * (1 + reaction.densityBoost * 1.8),
       type: "highpass",
       frequency: 5_400,
       q: 0.54,
@@ -520,7 +768,7 @@ function scheduleDrum(context, destination, drum, startAt) {
   }
 }
 
-function scheduleKick(context, destination, startAt) {
+function scheduleKick(context, destination, startAt, reaction = createEmptyReactionState()) {
   const duration = 0.24;
   const oscillator = context.createOscillator();
   const gain = context.createGain();
@@ -529,7 +777,7 @@ function scheduleKick(context, destination, startAt) {
   oscillator.frequency.setValueAtTime(98, startAt);
   oscillator.frequency.exponentialRampToValueAtTime(42, startAt + duration);
   gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.exponentialRampToValueAtTime(0.13, startAt + 0.015);
+  gain.gain.exponentialRampToValueAtTime(0.13 * (1 - reaction.drumSoftening * 0.38), startAt + 0.015);
   gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
 
   oscillator.connect(gain);
@@ -539,11 +787,11 @@ function scheduleKick(context, destination, startAt) {
   scheduleCleanup(context, [oscillator, gain], startAt + duration + 0.06);
 }
 
-function scheduleDust(context, destination, startAt, stepIndex) {
+function scheduleDust(context, destination, startAt, stepIndex, reaction = createEmptyReactionState()) {
   scheduleNoiseHit(context, destination, {
     startAt,
-    duration: 0.32,
-    gain: 0.018,
+    duration: 0.32 + reaction.spaceBoost * 0.5,
+    gain: 0.018 + reaction.dustLift * 0.052,
     type: "bandpass",
     frequency: 2_400 + (stepIndex % 12) * 92,
     q: 2.4,
@@ -709,11 +957,175 @@ function disconnectNode(node) {
   }
 }
 
+function getBaseToneFrequency(song) {
+  return 5_200 + clamp(song?.space ?? SPACE_LOFI_SPACE, 0, 1) * 2_200;
+}
+
+function getReactionToneFrequency(reaction, song) {
+  const baseTone = getBaseToneFrequency(song);
+  const spaceLift = reaction.spaceBoost * 8_400;
+  const leadLift = reaction.leadLift * 6_400;
+  if (reaction.interactionType === "resonance") {
+    return clamp(baseTone + 2_600 + spaceLift, 1_800, 14_500);
+  }
+  if (reaction.interactionType === "star-touch") {
+    return clamp(baseTone + 3_400 + leadLift, 1_800, 15_500);
+  }
+  return clamp(baseTone + 1_400 + leadLift * 0.74, 1_800, 13_500);
+}
+
 function normalizePlan(plan) {
   if (plan?.type === "space-lofi-infinite-song") {
     return plan;
   }
   return createSpaceLofiSongPlan();
+}
+
+function normalizeReaction(reaction, song) {
+  if (!reaction) {
+    return null;
+  }
+  if (reaction.type === "space-lofi-reaction") {
+    return reaction;
+  }
+  return createSpaceLofiReaction(reaction, {
+    plan: song,
+    startStep: reaction.startStep ?? 0
+  });
+}
+
+function normalizeReactionType(type) {
+  const normalized = String(type ?? "manual-pulse").trim().toLowerCase();
+  return REACTION_TYPES.has(normalized) ? normalized : "manual-pulse";
+}
+
+function createEmptyReactionState(song = null) {
+  return {
+    activeCount: 0,
+    interactionType: "none",
+    color: "#7dd3fc",
+    intensity: 0,
+    density: roundNumber(clamp(song?.density ?? SPACE_LOFI_DENSITY, 0, 1), 2),
+    space: roundNumber(clamp(song?.space ?? SPACE_LOFI_SPACE, 0, 1), 2),
+    densityBoost: 0,
+    spaceBoost: 0,
+    padLift: 0,
+    bassLift: 0,
+    leadLift: 0,
+    dustLift: 0,
+    drumSoftening: 0,
+    pan: 0,
+    phase: 0,
+    melodyShift: 0
+  };
+}
+
+function createStepMelody({
+  song,
+  reactiveSong,
+  chord,
+  phrase,
+  stepSeed,
+  motif,
+  reaction,
+  reactiveLead
+}) {
+  if (motif) {
+    const noteIndex = (motif.noteIndex + phrase + chord.bar + reaction.melodyShift) % LEAD_SCALE.length;
+    return {
+      frequency: roundNumber(LEAD_SCALE[noteIndex] * (motif.octave ? 2 : 1), 2),
+      gain: roundNumber(
+        (0.018 + seededUnit(`${stepSeed}:melody`) * 0.012 + reaction.leadLift * 0.028) *
+          getDensityGain(reactiveSong),
+        3
+      )
+    };
+  }
+
+  if (!reactiveLead) {
+    return null;
+  }
+
+  const noteIndex = (chord.bar + phrase + reaction.melodyShift + Math.floor(reaction.intensity * 7)) % LEAD_SCALE.length;
+  return {
+    frequency: roundNumber(LEAD_SCALE[noteIndex], 2),
+    gain: roundNumber((0.012 + reaction.leadLift * 0.05) * getDensityGain(reactiveSong), 3)
+  };
+}
+
+function getReactionDurationSteps(type, intensity, song) {
+  const space = clamp(song.space ?? SPACE_LOFI_SPACE, 0, 1);
+  if (type === "resonance") {
+    return Math.round(18 + intensity * 8 + space * 6);
+  }
+  if (type === "star-touch") {
+    return Math.round(12 + intensity * 6 + space * 5);
+  }
+  return Math.round(6 + intensity * 4 + space * 3);
+}
+
+function getDefaultReactionIntensity(type) {
+  if (type === "resonance") {
+    return 0.78;
+  }
+  if (type === "star-touch") {
+    return 0.64;
+  }
+  return 0.38;
+}
+
+function getReactionMelodyShift(type, hue, intensity) {
+  const hueShift = Math.round((hue / 360) * (LEAD_SCALE.length - 1));
+  if (type === "resonance") {
+    return (hueShift + 3 + Math.round(intensity * 2)) % LEAD_SCALE.length;
+  }
+  if (type === "star-touch") {
+    return (hueShift + 2) % LEAD_SCALE.length;
+  }
+  return hueShift % LEAD_SCALE.length;
+}
+
+function getReactionDensityBoost(type, intensity, song) {
+  const headroom = 1 - clamp(song.density ?? SPACE_LOFI_DENSITY, 0, 1);
+  const base = type === "star-touch" ? 0.24 : type === "resonance" ? 0.12 : 0.1;
+  return base * intensity * (0.55 + headroom * 0.45);
+}
+
+function getReactionSpaceBoost(type, intensity, song) {
+  const headroom = 1 - clamp(song.space ?? SPACE_LOFI_SPACE, 0, 1);
+  const base = type === "resonance" ? 0.32 : type === "star-touch" ? 0.21 : 0.08;
+  return base * intensity * (0.55 + headroom * 0.45);
+}
+
+function getReactionPadLift(type, intensity, song) {
+  const base = type === "resonance" ? 0.32 : type === "star-touch" ? 0.17 : 0.08;
+  return base * intensity;
+}
+
+function getReactionBassLift(type, intensity, song) {
+  const base = type === "resonance" ? 0.12 : type === "manual-pulse" ? 0.09 : 0.05;
+  return base * intensity;
+}
+
+function getReactionLeadLift(type, intensity, song) {
+  const base = type === "star-touch" ? 0.3 : type === "manual-pulse" ? 0.16 : 0.12;
+  return base * intensity;
+}
+
+function getReactionDustLift(type, intensity, song) {
+  const base = type === "star-touch" ? 0.42 : type === "resonance" ? 0.26 : 0.12;
+  return base * intensity;
+}
+
+function getReactionDrumSoftening(type, intensity, song) {
+  const base = type === "resonance" ? 0.34 : type === "star-touch" ? 0.1 : 0.04;
+  return base * intensity;
+}
+
+function getReactionEnvelope(reaction, stepIndex) {
+  const duration = Math.max(1, reaction.durationSteps);
+  const progress = clamp((stepIndex - reaction.startStep) / duration, 0, 1);
+  return roundNumber(Math.cos(progress * Math.PI * 0.5), 6);
 }
 
 function normalizeSeed(seed) {
@@ -723,6 +1135,40 @@ function normalizeSeed(seed) {
 
 function seededUnit(seed) {
   return (hashString(seed) % 10_000) / 10_000;
+}
+
+function getHexHue(color) {
+  const { r, g, b } = hexToRgb(normalizeHexColor(color));
+  const red = r / 255;
+  const green = g / 255;
+  const blue = b / 255;
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const delta = max - min;
+
+  if (delta === 0) {
+    return 0;
+  }
+
+  let hue;
+  if (max === red) {
+    hue = 60 * (((green - blue) / delta) % 6);
+  } else if (max === green) {
+    hue = 60 * ((blue - red) / delta + 2);
+  } else {
+    hue = 60 * ((red - green) / delta + 4);
+  }
+
+  return (hue + 360) % 360;
+}
+
+function hexToRgb(color) {
+  const value = normalizeHexColor(color).replace("#", "");
+  return {
+    r: Number.parseInt(value.slice(0, 2), 16),
+    g: Number.parseInt(value.slice(2, 4), 16),
+    b: Number.parseInt(value.slice(4, 6), 16)
+  };
 }
 
 function getDensityGain(song) {

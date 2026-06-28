@@ -167,7 +167,8 @@ label,
 .control-row,
 .scenario-grid,
 .mode-grid,
-.realtime-preset-grid {
+.realtime-preset-grid,
+.song-reaction-grid {
   display: grid;
   gap: 8px;
 }
@@ -177,13 +178,15 @@ label,
 }
 
 .scenario-grid,
-.mode-grid {
+.mode-grid,
+.song-reaction-grid {
   grid-template-columns: repeat(3, 1fr);
 }
 
 .control-row button,
 .scenario-button,
 .mode-button,
+.song-reaction-button,
 .sound-toggle-button,
 .launch-button {
   display: grid;

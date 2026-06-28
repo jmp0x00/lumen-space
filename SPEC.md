@@ -11,7 +11,7 @@ Lumen Space is a social visual game without scoring or winners. The goal is to c
 5. Touching a small environmental star emits a pulse from the local light, colored by blending the star and lumen colors.
 6. Pressing `Send Pulse`, pressing Space, or double-clicking the scene emits a colored pulse from the local light.
 7. When pulse fronts from different sources meet, they create a brief resonance flash.
-8. After browser audio is unlocked by user interaction, the room plays a gentle procedural lo-fi loop; manual pulses, star-touch pulses, and resonance flashes layer in as musical accents.
+8. After browser audio is unlocked by user interaction, the room plays the procedural space lo-fi song; manual pulses, star-touch pulses, and resonance flashes briefly reshape the song's density, space, tone, and voices.
 9. The player can mute or unmute the local lo-fi room audio.
 10. Other players in the same room see the player's latest position and pulses.
 11. Rooms are ephemeral. When all players leave, no room state remains.
@@ -27,7 +27,7 @@ In scope:
 - Local star-seeking bots that appear when a room starts, receive deterministic AI movement targets, move through the shared motion physics, and pulse.
 - Automated browser simulator for inspecting peer repulsion without manual multiplayer setup.
 - Realtime multi-user simulator mode that embeds several scene-only no-bot app clients in one WebRTC room and drives them with scripted user presets plus a configurable 1-8 client count.
-- Simulator song mode that plays a separate procedural space lo-fi infinite song and visualizes the current musical state.
+- Simulator song mode that plays the shared procedural space lo-fi infinite song and visualizes the current musical state.
 - Unit tests for pure domain logic.
 - Required challenge documentation.
 
@@ -56,8 +56,8 @@ Out of scope:
 - The physics simulator must run scripted peers automatically and expose collision radius, strength, and separation controls.
 - The physics simulator must include multiple scenarios, including a two-peer crossing-route scenario where route targets intersect at the center.
 - The physics simulator must show visible peer positions, repulsion vectors, closest-distance metrics, average repulsion, average speed, and per-peer coordinates.
-- The simulator must include a song mode backed by a separate JavaScript module that generates a soft space-themed lo-fi song indefinitely after user audio activation.
-- The simulator song mode must expose start/stop, seed-regeneration, tempo, density, space, and volume controls and show current bar, chord, tempo, and active voice state.
+- The simulator and room audio must share a JavaScript module that generates a soft space-themed lo-fi song indefinitely after user audio activation.
+- The simulator song mode must expose start/stop, seed-regeneration, tempo, density, space, volume, and reaction audition controls and show current bar, chord, tempo, active voice state, and reaction-influenced voice changes.
 - The app runtime must support a configurable UI generator that receives app view state and action callbacks, then decides what UI to render.
 - The default app runtime must use the full lobby and room UI generator.
 - The physics simulator must include a realtime room mode where each simulated user is visible in its own embedded app screen, joins the same room through the normal WebRTC connection, starts without bots, uses a scene-only UI generator, follows a chosen preset such as star chasing, scripted paths, orbiting, or chasing another user, and can be launched with a selected 1-8 client count.
@@ -68,10 +68,10 @@ Out of scope:
 - Stale peers must be removed after the heartbeat timeout.
 - Duplicate pulse messages must not create duplicate visuals.
 - Pulse fronts from different sources must create a short-lived resonance visual when they meet.
-- Local room audio must use the Web Audio API to synthesize a gentle lo-fi loop plus newly observed pulse and resonance accents after a user gesture unlocks audio.
-- Manual pulses, star-touch pulses, and resonance flashes must have distinct cue shapes while staying soft enough for repeated play.
+- Local room audio must use the Web Audio API to synthesize the shared space lo-fi song and convert newly observed pulse and resonance events into song reactions after a user gesture unlocks audio.
+- Manual pulses, star-touch pulses, and resonance flashes must noticeably tune existing song voices, density, space, and tone in distinct ways while avoiding separate sound-effect stabs during repeated play.
 - The default room UI must expose a mute/unmute Lo-Fi control.
-- Muted room audio must stop the loop and must not replay old pulse or resonance cues when unmuted again.
+- Muted room audio must stop the song and must not replay old pulse or resonance reactions when unmuted again.
 - Scripted realtime simulator clients must use a single designated sound-source client so many iframe clients do not play over one another.
 - The realtime simulator parent must expose one mute/unmute Lo-Fi control instead of a separate control in every embedded client.
 - Malformed network messages and non-v2 Lumen Space protocol messages must be ignored safely.
@@ -92,12 +92,12 @@ Out of scope:
 - Opening `simulator.html` starts an automated peer simulation that visibly shows repulsion without requiring network setup.
 - In `simulator.html`, selecting the crossing scenario shows two peers following intersecting routes through the center.
 - In `simulator.html`, selecting realtime mode launches the selected number of scene-only embedded app clients in the same no-bot WebRTC room; changing the client count in realtime mode relaunches the embedded room with that count, and each client screen shows scripted movement through the normal app/WebRTC runtime.
-- In `simulator.html`, selecting song mode shows a procedural music visualization; pressing the Song mode audio control starts and stops a standalone space lo-fi infinite song, and changing the song sliders updates tempo, density, space, and volume.
+- In `simulator.html`, selecting song mode shows a procedural music visualization; pressing the Song mode audio control starts and stops the shared space lo-fi infinite song, changing the song sliders updates tempo, density, space, and volume, and reaction audition controls let manual pulse, star-touch, and resonance reactions be heard.
 - Touching an environmental star emits a blended-color pulse and temporarily hides that star.
-- Entering or interacting with a room starts a soft procedural lo-fi loop after browser audio is unlocked.
-- Manual pulse actions create mellow local musical accents after browser audio is unlocked.
-- Star-touch pulses create brighter accents, and pulse resonances create a short local chord.
-- The room Lo-Fi control can mute and unmute local room audio without replaying old cues.
+- Entering or interacting with a room starts the soft procedural space lo-fi song after browser audio is unlocked.
+- Manual pulse actions noticeably shift the song's lead, bass, and mix after browser audio is unlocked.
+- Star-touch pulses brighten the song's lead/dust texture and open the tone quickly, while pulse resonances open the song's pad/space and soften the kit.
+- The room Lo-Fi control can mute and unmute local room audio without replaying old reactions.
 - In realtime simulator mode, only one embedded client is configured as the audio source, and the simulator shell provides the only Lo-Fi control.
 - Pulse events appear locally and remotely.
 - Peers exchange only v2 `hello`, `presence`, and pulse `event` messages; old v1 presence/pulse payloads are ignored safely.

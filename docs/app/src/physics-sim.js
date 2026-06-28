@@ -16,11 +16,12 @@ import {
   normalizeRealtimeRoomClientCount
 } from "./simulation-clients.js?v=lofi-audio-20260627";
 import {
+  createSpaceLofiReaction,
   createSpaceLofiSongPlan,
   createSpaceLofiSongPlayer,
   getSpaceLofiSongStep,
   getSpaceLofiStepDuration
-} from "./space-lofi-song.js";
+} from "./space-lofi-song.js?v=audible-reactions-20260628";
 import {
   getPeerCollisionDistance,
   getPeerCollisionRadius
@@ -65,6 +66,7 @@ const elements = {
   songSpaceOutput: document.querySelector("#song-space-output"),
   songVolume: document.querySelector("#song-volume-input"),
   songVolumeOutput: document.querySelector("#song-volume-output"),
+  songReactionButtons: document.querySelectorAll("[data-song-reaction]"),
   debugTitle: document.querySelector("#debug-title"),
   distanceLabel: document.querySelector("#metric-distance-label"),
   repulsionLabel: document.querySelector("#metric-repulsion-label"),
@@ -111,6 +113,7 @@ let songEnabled = false;
 let songElapsedSeconds = 0;
 let songStartedAt = performance.now() / 1000;
 let songVisualStars = createSongVisualStars(songPlan.seed);
+let songVisualReactions = [];
 
 bindControls();
 setScenario("cluster");
@@ -186,6 +189,11 @@ function bindControls() {
     elements.songVolume
   ]) {
     input.addEventListener("input", handleSongParameterInput);
+  }
+  for (const button of elements.songReactionButtons) {
+    button.addEventListener("click", () => {
+      void auditionSongReaction(button.dataset.songReaction);
+    });
   }
   window.addEventListener("message", handleRealtimeClientMessage);
   window.addEventListener("resize", resizeCanvas);
@@ -864,6 +872,7 @@ async function regenerateSong() {
   });
   songPlayer.setVolume(parameters.volume);
   songVisualStars = createSongVisualStars(songPlan.seed);
+  songVisualReactions = [];
   songElapsedSeconds = 0;
   songStartedAt = performance.now() / 1000;
   syncSongControls();
@@ -873,6 +882,31 @@ async function regenerateSong() {
   if (wasEnabled) {
     await setSongEnabled(true);
   }
+}
+
+async function auditionSongReaction(interactionType) {
+  if (!songEnabled) {
+    await setSongEnabled(true);
+  }
+
+  if (!songEnabled) {
+    return;
+  }
+
+  const nowSeconds = performance.now() / 1000;
+  const visualState = getSongVisualState(getSongElapsedSeconds(nowSeconds));
+  const reactionInput = getAuditionReactionInput(interactionType);
+  songPlayer.react(reactionInput);
+  const visualReaction = createSpaceLofiReaction(reactionInput, {
+    plan: songPlan,
+    startStep: visualState.step.stepIndex + 1
+  });
+  songVisualReactions = [
+    ...songVisualReactions.filter((reaction) => reaction.endStep >= visualState.step.stepIndex),
+    visualReaction
+  ].slice(-8);
+  drawSong(nowSeconds);
+  renderSongMetrics(nowSeconds);
 }
 
 function handleSongParameterInput() {
@@ -896,6 +930,7 @@ function handleSongParameterInput() {
     density: parameters.density,
     space: parameters.space
   });
+  songVisualReactions = [];
   songElapsedSeconds = elapsedSeconds;
   songStartedAt = performance.now() / 1000;
   if (wasEnabled) {
@@ -908,6 +943,7 @@ function handleSongParameterInput() {
 function resetSongTimeline() {
   songElapsedSeconds = 0;
   songStartedAt = performance.now() / 1000;
+  songVisualReactions = [];
   if (songEnabled) {
     songPlayer.stop();
     void songPlayer.start({ reset: true });
@@ -937,6 +973,34 @@ function getSongParameterValues() {
     density: roundNumber(clamp(Number(elements.songDensity.value), 0, 1), 2),
     space: roundNumber(clamp(Number(elements.songSpace.value), 0, 1), 2),
     volume: roundNumber(clamp(Number(elements.songVolume.value), 0, 1), 2)
+  };
+}
+
+function getAuditionReactionInput(interactionType) {
+  if (interactionType === "star-touch") {
+    return {
+      id: `sim-star-${Date.now()}`,
+      interactionType: "star-touch",
+      color: "#fcd34d",
+      intensity: 0.74,
+      pan: 0.28
+    };
+  }
+  if (interactionType === "resonance") {
+    return {
+      id: `sim-resonance-${Date.now()}`,
+      interactionType: "resonance",
+      color: "#86efac",
+      intensity: 0.82,
+      pan: 0
+    };
+  }
+  return {
+    id: `sim-manual-${Date.now()}`,
+    interactionType: "manual-pulse",
+    color: "#7dd3fc",
+    intensity: 0.52,
+    pan: -0.22
   };
 }
 
@@ -1251,8 +1315,9 @@ function getSongVisualState(elapsedSeconds) {
     stepDuration = oddDuration;
   }
 
+  songVisualReactions = songVisualReactions.filter((reaction) => reaction.endStep >= stepIndex);
   return {
-    step: getSpaceLofiSongStep(songPlan, stepIndex),
+    step: getSpaceLofiSongStep(songPlan, stepIndex, { reactions: songVisualReactions }),
     substepProgress: clamp(remaining / stepDuration, 0, 1)
   };
 }

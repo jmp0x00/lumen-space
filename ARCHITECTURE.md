@@ -7,7 +7,7 @@
 - Three.js `0.185.0` via CDN for WebGL rendering.
 - Trystero `0.25.2` via CDN for WebRTC peer rooms and public relay-based signaling.
 - Unique Names Generator `4.7.1` via CDN for generated player and bot names.
-- Web Audio API for local procedural lo-fi music with pulse and resonance accents.
+- Web Audio API for the shared procedural space lo-fi song with pulse and resonance-driven song reactions.
 - Node.js built-in test runner for unit tests.
 
 ## Architecture Overview
@@ -40,8 +40,8 @@ The preferred long-term game-core model is documented in
 - `app-ui.js` owns default DOM rendering for the lobby, room chrome, participants, actions, toast, and debug overlay, plus a scene-only generator for embedded clients.
 - `runtime-config.js` owns app runtime hooks and UI generator selection, defaulting to the full lobby and room UI while allowing embedded clients to render scene-only.
 - `simulation-clients.js` owns realtime simulator presets, no-bot client URL generation, single sound-source assignment, scripted movement target selection, and deterministic target helpers for tests.
-- `sound.js` owns deterministic lo-fi loop pattern generation, mapping from pulse/resonance state to sound cues, and the browser-only Web Audio performer.
-- `space-lofi-song.js` owns a standalone procedural space lo-fi infinite song plan and browser-only Web Audio performer used by the simulator song mode.
+- `sound.js` owns room audio glue, the room preset for the shared space lo-fi song, mapping from pulse/resonance state to song reaction events, and the browser-only Web Audio performer.
+- `space-lofi-song.js` owns the shared procedural space lo-fi infinite song plan, deterministic reaction model, reusable loop controller, and browser-only Web Audio performer used by both the room audio and simulator song mode.
 - `simulator.html`, `physics-sim.css`, and `physics-sim.js` form a separate static inspection app that runs scripted peers against the same pure physics modules, embeds realtime app clients, and exposes the separate song mode.
 - `scripts/serve-no-cache.mjs` is the local static development server used by `npm run serve`; it serves `docs/app` with no-store cache headers so iterative browser validation does not reuse stale HTML or module files.
 
@@ -59,7 +59,7 @@ This shape keeps network and rendering side effects away from the logic covered 
 8. Peer pulse events are event-like: they carry stable `eventId` values, are deduplicated before entering state, and then progress/expire through `physics/pulses.js`.
 9. Touch-star pulse events include `trigger`, `starId`, and `starGeneration` so other clients suppress and respawn the matching deterministic star.
 10. `physics/pulses.js` derives resonance events locally when different pulse fronts meet; no extra network message is sent.
-11. `app.js` compares the current pulse/resonance IDs with a local sound snapshot, then asks `sound.js` to keep the lo-fi loop running and play newly observed accents when sound is enabled and browser audio has been unlocked by a user gesture. The snapshot still advances while muted so old cues do not replay on unmute.
+11. `app.js` compares the current pulse/resonance IDs with a local sound snapshot, then asks `sound.js` to keep the shared space lo-fi song running and apply newly observed song reactions when sound is enabled and browser audio has been unlocked by a user gesture. The reaction model updates future song steps and also moves the current song bus tone, wet mix, and output gain so interactions are audible immediately. The snapshot still advances while muted so old reactions do not replay on unmute.
 12. Local bots remain local-only participants. They choose the closest available touch star, move through the same motion integration as user-driven lumes, preserve velocity, consume stars through the same pulse pipeline, and emit local scheduled pulses.
 
 ## Simulator
@@ -68,7 +68,7 @@ The simulator is a developer-facing static page at `simulator.html`. In physics 
 
 Realtime mode keeps WebRTC in the loop by embedding multiple `index.html` app instances as same-origin iframes. Each iframe receives URL parameters for identity, room ID, app-level no-bot startup, scene-only UI generator selection, total client count, sound-source eligibility, and a scripted behavior preset. The simulator launcher can request 1-8 clients: shorter counts use the first preset clients, and larger counts repeat the preset pattern with unique names and spread phases. When the count changes while realtime mode is active, the simulator debounces the edit and relaunches the embedded room with the new count. The embedded client still runs normal `app.js`, `runtime-config.js`, `app-ui.js`, `scene.js`, `network.js`, Trystero presence/pulse messages, touch-star handling, and repulsion; only its runtime target is generated from the realtime preset. The simulator parent monitors each iframe through same-origin state and `postMessage` updates, and uses one same-origin sound-control call or message that enables audio only on the designated source iframe.
 
-Song mode uses `space-lofi-song.js` instead of the room soundtrack in `sound.js`. The module exports pure deterministic planning helpers for the seed, chord cycle, motif, swing timing, density, space, and current step events, plus a Web Audio performer that schedules an infinite space-themed lo-fi track after a user gesture. The simulator draws a canvas visualization from the same song plan and shows current bar, chord, tempo, and active voice state so the generated music has an inspectable testable surface. Tempo, density, and space rebuild the deterministic plan with the current seed; volume updates the performer master gain directly.
+Song mode uses `space-lofi-song.js`, the same song engine used by room audio through the preset in `sound.js`. The module exports pure deterministic planning helpers for the seed, chord cycle, motif, swing timing, density, space, current step events, and interaction reactions, plus a reusable controller and Web Audio performer that schedule an infinite space-themed lo-fi track after a user gesture. The simulator draws a canvas visualization from the same song plan and shows current bar, chord, tempo, active voice state, and reaction-influenced voice changes so the generated music has an inspectable testable surface. Tempo, density, and space rebuild the deterministic plan with the current seed; volume updates the performer master gain directly; reaction audition buttons trigger manual pulse, star-touch, and resonance reactions against the current settings.
 
 ## Message Interfaces
 
@@ -141,8 +141,8 @@ For presence, `position` is the authoritative peer snapshot for remote interpola
 - Keep `domain.js` as a facade while moving physics internals into smaller modules, preserving current browser imports while improving test focus.
 - Use `hello`, `presence`, and `event` Trystero actions so identity/capability snapshots, replaceable movement snapshots, and deduplicated gameplay events remain distinct.
 - Keep rooms ephemeral to avoid storage, privacy, and cleanup concerns.
-- Generate the lo-fi loop and pulse accents locally with Web Audio instead of shipping audio files, expose a room-level Lo-Fi mute control, and keep realtime simulator audio routed through one controlled source iframe so validation remains readable.
-- Keep the simulator's standalone space lo-fi infinite song in `space-lofi-song.js` so it can evolve independently from the room-reactive pulse soundtrack.
+- Generate the space lo-fi song and pulse reactions locally with Web Audio instead of shipping audio files, expose a room-level Lo-Fi mute control, and keep realtime simulator audio routed through one controlled source iframe so validation remains readable.
+- Share the richer infinite song engine between the simulator and game room while keeping room event-to-reaction mapping in `sound.js`, so the game benefits from simulator-tuned music without making simulator controls depend on room state.
 - Treat the project as a social visual game, matching the challenge while preserving the desired creative direction.
 
 ## AI Tooling Used

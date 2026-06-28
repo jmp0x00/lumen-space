@@ -2,15 +2,20 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   createLofiLoopPattern,
+  createRoomLofiSongPlan,
   collectNewSoundCues,
-  createPulseSoundCue,
-  createResonanceSoundCue,
+  createPulseSongReaction,
+  createResonanceSongReaction,
   createSoundCueSnapshot,
   LOFI_LOOP_BPM,
+  ROOM_LOFI_SONG_BPM,
+  ROOM_LOFI_SONG_DENSITY,
+  ROOM_LOFI_SONG_SEED,
+  ROOM_LOFI_SONG_SPACE,
   SOUND_CUE_MEMORY_LIMIT
 } from "../docs/app/src/sound.js";
 
-test("createLofiLoopPattern describes the procedural lo-fi room song", () => {
+test("createLofiLoopPattern keeps the legacy four-bar lo-fi loop deterministic", () => {
   const pattern = createLofiLoopPattern();
 
   assert.equal(pattern.type, "lofi-loop");
@@ -30,8 +35,24 @@ test("createLofiLoopPattern describes the procedural lo-fi room song", () => {
   assert.equal(pattern.melody.length, 6);
 });
 
-test("createPulseSoundCue maps local manual pulses to mellow lo-fi accent notes", () => {
-  const cue = createPulseSoundCue(
+test("createRoomLofiSongPlan uses the shared infinite space lo-fi song", () => {
+  const plan = createRoomLofiSongPlan();
+
+  assert.equal(plan.type, "space-lofi-infinite-song");
+  assert.equal(plan.seed, ROOM_LOFI_SONG_SEED);
+  assert.equal(plan.bpm, ROOM_LOFI_SONG_BPM);
+  assert.equal(plan.density, ROOM_LOFI_SONG_DENSITY);
+  assert.equal(plan.space, ROOM_LOFI_SONG_SPACE);
+  assert.equal(plan.reactionMix, 0.86);
+  assert.equal(plan.progression.length, 8);
+  assert.deepEqual(
+    plan.voices.map((voice) => voice.id),
+    ["pad", "bass", "drums", "signal", "dust"]
+  );
+});
+
+test("createPulseSongReaction maps local manual pulses to song changes", () => {
+  const reaction = createPulseSongReaction(
     {
       id: "manual-1",
       sourceId: "client-local",
@@ -42,28 +63,18 @@ test("createPulseSoundCue maps local manual pulses to mellow lo-fi accent notes"
     { localClientId: "client-local" }
   );
 
-  assert.deepEqual(cue, {
+  assert.deepEqual(reaction, {
     id: "pulse:manual-1",
-    type: "pulse",
+    type: "song-reaction",
+    interactionType: "manual-pulse",
     color: "#7dd3fc",
-    frequency: 329.63,
-    endFrequency: 237.33,
-    gain: 0.048,
-    duration: 0.519,
-    pan: 0.5,
-    wave: "sine",
-    sparkle: false,
-    filterFrequency: 1118,
-    delay: {
-      time: 0.19,
-      feedback: 0.22,
-      mix: 0.2
-    }
+    intensity: 0.681,
+    pan: 0.5
   });
 });
 
-test("createPulseSoundCue gives star-touch pulses a brighter musical accent", () => {
-  const cue = createPulseSoundCue({
+test("createPulseSongReaction gives star-touch pulses a stronger song reaction", () => {
+  const reaction = createPulseSongReaction({
     id: "star-1",
     sourceId: "client-local",
     color: "#fcd34d",
@@ -72,33 +83,35 @@ test("createPulseSoundCue gives star-touch pulses a brighter musical accent", ()
     origin: { x: -99, y: 0, z: 0 }
   });
 
-  assert.equal(cue.id, "pulse:star-1");
-  assert.equal(cue.wave, "triangle");
-  assert.equal(cue.sparkle, true);
-  assert.equal(cue.color, "#fcd34d");
-  assert.equal(cue.pan, -0.72);
-  assert.ok(cue.frequency > cue.endFrequency);
-  assert.equal(cue.delay.feedback, 0.16);
-  assert.ok(cue.filterFrequency > 1_800);
+  assert.deepEqual(reaction, {
+    id: "pulse:star-1",
+    type: "song-reaction",
+    interactionType: "star-touch",
+    color: "#fcd34d",
+    intensity: 0.888,
+    pan: -0.72
+  });
 });
 
-test("createResonanceSoundCue maps resonance intensity to a chord cue", () => {
-  const cue = createResonanceSoundCue({
+test("createResonanceSongReaction maps resonance intensity to a broad song reaction", () => {
+  const reaction = createResonanceSongReaction({
     id: "resonance:pulse-a:pulse-b",
     color: "#86efac",
     intensity: 0.75,
     position: { x: 0, y: 0, z: 0 }
   });
 
-  assert.equal(cue.id, "resonance:resonance:pulse-a:pulse-b");
-  assert.equal(cue.type, "resonance");
-  assert.equal(cue.color, "#86efac");
-  assert.deepEqual(cue.frequencies, [300.54, 375.67, 450.81]);
-  assert.equal(cue.gain, 0.063);
-  assert.equal(cue.duration, 0.545);
+  assert.deepEqual(reaction, {
+    id: "resonance:resonance:pulse-a:pulse-b",
+    type: "song-reaction",
+    interactionType: "resonance",
+    color: "#86efac",
+    intensity: 0.86,
+    pan: 0
+  });
 });
 
-test("collectNewSoundCues emits each pulse and resonance cue once", () => {
+test("collectNewSoundCues emits each pulse and resonance reaction once", () => {
   const first = collectNewSoundCues(createSoundCueSnapshot(), {
     pulses: [
       {
@@ -120,8 +133,11 @@ test("collectNewSoundCues emits each pulse and resonance cue once", () => {
   });
 
   assert.deepEqual(
-    first.cues.map((cue) => cue.id),
-    ["pulse:pulse-1", "resonance:resonance:pulse-1:pulse-2"]
+    first.cues.map((cue) => `${cue.type}:${cue.id}:${cue.interactionType}`),
+    [
+      "song-reaction:pulse:pulse-1:manual-pulse",
+      "song-reaction:resonance:resonance:pulse-1:pulse-2:resonance"
+    ]
   );
 
   const second = collectNewSoundCues(first.snapshot, {
