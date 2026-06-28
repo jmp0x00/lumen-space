@@ -10,11 +10,10 @@ Use this checklist after any UI or networking change.
 6. Open the copied room link in a second browser tab or a second browser profile.
 7. Confirm both names and colors appear in both participant panels.
 8. Move each pointer and confirm the corresponding light drifts in the other tab.
-9. Double-click the room label and confirm the hidden debug panel shows position, velocity, and speed rows that update as lumes move.
-10. Double-click the room label again and confirm the debug panel hides.
+9. Confirm the room action controls are copy invite, Lo-Fi, and leave icon buttons, with no `Send Pulse`, `Add Bot`, or `Remove Bot` room control.
+10. Resize to a mobile-width viewport and confirm the Lights list stays shallow, scrolls horizontally, and does not overlap the icon action controls.
 11. Move through a small touch star and confirm a pulse appears and the star temporarily disappears.
-12. Confirm there is no `Send Pulse`, `Add Bot`, or `Remove Bot` room control.
-13. Press Space and double-click the scene, then confirm no pulse appears unless a touch star is consumed.
-14. Confirm shared bots appear automatically, chase stars, and create pulses only when they consume stars.
-15. Close one tab and confirm the peer disappears within the stale-peer window while remaining clients continue showing shared bots.
-16. Block network access or CDN loading, reload, and confirm the app keeps reporting retry status rather than a blank screen.
+12. Press Space and double-click the scene, then confirm no pulse appears unless a touch star is consumed.
+13. Confirm shared bots appear automatically, chase stars, and create pulses only when they consume stars.
+14. Close one tab and confirm the peer disappears within the stale-peer window while remaining clients continue showing shared bots.
+15. Block network access or CDN loading, reload, and confirm the app keeps reporting retry status rather than a blank screen.

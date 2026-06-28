@@ -13,7 +13,7 @@
 - Added an external name generator for funny editable player names and bot names, with a local fallback for resilience.
 - Added a manual name regeneration control after trying the default-name flow in the lobby.
 - Added touch stars so pulses can emerge from environmental interaction instead of only explicit controls, then refined them to respawn with deterministic random-looking positions and colors for multiplayer consistency and blend star/lumen pulse colors.
-- Added a hidden debug overlay for current lume positions and velocities, because multiplayer movement feel needed live instrumentation rather than relying only on visual judgment.
+- Added temporary room instrumentation for current lume positions and velocities, because multiplayer movement feel needed live data rather than relying only on visual judgment.
 
 ### 2026-06-27
 
@@ -29,7 +29,7 @@
 - Redirected bot AI from ambient paths to star-seeking targets, while keeping push effects in velocity so player contact can still bend the bot's route without rewriting its objective.
 - Started rooms with visible local bots and let bots consume touch stars through the same pulse pipeline as players.
 - Found that equal-strength peer repulsion could let two bots orbit just outside a shared star's touch radius; moved the fix into bot AI instead of core physics by tracking target progress and switching stalled bots to the next nearest available star.
-- Expanded the hidden debug overlay with bot AI target and distance state after visual observation still made some bots look motionless without explaining their intent.
+- Expanded the temporary room instrumentation with bot AI target and distance state after visual observation still made some bots look motionless without explaining their intent.
 - Tried fixing bot target thrashing with sticky target selection and idle-based target skipping, but visual testing showed the behavior was still too complex for the current bot model.
 - Rolled back the sticky/idle bot targeting experiment after visual testing showed target churn and wall jams were still too hard to reason about; bots now simply chase the closest available star every update, and live peer collisions are kept small enough to avoid broad repulsion jams.
 - Replaced the single repulsion radius with a shared size-based collision radius, so local lumes, remote lumes, and bots have different collision footprints and star touches use peer-radius plus star-radius contact instead of point overlap.
@@ -69,6 +69,8 @@
 - Generated a small favicon and touch/app icon set from the lobby's luminous brand-mark direction, then wired the static page to use those assets explicitly so browser logs no longer include the default missing-icon request.
 - Expanded the playable world beyond a single camera view and added smooth camera follow, after visual review showed the room still felt like a small rectangle instead of open space.
 - Increased ambient and touch-star density after the larger world felt too empty, keeping the same deterministic placement and population-scaling model instead of adding a new system.
+- Reworked the room chrome for mobile after the Lights list became too tall with shared bots: the roster now stays shallow and scrolls horizontally, while copy, Lo-Fi, and leave are compact touch-sized icon actions.
+- Removed the temporary playable-room instrumentation and its domain/view-state plumbing once the separate simulator had become the better place for movement inspection.
 
 ## AI Tools Used
 
@@ -88,7 +90,7 @@
 - Separating pure logic from WebRTC/WebGL kept tests straightforward.
 - Splitting physics into focused modules made behavior-specific tests easier to read without changing the playable browser surface.
 - Building a small inspection harness around the pure physics modules made movement tuning faster than repeatedly staging multiplayer scenarios by hand.
-- Adding a small hidden debug readout made multiplayer movement easier to reason about while preserving the simple player-facing interface.
+- Using temporary room instrumentation made multiplayer movement easier to reason about early, and moving that diagnostic role into the simulator kept the final room UI simpler.
 - Keeping audio planning separate from Web Audio playback made it possible to evolve sound design from effects into music without losing unit-test coverage.
 - A static app shape matched the GitDocs sharing goal and avoided backend credentials.
 
@@ -97,6 +99,7 @@
 - True backend-free realtime still depends on public relay/signaling infrastructure.
 - WebRTC behavior can vary by network, NAT, and browser, so local tests cannot fully prove hosted multiplayer reliability.
 - GitDocs deployment details are environment-specific and need final verification after repository creation.
+- Hidden product-surface diagnostics were useful for tuning but became documentation and UI debt once the simulator covered the same questions more cleanly.
 
 ## Surprises And Discoveries
 

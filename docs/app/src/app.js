@@ -84,8 +84,7 @@ const ui = runtimeConfig.createUi({
     onSelectColor: selectColor,
     onCopyInvite: copyInviteLink,
     onToggleSound: toggleSound,
-    onLeaveRoom: leaveRoom,
-    onToggleDebug: toggleDebugPanel
+    onLeaveRoom: leaveRoom
   }
 });
 
@@ -363,9 +362,6 @@ function startRoomLoop() {
     applyCoreResult(stepGame(game, { now: nowMs, deltaSeconds, runtimeTarget }), {
       render: false
     });
-    if (game.debugVisible) {
-      renderUi();
-    }
     animationFrame = window.requestAnimationFrame(tick);
   };
 
@@ -377,7 +373,6 @@ function renderUi() {
     {
       ...selectUiView(game, {
         uiMode: runtimeConfig.uiMode,
-        canShowDebug: ui.canShowDebug,
         now: Date.now()
       }),
       sound: {
@@ -448,10 +443,6 @@ function leaveRoom() {
 
 function toggleSound() {
   setSoundEnabled(!soundEnabled, { render: true, unlock: true });
-}
-
-function toggleDebugPanel() {
-  dispatch({ type: "debug/set", visible: ui.canShowDebug && !game.debugVisible });
 }
 
 function dispatch(event, options = {}) {

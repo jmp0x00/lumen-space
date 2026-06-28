@@ -18,7 +18,8 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Touch-star availability scales from the active human and bot population, with a 72-star generated pool and active cap spread across the playable space.
 - When different players' pulse fronts meet, they create a brief resonance flash.
 - Hear the procedural space lo-fi song after the browser unlocks audio through interaction; star-touch pulses and resonance flashes briefly and noticeably reshape the song's density, space, tone, and voices instead of playing as separate effects.
-- Use the room Lo-Fi control to mute or unmute the reactive song.
+- Use compact room controls to copy the invite link, mute or unmute the reactive song, and leave the room.
+- On mobile, the Lights roster stays shallow and scrolls sideways so the room remains playable with larger populations.
 - Shared AI-driven bots seek less-contested touch stars automatically and are simulated by the connected players through deterministic ownership.
 - Rooms are peer-to-peer and ephemeral; no account, backend server, or database is used.
 - If realtime networking is unavailable, the app keeps retrying while the visual room stays usable.
@@ -67,7 +68,7 @@ npm test
 ```
 
 Manual browser validation is documented in [docs/testing/manual-smoke-test.md](docs/testing/manual-smoke-test.md).
-For physics tuning, double-click the room label in the room to toggle a hidden debug readout with lume positions, velocities, and bot AI target, chaser count, and decision state.
+For physics tuning, use `simulator.html`.
 
 ## Project Structure
 
@@ -77,7 +78,7 @@ For physics tuning, double-click the room label in the room to toggle a hidden d
 - `docs/app/src/runtime-config.js`: app runtime configuration, including the selected UI generator and scene-only embedded clients.
 - `docs/app/src/config.js`: shared app, gameplay, physics, audio, scene, and simulator configuration values.
 - `docs/app/src/app-ui.js`: default and scene-only UI generators that render app state into DOM.
-- `docs/app/src/domain.js`: pure domain facade for identity, presence, debug rows, and compatibility exports.
+- `docs/app/src/domain.js`: pure domain facade for identity, presence, and compatibility exports.
 - `docs/app/src/protocol.js`: v2 peer protocol creators and validators for hello, presence, and pulse events.
 - `docs/app/src/core/`: canonical game state, event reducer, simulation step, and scene/UI selectors.
 - `docs/app/src/physics/`: focused pure physics modules for vectors, local motion, peer collision/repulsion, AI-driven bot motion, touch stars, pulses, and resonance.

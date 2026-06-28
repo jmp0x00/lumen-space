@@ -41,10 +41,6 @@ export function reduceGameEvent(state, event = {}) {
           state: event.state ?? state.status.state
         }
       });
-    case "debug/set":
-      return withoutEffects({ ...state, debugVisible: Boolean(event.visible) });
-    case "debug/toggle":
-      return withoutEffects({ ...state, debugVisible: !state.debugVisible });
     case "pointer/target":
       return withoutEffects({ ...state, pointerTarget: clampVector(event.target) });
     case "peer/join":

@@ -75,6 +75,8 @@ Out of scope:
 - Local room audio must use the Web Audio API to synthesize the shared space lo-fi song and convert newly observed pulse and resonance events into song reactions after a user gesture unlocks audio.
 - Star-touch pulses and resonance flashes must noticeably tune existing song voices, density, space, and tone in distinct ways while avoiding separate sound-effect stabs during repeated play.
 - The default room UI must expose a mute/unmute Lo-Fi control.
+- The default room UI must expose copy invite, mute/unmute Lo-Fi, and leave controls as compact touch-friendly actions.
+- On mobile-width viewports, the Lights roster must remain shallow and horizontally scrollable instead of becoming a tall overlay.
 - Muted room audio must stop the song and must not replay old pulse or resonance reactions when unmuted again.
 - Scripted realtime simulator clients must use a single designated sound-source client so many iframe clients do not play over one another.
 - The realtime simulator parent must expose one mute/unmute Lo-Fi control instead of a separate control in every embedded client.
@@ -83,7 +85,6 @@ Out of scope:
 - Rooms must maintain automatic shared bots according to active human count, with a hard total lume limit of 12, desired room population of 8, and maximum of 6 generated bots.
 - Shared bot IDs must be stable room-level participant IDs, and sorted active human client IDs must assign bot slots round-robin.
 - Bots must choose available touch stars through deterministic crowd-aware scoring, continue toward a nearby current star when it is not overcrowded, redirect toward lower-pressure alternatives when multiple bots aim at the same star, ignore cooling stars, move through the same motion integration as user-driven lumes, preserve existing velocity, remain within world bounds, consume touch stars, and emit pulses only through star consumption.
-- A hidden debug toggle must show current lume positions, velocities, speed, and bot AI target/distance/chaser decision state for physics tuning without adding a visible player-facing control.
 
 ## Acceptance Criteria
 
@@ -102,13 +103,13 @@ Out of scope:
 - Entering or interacting with a room starts the soft procedural space lo-fi song after browser audio is unlocked.
 - Star-touch pulses brighten the song's lead/dust texture and open the tone quickly, while pulse resonances open the song's pad/space and soften the kit.
 - The room Lo-Fi control can mute and unmute local room audio without replaying old reactions.
+- On mobile-width viewports, the Lights list stays compact with horizontal scrolling and the room actions remain touch-sized icon controls.
 - In realtime simulator mode, only one embedded client is configured as the audio source, and the simulator shell provides the only Lo-Fi control.
 - Pulse events appear locally and remotely.
 - Peers exchange only v2 `hello`, `presence`, and star-touch pulse `event` messages; old v1 presence/pulse payloads and manual pulse events are ignored safely.
 - Overlapping pulse fronts from different sources create a resonance flash without a separate network message.
 - Connecting to a room automatically shows shared bots when human population leaves room under the target population.
 - Closing a bot owner tab causes remaining clients to recalculate deterministic bot ownership and continue publishing shared bot presence.
-- Double-clicking the room label toggles a debug overlay whose position, velocity, and bot AI rows update as lumes move.
 - Closing one tab removes that participant from the other tab within the stale-peer window.
 - `npm test` passes.
 - `README.md`, `SPEC.md`, `ARCHITECTURE.md`, and `RETROSPECTIVE.md` exist at repository root.

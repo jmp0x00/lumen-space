@@ -20,10 +20,10 @@ The preferred long-term game-core model is documented in
 - `protocol.js` owns the v2 peer protocol for `hello`, `presence`, and pulse `event` messages. It creates outbound messages, validates inbound messages, rejects non-v2 payloads, normalizes identity/vector/color/timing fields, and exposes sequence/dedup helpers.
 - `core/population.js` owns capped room population policy, shared bot slot ownership, stable bot IDs, and population-scaled touch-star counts.
 - `core/game-state.js` owns the canonical state shape, room-entry state creation, deterministic start positions, shared bot participant creation, active touch-star selection, and participant aggregation.
-- `core/game-events.js` owns pure event reduction for lobby changes, room lifecycle, pointer targets, peer hello/presence, star-touch pulse events, debug state, stale-peer pruning, and outbound network effects.
+- `core/game-events.js` owns pure event reduction for lobby changes, room lifecycle, pointer targets, peer hello/presence, star-touch pulse events, stale-peer pruning, and outbound network effects.
 - `core/simulation.js` owns the tick-based room simulation: local motion, remote interpolation, shared bot ownership/motion, repulsion, pulse lifecycle, touch-star pulses, resonance detection, and simulation effects.
 - `core/scene-model.js` owns selectors that derive UI, scene, participant, and runtime-simulator views from canonical game state.
-- `domain.js` is the public domain facade for identity sanitization, debug row formatting including bot AI target state, legacy pure helpers, and stable room/physics exports for existing callers.
+- `domain.js` is the public domain facade for identity sanitization, legacy pure helpers, and stable room/physics exports for existing callers.
 - `room.js` owns room ID normalization, room ID generation, room extraction from URLs, and invite URL creation.
 - `colors.js` owns color constants, hex color normalization, and color mixing utilities used by identity and pulse logic.
 - `physics/vector.js` owns vector sanitization, clamping, interpolation, and distance helpers.
@@ -38,7 +38,7 @@ The preferred long-term game-core model is documented in
 - `names.js` dynamically imports Unique Names Generator and falls back to a small deterministic local generator if the CDN is unavailable.
 - `scene.js` dynamically imports Three.js and renders participants, labels, a dense oversized star field, touch stars, pulse rings, and resonance flashes, with a smooth camera follow so the larger world is reachable beyond the initial viewport.
 - `app.js` is now a browser adapter. It owns DOM/UI callbacks, local storage, URL updates, realtime connection, timers, animation frames, scene startup, and effect execution while delegating game-state changes to the pure core modules.
-- `app-ui.js` owns default DOM rendering for the lobby, room chrome, participants, actions, toast, and debug overlay, plus a scene-only generator for embedded clients.
+- `app-ui.js` owns default DOM rendering for the lobby, room chrome, compact participant roster, icon actions, and toast, plus a scene-only generator for embedded clients.
 - `runtime-config.js` owns app runtime hooks and UI generator selection, defaulting to the full lobby and room UI while allowing embedded clients to render scene-only.
 - `config.js` owns shared app, gameplay, physics, audio, scene, and simulator constants so limits and tunables have one source of truth.
 - `simulation-clients.js` owns no-bot realtime simulator client URL generation, single sound-source assignment, scripted movement target selection, and deterministic target helpers for tests, using presets from `config.js`.

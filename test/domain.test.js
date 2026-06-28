@@ -15,7 +15,6 @@ import {
   createPulseMessage,
   createRoomId,
   createTouchStars,
-  formatParticipantDebugRows,
   getRoomIdFromLocation,
   lerpVector,
   normalizePulseMessage,
@@ -99,92 +98,6 @@ test("updateMotion moves toward the pointer target while respecting bounds", () 
     0.05
   );
   assert.equal(bounded.position.x, SPACE_BOUNDS.x[1]);
-});
-
-test("formatParticipantDebugRows returns rounded lume state for the debug panel", () => {
-  const rows = formatParticipantDebugRows(
-    [
-      {
-        id: "local",
-        name: "Local Player",
-        position: { x: 1.234, y: -2.345, z: 0.004 },
-        velocity: { x: 0.1, y: -0.2, z: 0.3 },
-        isLocal: true
-      },
-      {
-        id: "bot-1",
-        name: "Bot",
-        position: { x: 99, y: -99, z: 10 },
-        targetPosition: { x: 7.8, y: -4, z: 0 },
-        velocity: { x: 3, y: 4, z: 0 },
-        botTargetStarId: "touch-star-2",
-        botTargetBestDistance: 1.234,
-        botTargetChaserCount: 3,
-        botTargetDecision: "redirect",
-        botTargetIdleSince: 3_500,
-        botSkippedStarId: "touch-star-0",
-        botSkippedStarUntil: 6_200,
-        isBot: true
-      },
-      null
-    ],
-    { digits: 1, now: 5_000 }
-  );
-
-  assert.deepEqual(rows, [
-    {
-      id: "local",
-      name: "Local Player",
-      kind: "local",
-      position: { x: 1.2, y: -2.3, z: 0 },
-      velocity: { x: 0.1, y: -0.2, z: 0.3 },
-      speed: 0.4
-    },
-    {
-      id: "bot-1",
-      name: "Bot",
-      kind: "bot",
-      position: { x: SPACE_BOUNDS.x[1], y: SPACE_BOUNDS.y[0], z: SPACE_BOUNDS.z[1] },
-      velocity: { x: 3, y: 4, z: 0 },
-      speed: 5,
-      ai: {
-        targetStarId: "touch-star-2",
-        targetDistance: 18.8,
-        bestDistance: 1.2,
-        chaserCount: 3,
-        decision: "redirect",
-        idleMs: 1_500,
-        skippedStarId: "touch-star-0",
-        skipMs: 1_200
-      }
-    }
-  ]);
-});
-
-test("formatParticipantDebugRows keeps empty bot AI timings neutral", () => {
-  const rows = formatParticipantDebugRows(
-    [
-      {
-        id: "bot-2",
-        name: "Fresh Bot",
-        position: { x: 1, y: 2, z: 0 },
-        velocity: { x: 0, y: 0, z: 0 },
-        isBot: true
-      }
-    ],
-    { digits: 1, now: 5_000 }
-  );
-
-  assert.deepEqual(rows[0].ai, {
-    targetStarId: "drift",
-    targetDistance: null,
-    bestDistance: null,
-    chaserCount: null,
-    decision: null,
-    idleMs: 0,
-    skippedStarId: null,
-    skipMs: 0
-  });
 });
 
 test("reducePresence accepts newer presence and preserves smooth current position", () => {

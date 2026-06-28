@@ -51,7 +51,6 @@ import {
   clamp,
   clampVector,
   lerpVector,
-  planeDistance,
   sanitizeVector
 } from "./physics/vector.js";
 
@@ -124,29 +123,6 @@ export function sanitizeIdentity(raw = {}) {
     name: name || "Guest",
     color: normalizeHexColor(source.color)
   };
-}
-
-export function formatParticipantDebugRows(participants, options = {}) {
-  const digits = clamp(Math.floor(Number(options.digits ?? 2)), 0, 4);
-  const now = normalizeDebugTimestamp(options.now);
-  return (Array.isArray(participants) ? participants : [])
-    .filter(isObject)
-    .map((participant) => {
-      const position = clampVector(participant.position);
-      const velocity = sanitizeVector(participant.velocity);
-      const row = {
-        id: String(participant.id ?? "unknown"),
-        name: String(participant.name ?? "Unknown").slice(0, NAME_MAX_LENGTH),
-        kind: participant.isLocal ? "local" : participant.isBot ? "bot" : "peer",
-        position: roundVector(position, digits),
-        velocity: roundVector(velocity, digits),
-        speed: roundNumber(Math.hypot(velocity.x, velocity.y, velocity.z), digits)
-      };
-      if (participant.isBot) {
-        row.ai = formatBotDebugState(participant, position, now, digits);
-      }
-      return row;
-    });
 }
 
 export function createPresenceMessage({ identity, position, velocity, timestamp = Date.now() }) {
@@ -223,77 +199,6 @@ export function normalizePresenceMessage(data, receivedAt = Date.now()) {
 function normalizeTimestamp(value, fallback = Date.now()) {
   const timestamp = Number(value);
   return Number.isFinite(timestamp) && timestamp > 0 ? timestamp : fallback;
-}
-
-function roundVector(vector, digits) {
-  const safeVector = sanitizeVector(vector);
-  return {
-    x: roundNumber(safeVector.x, digits),
-    y: roundNumber(safeVector.y, digits),
-    z: roundNumber(safeVector.z, digits)
-  };
-}
-
-function formatBotDebugState(participant, position, now, digits) {
-  const targetPosition = isObject(participant.targetPosition)
-    ? clampVector(participant.targetPosition)
-    : null;
-  const idleSince = normalizeNullableTimestamp(participant.botTargetIdleSince);
-  const skippedUntil = normalizeNullableTimestamp(participant.botSkippedStarUntil);
-
-  return {
-    targetStarId: normalizeDebugText(participant.botTargetStarId, "drift"),
-    targetDistance:
-      targetPosition === null ? null : roundNumber(planeDistance(position, targetPosition), digits),
-    bestDistance: roundNullableNumber(participant.botTargetBestDistance, digits),
-    chaserCount: readNullableNonNegativeInteger(participant.botTargetChaserCount),
-    decision: normalizeDebugText(participant.botTargetDecision, null),
-    idleMs: idleSince === null ? 0 : Math.max(0, Math.round(now - idleSince)),
-    skippedStarId: normalizeDebugText(participant.botSkippedStarId, null),
-    skipMs: skippedUntil === null ? 0 : Math.max(0, Math.round(skippedUntil - now))
-  };
-}
-
-function normalizeDebugTimestamp(value) {
-  const timestamp = Number(value);
-  return Number.isFinite(timestamp) ? timestamp : Date.now();
-}
-
-function normalizeNullableTimestamp(value) {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  const timestamp = Number(value);
-  return Number.isFinite(timestamp) ? timestamp : null;
-}
-
-function normalizeDebugText(value, fallback) {
-  const text = String(value ?? "").trim();
-  return text || fallback;
-}
-
-function roundNullableNumber(value, digits) {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? roundNumber(numeric, digits) : null;
-}
-
-function readNullableNonNegativeInteger(value) {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  const numeric = Math.floor(Number(value));
-  return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
-}
-
-function roundNumber(value, digits) {
-  const factor = 10 ** digits;
-  return Math.round(Number(value) * factor) / factor;
 }
 
 function isObject(value) {
