@@ -1,6 +1,6 @@
 # Lumen Space
 
-Lumen Space is a small social visual game for the AI-native development challenge. Players enter an ephemeral shared room, appear as glowing lights in a calm 3D space, drift with cursor movement, and release colored pulse waves by consuming touch stars.
+Lumen Space is a small social visual game for the AI-native development challenge. Players enter an ephemeral shared room, appear as glowing lights in a calm 3D space, drift with cursor movement, and reveal shared constellations by consuming touch stars.
 
 Playable link: TODO after the repository is created under `rc-ai-learning/vadim-kiryukhin-lumen-space` and GitDocs is enabled.
 
@@ -13,9 +13,11 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Travel through a larger space that extends beyond the first camera view while the camera gently follows your light.
 - Nearby lights use a small size-based collision radius, with local lumes slightly larger and bots smaller.
 - Pushed idle lights keep the displaced resting spot until fresh pointer or presence input moves them again.
-- Drift through small colorful touch stars to release pulses that blend star and lumen colors; star consumption is the only pulse source.
+- Drift through small colorful touch stars that appear on real-inspired constellation paths to release pulses that blend star and lumen colors; star consumption is the only pulse source.
+- Each constellation has one deterministic room color, tracks touched star nodes for the whole room, and reveals its glowing line pattern and name when all nodes have been gathered.
+- Revealed constellations stay visible for everyone while future touch stars keep cycling along those completed paths.
 - Rooms maintain a capped shared population of human players plus automatic star-seeking bots.
-- Touch-star availability scales from the active human and bot population, with a 72-star generated pool and active cap spread across the playable space.
+- Touch-star availability scales from the active human and bot population, with a 72-star generated pool distributed across curated real constellation patterns in the playable space.
 - When different players' pulse fronts meet, they create a brief resonance flash.
 - Hear the procedural space lo-fi song after the browser unlocks audio through interaction; star-touch pulses create a clear lead/dust bloom, and resonance flashes create a wider pad/space swell while still reshaping the song instead of playing as separate effects.
 - Use compact room controls to copy the invite link, mute or unmute the reactive song, and leave the room.
@@ -77,6 +79,7 @@ For physics tuning, use `simulator.html`.
 - `docs/app/src/simulation-clients.js`: realtime room simulator presets and scripted client target selection.
 - `docs/app/src/runtime-config.js`: app runtime configuration, including the selected UI generator and scene-only embedded clients.
 - `docs/app/src/config.js`: shared app, gameplay, physics, audio, scene, and simulator configuration values.
+- `docs/app/src/constellations.js`: curated real constellation patterns, deterministic room placement, star-node mapping, and progress/reveal helpers.
 - `docs/app/src/app-ui.js`: default and scene-only UI generators that render app state into DOM.
 - `docs/app/src/domain.js`: pure domain facade for identity, presence, and compatibility exports.
 - `docs/app/src/protocol.js`: v2 peer protocol creators and validators for hello, presence, and pulse events.

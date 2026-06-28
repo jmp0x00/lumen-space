@@ -74,6 +74,12 @@
 - Rolled back the brighter layered lume treatment after feedback clarified that the desired change was not a new look, but the original lumes with light pulsation; the final renderer keeps the original sphere/halo/light setup and adds only a subtle deterministic breathing pulse.
 - Debugged clunky remote-player movement after comparing it with smoother locally simulated bots. The fix preserved authoritative presence snapshots separately from participant intent, then reused the target-driven motion integrator for remote humans and bots with short velocity projection plus bounded correction.
 - Retuned lo-fi reactions after feedback that interaction was still too subtle: star touches now push lead, dust, density, and tone harder, while resonances create a longer pad/space bloom and stronger kit softening without reintroducing separate sound-effect stabs.
+- Chose collaborative constellations as the next fun-loop improvement because they add shared room memory and exploration without changing the calm noncompetitive identity of the game.
+- Replaced free random-looking touch-star placement with deterministic constellation-node placement across a curated real-inspired catalogue: Orion, Cassiopeia, Ursa Major, Cygnus, Lyra, Scorpius, Taurus, Leo, Pegasus, Andromeda, Draco, and Corona Borealis.
+- Kept the existing star-touch pulse protocol as the gameplay event and derived touched constellation nodes from room ID, star ID, and generation, which avoided broadcasting raw positions or adding a second event channel.
+- Added monotonic constellation progress bitmasks to human presence snapshots so late joiners can see already revealed constellations without a backend.
+- Added completed-constellation rendering to the Three.js scene with subtle additive line segments, node glows, and labels, while leaving incomplete constellations hidden until the room discovers every node.
+- Added deterministic tests for constellation placement, progress merging, reveal completion, protocol progress normalization, reducer sync, and local star-touch progress.
 
 ## AI Tools Used
 
@@ -95,6 +101,7 @@
 - Building a small inspection harness around the pure physics modules made movement tuning faster than repeatedly staging multiplayer scenarios by hand.
 - Using temporary room instrumentation made multiplayer movement easier to reason about early, and moving that diagnostic role into the simulator kept the final room UI simpler.
 - Keeping audio planning separate from Web Audio playback made it possible to evolve sound design from effects into music without losing unit-test coverage.
+- The existing star generation/event model was flexible enough to support collaborative constellation discovery with a small pure module and a compact progress snapshot.
 - A static app shape matched the GitDocs sharing goal and avoided backend credentials.
 
 ## What Did Not Work Well

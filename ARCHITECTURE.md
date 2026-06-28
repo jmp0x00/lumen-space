@@ -17,12 +17,13 @@ The app is split into pure domain/physics modules and browser adapters.
 The preferred long-term game-core model is documented in
 [docs/core-game-architecture.md](docs/core-game-architecture.md). In short, local input, remote peer messages, bot decisions, and frame time should be normalized into validated events or snapshots; pure game-state logic should update the canonical state; and the UI plus Three.js scene should render derived projections of that state.
 
-- `protocol.js` owns the v2 peer protocol for `hello`, `presence`, and pulse `event` messages. It creates outbound messages, validates inbound messages, rejects non-v2 payloads, normalizes identity/vector/color/timing fields, and exposes sequence/dedup helpers.
+- `protocol.js` owns the v2 peer protocol for `hello`, `presence`, and pulse `event` messages. It creates outbound messages, validates inbound messages, rejects non-v2 payloads, normalizes identity/vector/color/timing/progress fields, and exposes sequence/dedup helpers.
 - `core/population.js` owns capped room population policy, shared bot slot ownership, stable bot IDs, and population-scaled touch-star counts.
 - `core/game-state.js` owns the canonical state shape, room-entry state creation, deterministic start positions, shared bot participant creation, active touch-star selection, and participant aggregation.
 - `core/game-events.js` owns pure event reduction for lobby changes, room lifecycle, pointer targets, peer hello/presence, star-touch pulse events, stale-peer pruning, and outbound network effects.
 - `core/simulation.js` owns the tick-based room simulation: local motion, remote participant motion and network correction, shared bot ownership/motion, repulsion, pulse lifecycle, touch-star pulses, resonance detection, and simulation effects.
 - `core/scene-model.js` owns selectors that derive UI, scene, participant, and runtime-simulator views from canonical game state.
+- `constellations.js` owns the curated real-inspired constellation catalogue, deterministic room placement, room-seeded constellation colors, star-slot-to-node mapping, monotonic progress bitmasks, progress merging, and completed-constellation scene models.
 - `domain.js` is the public domain facade for identity sanitization, legacy pure helpers, and stable room/physics exports for existing callers.
 - `room.js` owns room ID normalization, room ID generation, room extraction from URLs, and invite URL creation.
 - `colors.js` owns color constants, hex color normalization, and color mixing utilities used by identity and pulse logic.
@@ -32,11 +33,11 @@ The preferred long-term game-core model is documented in
 - `physics/repulsion.js` owns bounded peer-to-peer velocity nudges and visible movement-plane separation correction using pair collision distances from `physics/collision.js`.
 - Peer repulsion also carries each participant's current movement target by the same displacement, preventing idle local or remote lumes from easing back to stale targets after a push.
 - `physics/bots.js` owns deterministic crowd-aware bot AI target generation toward available touch stars and shared motion integration for bot participants.
-- `physics/touch-stars.js` owns deterministic progressive-spread touch-star placement, peer-radius-aware plane-distance collision, cooldown, respawn, and remote suppression.
+- `physics/touch-stars.js` owns constellation-node touch-star placement, peer-radius-aware plane-distance collision, cooldown, respawn, and remote suppression.
 - `physics/pulses.js` owns pulse normalization, progression, radius calculation, deduplication, expiry, and resonance detection.
 - `network.js` dynamically imports Trystero and exposes a small room adapter with `sendHello`, `sendPresence`, `sendEvent`, and `leave`.
 - `names.js` dynamically imports Unique Names Generator and falls back to a small deterministic local generator if the CDN is unavailable.
-- `scene.js` dynamically imports Three.js and renders participants, labels, a dense oversized star field, touch stars, pulse rings, and resonance flashes, with a smooth camera follow so the larger world is reachable beyond the initial viewport. Participant lumes keep the original colored sphere plus additive halo presentation and apply only a light deterministic breathing pulse to scale, halo opacity, and point-light intensity.
+- `scene.js` dynamically imports Three.js and renders participants, labels, a dense oversized star field, touch stars, revealed constellation line patterns and labels, pulse rings, and resonance flashes, with a smooth camera follow so the larger world is reachable beyond the initial viewport. Participant lumes keep the original colored sphere plus additive halo presentation and apply only a light deterministic breathing pulse to scale, halo opacity, and point-light intensity.
 - `app.js` is now a browser adapter. It owns DOM/UI callbacks, local storage, URL updates, realtime connection, timers, animation frames, scene startup, and effect execution while delegating game-state changes to the pure core modules.
 - `app-ui.js` owns default DOM rendering for the lobby, room chrome, compact participant roster, icon actions, and toast, plus a scene-only generator for embedded clients.
 - `runtime-config.js` owns app runtime hooks and UI generator selection, defaulting to the full lobby and room UI while allowing embedded clients to render scene-only.
@@ -52,17 +53,18 @@ This shape keeps network and rendering side effects away from the logic covered 
 ## Data Flow
 
 1. The selected UI generator emits action callbacks; `app.js` dispatches reducer events and performs browser-only side effects such as `localStorage`, history updates, clipboard writes, and toasts.
-2. Entering a room creates canonical room state through `core/game-state.js`: local participant, pointer target, a capped deterministic touch-star pool spread across the playable space, owned shared bot slots, status, and empty peer/pulse/resonance collections.
+2. Entering a room creates canonical room state through `core/game-state.js`: local participant, pointer target, a capped deterministic touch-star pool mapped onto curated constellation nodes around the playable space, empty constellation progress, owned shared bot slots, status, and empty peer/pulse/resonance collections.
 3. `scene.js` starts the WebGL scene, follows the local participant with a smoothed camera, maps pointer positions through the current camera to world-space targets, and renders data selected from canonical game state.
 4. Each animation frame calls `core/simulation.js`, which recalculates shared bot ownership, updates local motion, advances remote participants from their latest intent targets with bounded correction toward short projected network snapshots, updates owned crowd-aware bot AI/motion, collision repulsion, pulse expiry, touch-star cooldowns, star-touch pulses, and resonances.
 5. `core/game-events.js` returns outbound effects such as v2 pulse events, presence messages, hello messages, toasts, and runtime-simulator state publishing. `app.js` executes those effects against WebRTC, DOM, or `postMessage`.
 6. `protocol.js` creates outbound v2 messages and validates inbound network payloads before they can become reducer events.
-7. `network.js` broadcasts throttled v2 `presence` snapshots through Trystero. Human presence uses the player's client ID; bot presence uses stable `bot:<roomId>:<slot>` IDs plus owner metadata. Newer peer sequences replace older snapshots from the same publisher. The reducer stores the sender's actual `position` and `velocity` as `networkPosition` and `networkVelocity`, while preserving `targetPosition` as the participant's current motion intent. The simulation advances remote humans and remote bots through the shared target-driven motion integrator, then softly corrects them toward a short velocity-projected network snapshot so movement stays smooth without unbounded prediction.
+7. `network.js` broadcasts throttled v2 `presence` snapshots through Trystero. Human presence uses the player's client ID and carries a compact constellation-progress bitmask snapshot; bot presence uses stable `bot:<roomId>:<slot>` IDs plus owner metadata. Newer peer sequences replace older snapshots from the same publisher. The reducer stores the sender's actual `position` and `velocity` as `networkPosition` and `networkVelocity`, while preserving `targetPosition` as the participant's current motion intent. The simulation advances remote humans and remote bots through the shared target-driven motion integrator, then softly corrects them toward a short velocity-projected network snapshot so movement stays smooth without unbounded prediction.
 8. Peer pulse events are event-like: they carry stable `eventId` values, are deduplicated before entering state, and then progress/expire through `physics/pulses.js`.
-9. Touch-star pulse events are the only accepted pulse events. They include `trigger`, `starId`, and `starGeneration` so other clients suppress and respawn the matching deterministic star.
+9. Touch-star pulse events are the only accepted pulse events. They include `trigger`, `starId`, and `starGeneration` so other clients suppress and respawn the matching deterministic star, then derive the touched constellation node from the shared room ID, star index, and previous generation.
 10. `physics/pulses.js` derives resonance events locally when different pulse fronts meet; no extra network message is sent.
 11. `app.js` compares the current pulse/resonance IDs with a local sound snapshot, then asks `sound.js` to keep the shared space lo-fi song running and apply newly observed song reactions when sound is enabled and browser audio has been unlocked by a user gesture. The reaction model updates future song steps and also moves the current song bus tone, wet mix, feedback, and output gain so interactions are audible immediately. The snapshot still advances while muted so old reactions do not replay on unmute.
-12. Shared bots are owned by connected human clients through deterministic round-robin slot assignment. The owner simulates each assigned bot, counts owned and remote bot target pressure from current star targets, prefers continuing toward a nearby uncrowded target, redirects toward lower-pressure available stars when needed, publishes bot presence, and broadcasts only star-touch pulse events when that bot consumes a star.
+12. Constellation progress is monotonic room state: local and remote star-touch pulses mark nodes, peer presence snapshots are merged with bitwise OR, completed constellations are selected for rendering, and no backend persistence is required.
+13. Shared bots are owned by connected human clients through deterministic round-robin slot assignment. The owner simulates each assigned bot, counts owned and remote bot target pressure from current star targets, prefers continuing toward a nearby uncrowded target, redirects toward lower-pressure available stars when needed, publishes bot presence, and broadcasts only star-touch pulse events when that bot consumes a star.
 
 ## Simulator
 
@@ -106,11 +108,12 @@ Presence:
   "velocity": { "x": 0, "y": 0, "z": 0 },
   "targetPosition": { "x": 1, "y": 0, "z": 0 },
   "kind": "human",
+  "constellationProgress": { "orion": 15 },
   "timestamp": 1782482400000
 }
 ```
 
-Bot presence uses the same shape with `"kind": "bot"`, `clientId` set to the stable bot ID, and `ownerClientId` plus `botSlot` included.
+Bot presence uses the same shape with `"kind": "bot"`, `clientId` set to the stable bot ID, and `ownerClientId` plus `botSlot` included. Constellation progress is sent on human presence snapshots; receivers merge progress with bitwise OR because touched nodes never become untouchable again.
 
 Pulse Event:
 
@@ -136,7 +139,7 @@ Pulse Event:
 
 For star-touch pulse events, `color` is the blended star/lumen color and `trigger`, `starId`, and `starGeneration` are required. Pulse events without `trigger: "star-touch"` are ignored.
 
-For presence, `position` is the authoritative peer snapshot used for bounded remote correction. `velocity` allows a short dead-reckoned projection between throttled presence messages. `targetPosition` carries the sender's current input or AI target so remote humans and remote bots can keep moving through the same target-driven motion loop used by local and bot participants.
+For presence, `position` is the authoritative peer snapshot used for bounded remote correction. `velocity` allows a short dead-reckoned projection between throttled presence messages. `targetPosition` carries the sender's current input or AI target so remote humans and remote bots can keep moving through the same target-driven motion loop used by local and bot participants. `constellationProgress` is optional and maps constellation IDs to compact node bitmasks.
 
 ## Major Design Decisions
 
@@ -146,6 +149,7 @@ For presence, `position` is the authoritative peer snapshot used for bounded rem
 - Import browser-only dependencies dynamically so app startup can report failures clearly and retry realtime connection.
 - Keep `domain.js` as a facade while moving physics internals into smaller modules, preserving current browser imports while improving test focus.
 - Use `hello`, `presence`, and `event` Trystero actions so identity/capability snapshots, replaceable movement snapshots, and deduplicated gameplay events remain distinct.
+- Keep constellation progress in presence snapshots instead of adding a new event type because progress is small, monotonic, and useful for late joiners.
 - Keep rooms ephemeral to avoid storage, privacy, and cleanup concerns.
 - Generate the space lo-fi song and pulse reactions locally with Web Audio instead of shipping audio files, expose a room-level Lo-Fi mute control, and keep realtime simulator audio routed through one controlled source iframe so validation remains readable.
 - Share the richer infinite song engine between the simulator and game room while keeping room event-to-reaction mapping in `sound.js`, so the game benefits from simulator-tuned music without making simulator controls depend on room state.

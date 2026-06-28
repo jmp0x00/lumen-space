@@ -1,4 +1,8 @@
 import { DEFAULT_COLOR } from "../colors.js";
+import {
+  markConstellationProgressFromPulse,
+  mergeConstellationProgress
+} from "../constellations.js";
 import { STALE_PEER_MS } from "../config.js";
 import { clampVector, sanitizeVector } from "../physics/vector.js";
 import { createPulse } from "../physics/pulses.js";
@@ -206,6 +210,10 @@ function applyPeerPresence(state, peerId, message) {
   const visualVelocity = hasExistingPeer ? sanitizeVector(base.velocity) : message.velocity;
   const nextState = {
     ...state,
+    constellationProgress: mergeConstellationProgress(
+      state.constellationProgress,
+      message.constellationProgress
+    ),
     peers: {
       ...peers,
       [peerKey]: {
@@ -265,6 +273,11 @@ function applyNetworkPulseEvent(state, message) {
   return addPulseToState(
     {
       ...state,
+      constellationProgress: markConstellationProgressFromPulse(
+        state.constellationProgress,
+        state.roomId,
+        message
+      ),
       seenEventIds: {
         ...state.seenEventIds,
         [dedupKey]: true
@@ -307,6 +320,7 @@ function createPresenceEffect(state, now = Date.now()) {
         kind,
         ownerClientId,
         botSlot,
+        constellationProgress: kind === "human" ? state.constellationProgress : null,
         timestamp: now
       })
     });

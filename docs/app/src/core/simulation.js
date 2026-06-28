@@ -1,4 +1,5 @@
 import { MOTION_CONFIG } from "../config.js";
+import { markConstellationProgressFromPulses } from "../constellations.js";
 import { applyPeerRepulsionToParticipants } from "../physics/repulsion.js?v=peer-collision-radius-20260627";
 import { updateMotion } from "../physics/motion.js";
 import { clamp, lerpVector, clampVector, sanitizeVector } from "../physics/vector.js";
@@ -74,6 +75,11 @@ export function stepGame(state, { now = Date.now(), deltaSeconds = 1 / 60, runti
   );
   nextState = {
     ...nextState,
+    constellationProgress: markConstellationProgressFromPulses(
+      nextState.constellationProgress,
+      nextState.roomId,
+      starTouchResult.pulses
+    ),
     touchStars: mergeTouchStars(nextState.touchStars, starTouchResult.touchStars)
   };
   for (const pulse of starTouchResult.pulses) {

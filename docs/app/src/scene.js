@@ -6,7 +6,8 @@ export async function createSpaceScene({
   getParticipants,
   getPulses,
   getResonances = () => [],
-  getTouchStars = () => []
+  getTouchStars = () => [],
+  getConstellations = () => []
 }) {
   const THREE = await import(SCENE_CONFIG.threeUrl);
 
@@ -29,7 +30,9 @@ export async function createSpaceScene({
   const pulseMeshes = new Map();
   const resonanceMeshes = new Map();
   const touchStarMeshes = new Map();
+  const constellationMeshes = new Map();
   const labels = new Map();
+  const constellationLabels = new Map();
   const glowTexture = createGlowTexture(THREE);
   const cameraFocus = new THREE.Vector3(0, 0, 0);
 
@@ -63,6 +66,7 @@ export async function createSpaceScene({
     const now = Date.now();
     const participants = getParticipants();
     syncCamera(participants);
+    syncConstellations(THREE, now);
     syncParticipants(THREE, participants, now);
     syncTouchStars(THREE, now);
     syncPulses(THREE);
@@ -140,6 +144,54 @@ export async function createSpaceScene({
         participantMeshes.delete(id);
         labels.get(id)?.remove();
         labels.delete(id);
+      }
+    }
+  }
+
+  function syncConstellations(THREERef, now) {
+    const constellations = getConstellations();
+    const activeIds = new Set(constellations.map((constellation) => constellation.id));
+
+    for (const constellation of constellations) {
+      let mesh = constellationMeshes.get(constellation.id);
+      if (!mesh) {
+        mesh = createConstellationMesh(THREERef, constellation, glowTexture);
+        constellationMeshes.set(constellation.id, mesh);
+        constellationLabels.set(
+          constellation.id,
+          createConstellationLabel(container, constellation.name)
+        );
+        scene.add(mesh.group);
+      }
+
+      const color = new THREERef.Color(constellation.color);
+      const shimmer = 0.86 + Math.sin(now * 0.0018 + stablePhase(constellation.id)) * 0.14;
+      mesh.lines.material.color.copy(color);
+      mesh.lines.material.opacity = 0.2 + shimmer * 0.14;
+      for (const node of mesh.nodes) {
+        node.material.color.copy(color);
+        node.material.opacity = 0.42 + shimmer * 0.24;
+      }
+      mesh.halo.material.color.copy(color);
+      mesh.halo.material.opacity = 0.12 + shimmer * 0.08;
+      mesh.light.color.copy(color);
+      mesh.light.intensity = 0.22 + shimmer * 0.12;
+      mesh.labelPosition.copy(vectorFromPosition(THREERef, constellation.labelPosition));
+
+      const label = constellationLabels.get(constellation.id);
+      if (label) {
+        label.textContent = constellation.name;
+        label.style.borderColor = `${constellation.color}66`;
+      }
+    }
+
+    for (const [id, mesh] of constellationMeshes) {
+      if (!activeIds.has(id)) {
+        scene.remove(mesh.group);
+        disposeGroup(mesh.group);
+        constellationMeshes.delete(id);
+        constellationLabels.get(id)?.remove();
+        constellationLabels.delete(id);
       }
     }
   }
@@ -254,6 +306,20 @@ export async function createSpaceScene({
         label.style.top = `${((-vector.y + 1) / 2) * height + 28}px`;
       }
     }
+
+    for (const [id, mesh] of constellationMeshes) {
+      const label = constellationLabels.get(id);
+      if (!label) {
+        continue;
+      }
+      vector.copy(mesh.labelPosition).project(camera);
+      const visible = vector.z < 1 && Math.abs(vector.x) <= 1.02 && Math.abs(vector.y) <= 1.02;
+      label.hidden = !visible;
+      if (visible) {
+        label.style.left = `${((vector.x + 1) / 2) * width}px`;
+        label.style.top = `${((-vector.y + 1) / 2) * height}px`;
+      }
+    }
   }
 
   function resize() {
@@ -295,7 +361,13 @@ export async function createSpaceScene({
     for (const mesh of touchStarMeshes.values()) {
       disposeGroup(mesh.group);
     }
+    for (const mesh of constellationMeshes.values()) {
+      disposeGroup(mesh.group);
+    }
     for (const label of labels.values()) {
+      label.remove();
+    }
+    for (const label of constellationLabels.values()) {
       label.remove();
     }
     renderer.dispose();
@@ -367,6 +439,61 @@ function createTouchStarMesh(THREE, star, glowTexture) {
   glow.scale.set(0.88, 0.88, 1);
   group.add(glow, core, light);
   return { group, core, glow, light };
+}
+
+function createConstellationMesh(THREE, constellation, glowTexture) {
+  const color = new THREE.Color(constellation.color);
+  const group = new THREE.Group();
+  const linePositions = new Float32Array(constellation.lines.length * 2 * 3);
+  for (let index = 0; index < constellation.lines.length; index += 1) {
+    const line = constellation.lines[index];
+    writePosition(linePositions, index * 6, line.start);
+    writePosition(linePositions, index * 6 + 3, line.end);
+  }
+  const lineGeometry = new THREE.BufferGeometry();
+  lineGeometry.setAttribute("position", new THREE.BufferAttribute(linePositions, 3));
+  const lines = new THREE.LineSegments(
+    lineGeometry,
+    new THREE.LineBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.28,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    })
+  );
+  const nodes = constellation.nodes.map((node) => {
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.045, 12, 8),
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.58,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      })
+    );
+    mesh.position.set(node.position.x, node.position.y, node.position.z);
+    return mesh;
+  });
+  const halo = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: glowTexture,
+      color,
+      transparent: true,
+      opacity: 0.16,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    })
+  );
+  const light = new THREE.PointLight(color, 0.28, 6.4);
+  const labelPosition = vectorFromPosition(THREE, constellation.labelPosition);
+
+  halo.position.copy(labelPosition);
+  halo.scale.set(2.8, 2.8, 1);
+  light.position.copy(labelPosition);
+  group.add(lines, halo, light, ...nodes);
+  return { group, lines, nodes, halo, light, labelPosition };
 }
 
 function createResonanceMesh(THREE, resonance, glowTexture) {
@@ -452,6 +579,28 @@ function createLabel(container, name) {
   label.textContent = name;
   container.appendChild(label);
   return label;
+}
+
+function createConstellationLabel(container, name) {
+  const label = document.createElement("div");
+  label.className = "constellation-label";
+  label.textContent = name;
+  container.appendChild(label);
+  return label;
+}
+
+function vectorFromPosition(THREE, position) {
+  return new THREE.Vector3(
+    Number(position?.x) || 0,
+    Number(position?.y) || 0,
+    Number(position?.z) || 0
+  );
+}
+
+function writePosition(target, offset, position) {
+  target[offset] = Number(position?.x) || 0;
+  target[offset + 1] = Number(position?.y) || 0;
+  target[offset + 2] = Number(position?.z) || 0;
 }
 
 function disposeGroup(group) {

@@ -74,6 +74,7 @@ test("presence messages carry replaceable snapshots with monotonic sequences", (
     position: { x: 99, y: 1, z: 0 },
     velocity: { x: 0.25, y: 0, z: 0 },
     targetPosition: { x: 2, y: 0, z: 0 },
+    constellationProgress: { orion: 3, "Bad ID": 4, ignored: 0 },
     timestamp: 2_000
   });
   const normalized = normalizePresenceMessage(message, 2_050);
@@ -82,6 +83,7 @@ test("presence messages carry replaceable snapshots with monotonic sequences", (
   assert.equal(normalized.kind, "human");
   assert.equal(normalized.ownerClientId, null);
   assert.equal(normalized.botSlot, null);
+  assert.deepEqual(normalized.constellationProgress, { orion: 3, "bad-id": 4 });
   assert.deepEqual(normalized.position, { x: SPACE_BOUNDS.x[1], y: 1, z: 0 });
   assert.equal(isNewerSequence(6, normalized.sequence), true);
   assert.equal(isNewerSequence(7, normalized.sequence), false);

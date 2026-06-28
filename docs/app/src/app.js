@@ -201,7 +201,8 @@ async function enterRoom() {
       getParticipants: () => selectSceneModel(game).participants,
       getPulses: () => selectSceneModel(game).pulses,
       getResonances: () => selectSceneModel(game).resonances,
-      getTouchStars: () => selectSceneModel(game).touchStars
+      getTouchStars: () => selectSceneModel(game).touchStars,
+      getConstellations: () => selectSceneModel(game).constellations
     });
     sceneController.start();
     if (runtimeConfig.usePointerInput) {

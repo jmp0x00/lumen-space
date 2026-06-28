@@ -60,6 +60,9 @@ export function createRuntimeConfig(locationLike) {
         peerCount: context.peerCount,
         botCount: context.botCount,
         touchStarCount: context.touchStarCount,
+        ...(Number.isFinite(Number(context.constellationCount))
+          ? { constellationCount: context.constellationCount }
+          : {}),
         position: roundStateVector(context.position),
         target: roundStateVector(context.target),
         sound: {

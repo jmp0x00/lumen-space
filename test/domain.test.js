@@ -199,7 +199,7 @@ test("malformed pulse messages are ignored", () => {
   assert.equal(addPulse([], { type: "presence", version: 1 }, "peer-1", 1_000).length, 0);
 });
 
-test("touch stars are deterministic per room and stay inside playable bounds", () => {
+test("touch stars are deterministic constellation nodes inside playable bounds", () => {
   const first = createTouchStars("lumen-alpha", 3);
   const second = createTouchStars("lumen-alpha", 3);
   const otherRoom = createTouchStars("lumen-beta", 3);
@@ -212,6 +212,8 @@ test("touch stars are deterministic per room and stay inside playable bounds", (
   assert.equal(first.length, 3);
   for (const star of first) {
     assert.match(star.id, /^touch-star-\d+$/);
+    assert.match(star.constellationId, /^[a-z0-9-]+$/);
+    assert.equal(typeof star.constellationName, "string");
     assert.equal(star.availableAt, 0);
     assert.equal(Object.hasOwn(star, "touchedAt"), false);
     assert.ok(star.position.x >= SPACE_BOUNDS.x[0] && star.position.x <= SPACE_BOUNDS.x[1]);
@@ -240,7 +242,12 @@ test("touch stars emit one pulse and enter cooldown when touched", () => {
   assert.deepEqual(touched.pulses[0].origin, participant.position);
   assert.equal(touched.touchStars[0].generation, 1);
   assert.notDeepEqual(touched.touchStars[0].position, originalStar.position);
-  assert.notEqual(touched.touchStars[0].color, originalStar.color);
+  assert.equal(touched.touchStars[0].color, originalStar.color);
+  assert.equal(touched.touchStars[0].constellationId, originalStar.constellationId);
+  assert.notEqual(
+    touched.touchStars[0].constellationNodeIndex,
+    originalStar.constellationNodeIndex
+  );
   assert.equal(touched.touchStars[0].availableAt, 2_000 + TOUCH_STAR_COOLDOWN_MS);
 
   const repeated = collectTouchStarPulses(touched.touchStars, [participant], 2_100);
@@ -318,7 +325,9 @@ test("touch stars suppress from received star-touch pulses but ignore manual pul
   assert.equal(suppressed[0].availableAt, 2_250 + TOUCH_STAR_COOLDOWN_MS);
   assert.equal(suppressed[0].generation, 1);
   assert.notDeepEqual(suppressed[0].position, touchStars[0].position);
-  assert.notEqual(suppressed[0].color, touchStars[0].color);
+  assert.equal(suppressed[0].color, touchStars[0].color);
+  assert.equal(suppressed[0].constellationId, touchStars[0].constellationId);
+  assert.notEqual(suppressed[0].constellationNodeIndex, touchStars[0].constellationNodeIndex);
 });
 
 test("touch star pulse metadata lets another client compute the same respawn", () => {

@@ -40,6 +40,7 @@ export function createInitialGameState({
     peers: {},
     botParticipants: [],
     touchStars: [],
+    constellationProgress: {},
     sharedBotsEnabled: true,
     pulses: [],
     resonances: [],
@@ -88,6 +89,7 @@ export function enterRoomState(
     pulses: [],
     resonances: [],
     touchStars: createTouchStars(roomId, TOUCH_STAR_COUNT),
+    constellationProgress: {},
     sharedBotsEnabled: Boolean(sharedBotsEnabled),
     botParticipants: []
   };
@@ -103,6 +105,7 @@ export function leaveRoomState(state) {
     pulses: [],
     resonances: [],
     touchStars: [],
+    constellationProgress: {},
     botParticipants: []
   };
 }

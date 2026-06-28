@@ -15,7 +15,7 @@ import {
 import { getPeerCollisionRadius } from "../../docs/app/src/physics/collision.js";
 import { SPACE_BOUNDS } from "../../docs/app/src/physics/vector.js";
 
-test("touch-star fields are deterministic per room and stay inside bounds", () => {
+test("touch stars are deterministic constellation nodes inside bounds", () => {
   const first = createTouchStars("lumen-alpha", 3);
   const second = createTouchStars("lumen-alpha", 3);
   const otherRoom = createTouchStars("lumen-beta", 3);
@@ -29,6 +29,9 @@ test("touch-star fields are deterministic per room and stay inside bounds", () =
   for (const star of first) {
     assert.match(star.id, /^touch-star-\d+$/);
     assert.equal(star.availableAt, 0);
+    assert.match(star.constellationId, /^[a-z0-9-]+$/);
+    assert.equal(typeof star.constellationName, "string");
+    assert.equal(typeof star.constellationNodeIndex, "number");
     assert.ok(star.position.x >= SPACE_BOUNDS.x[0] && star.position.x <= SPACE_BOUNDS.x[1]);
     assert.ok(star.position.y >= SPACE_BOUNDS.y[0] && star.position.y <= SPACE_BOUNDS.y[1]);
     assert.ok(star.position.z >= SPACE_BOUNDS.z[0] && star.position.z <= SPACE_BOUNDS.z[1]);

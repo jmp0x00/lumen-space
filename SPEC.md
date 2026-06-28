@@ -10,12 +10,16 @@ Lumen Space is a social visual game without scoring or winners. The goal is to c
 4. The playable space is larger than the first camera view; the camera gently follows the local light as it travels.
 5. Nearby lights use a small collision radius derived from their visual size so contacts are gentle and bounded.
 6. Touching a small environmental star emits a pulse from the local light, colored by blending the star and lumen colors.
-7. Pulses are not an explicit player or bot action; consuming a touch star is the only way to emit a colored pulse.
-8. When pulse fronts from different sources meet, they create a brief resonance flash.
-9. After browser audio is unlocked by user interaction, the room plays the procedural space lo-fi song; star-touch pulses and resonance flashes immediately and noticeably reshape the song's density, space, tone, and voices.
-10. The player can mute or unmute the local lo-fi room audio.
-11. Other players in the same room see the player's latest position, shared bots, star-touch pulses, and resonances.
-12. Rooms are ephemeral. When all players leave, no room state remains.
+7. Touch stars are generated on curated real constellation paths placed around the playable space.
+8. Each constellation has one deterministic room color and tracks which of its nodes have been touched by any player or bot.
+9. When all nodes in a constellation have been touched, the constellation reveals its glowing line pattern and name for everyone in the room.
+10. Revealed constellations stay visible, and future touch stars continue cycling along their nodes.
+11. Pulses are not an explicit player or bot action; consuming a touch star is the only way to emit a colored pulse.
+12. When pulse fronts from different sources meet, they create a brief resonance flash.
+13. After browser audio is unlocked by user interaction, the room plays the procedural space lo-fi song; star-touch pulses and resonance flashes immediately and noticeably reshape the song's density, space, tone, and voices.
+14. The player can mute or unmute the local lo-fi room audio.
+15. Other players in the same room see the player's latest position, shared bots, star-touch pulses, revealed constellations, and resonances.
+16. Rooms are ephemeral. When all players leave, no room state remains.
 
 ## Scope
 
@@ -25,6 +29,7 @@ In scope:
 - Peer-to-peer realtime rooms for 2-8 participants.
 - Nickname and color identity stored locally.
 - Three.js visual scene with participant lights and pulse rings.
+- Curated real-inspired constellation patterns that act as deterministic touch-star paths and shared room discoveries.
 - Crowd-aware star-seeking bots with deterministic ownership, capped by room population, that move through the shared motion physics and consume stars.
 - Automated browser simulator for inspecting peer repulsion without manual multiplayer setup.
 - Realtime multi-user simulator mode that embeds several scene-only no-bot app clients in one WebRTC room and drives those peers with scripted user presets plus a configurable 1-8 client count.
@@ -64,8 +69,15 @@ Out of scope:
 - The default app runtime must use the full lobby and room UI generator.
 - The physics simulator must include a realtime room mode where each simulated user is visible in its own embedded app screen, joins the same room through the normal WebRTC connection, starts without bots, uses a scene-only UI generator, follows a chosen preset such as star chasing, scripted paths, orbiting, or chasing another user, and can be launched with a selected 1-8 client count.
 - Scripted realtime star-chasing clients must target only the currently active population-scaled touch-star subset, so they cannot idle on inactive generated stars.
-- Rooms must render deterministic random-looking touch stars from a capped 72-star pool, using progressive spread placement so even the active subset is distributed across the playable space.
-- After a touch, the star must temporarily disappear and respawn in a new deterministic random-looking position and color.
+- Rooms must render deterministic touch stars from a capped 72-star pool, using constellation-node placement so even the active subset is distributed across the playable space.
+- The constellation catalogue must include recognizable real constellation patterns such as Orion, Cassiopeia, Ursa Major, Cygnus, Lyra, Scorpius, Taurus, Leo, Pegasus, Andromeda, Draco, and Corona Borealis.
+- Each room must assign one deterministic color to each constellation, and every active touch star on that constellation must use that color.
+- Each touch-star slot must map deterministically from room ID, star index, and generation to one constellation node.
+- After a touch, the star must temporarily disappear and respawn on a new deterministic node along its constellation path.
+- Star-touch progress must be monotonic: touching a node marks it discovered for the room and repeated touches must not remove progress.
+- Constellation progress must synchronize peer-to-peer through compact presence snapshots so late joiners can see already revealed constellations without a backend.
+- A constellation must reveal its line segments and name after all of its nodes have been touched.
+- Revealed constellations must remain visible while touch stars continue respawning on their nodes.
 - Star-touch pulse colors must blend the touched star color with the triggering lumen color.
 - Star-touch pulses must temporarily suppress and respawn the matching star for other clients through existing pulse metadata.
 - Star-touch pulses must be the only accepted pulse event type; manual pulse messages must be ignored safely.
@@ -100,6 +112,8 @@ Out of scope:
 - In `simulator.html`, selecting realtime mode launches the selected number of scene-only embedded app clients in the same no-bot WebRTC room; changing the client count in realtime mode relaunches the embedded room with that count, and each client screen shows scripted movement through the normal app/WebRTC runtime.
 - In `simulator.html`, selecting song mode shows a procedural music visualization; pressing the Song mode audio control starts and stops the shared space lo-fi infinite song, changing the song sliders updates tempo, density, space, and volume, and reaction audition controls let star-touch and resonance reactions be heard.
 - Touching an environmental star emits a blended-color pulse and temporarily hides that star.
+- Touching all nodes of a constellation reveals its glowing real-inspired line pattern and name for all connected players.
+- A new player joining after a reveal receives constellation progress through presence and sees already revealed constellations.
 - Entering or interacting with a room starts the soft procedural space lo-fi song after browser audio is unlocked.
 - Star-touch pulses clearly brighten the song's lead/dust texture and open the tone quickly, while pulse resonances create a broader pad/space swell and soften the kit.
 - The room Lo-Fi control can mute and unmute local room audio without replaying old reactions.

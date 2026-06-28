@@ -1,4 +1,5 @@
 import { isValidHexColor, normalizeHexColor } from "./colors.js";
+import { normalizeConstellationProgress } from "./constellations.js";
 import {
   DEFAULT_CAPABILITIES,
   DEFAULT_COLOR,
@@ -78,6 +79,7 @@ export function createPresenceMessage({
   kind = "human",
   ownerClientId = null,
   botSlot = null,
+  constellationProgress = null,
   timestamp = Date.now()
 }) {
   const normalizedIdentity = normalizeProtocolIdentity(identity);
@@ -102,6 +104,11 @@ export function createPresenceMessage({
     message.botSlot = readNonNegativeInteger(botSlot);
   }
 
+  const progress = normalizeConstellationProgress(constellationProgress);
+  if (Object.keys(progress).length > 0) {
+    message.constellationProgress = progress;
+  }
+
   return message;
 }
 
@@ -119,6 +126,7 @@ export function normalizePresenceMessage(data, receivedAt = Date.now()) {
   const kind = normalizePresenceKind(data.kind);
   const ownerClientId = kind === "bot" ? normalizeRequiredText(data.ownerClientId) : null;
   const botSlot = kind === "bot" ? readNonNegativeInteger(data.botSlot) : null;
+  const constellationProgress = normalizeConstellationProgress(data.constellationProgress);
   const timestamp = readPositiveTimestamp(data.timestamp, receivedAt);
   if (
     !clientId ||
@@ -147,6 +155,7 @@ export function normalizePresenceMessage(data, receivedAt = Date.now()) {
     kind,
     ownerClientId,
     botSlot,
+    constellationProgress,
     timestamp,
     receivedAt
   };

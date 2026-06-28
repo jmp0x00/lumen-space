@@ -111,6 +111,37 @@ test("network pulse events are deduplicated by eventId", () => {
   assert.equal(first.pulses.length, 1);
   assert.equal(second.pulses.length, 1);
   assert.equal(second.seenEventIds["event-4"], true);
+  assert.equal(second.constellationProgress.orion, 1);
+});
+
+test("peer presence merges constellation progress monotonically", () => {
+  const state = {
+    ...createRoomState(),
+    constellationProgress: { orion: 1 }
+  };
+  const message = normalizePresenceMessage(
+    createPresenceMessage({
+      clientId: "client-peer",
+      sequence: 2,
+      identity: { name: "Lin", color: "#86efac" },
+      position: { x: 3, y: 0, z: 0 },
+      velocity: { x: 1, y: 0, z: 0 },
+      targetPosition: { x: 4, y: 0, z: 0 },
+      constellationProgress: { orion: 4, "ursa-major": 2 },
+      timestamp: 2_000
+    }),
+    2_050
+  );
+  const result = reduceGameEvent(state, {
+    type: "peer/presence",
+    peerId: "transport-1",
+    message
+  }).state;
+
+  assert.deepEqual(result.constellationProgress, {
+    orion: 5,
+    "ursa-major": 2
+  });
 });
 
 test("presence requests increment sequence and emit a v2 presence effect", () => {
@@ -124,6 +155,19 @@ test("presence requests increment sequence and emit a v2 presence effect", () =>
   assert.equal(result.effects[0].message.sequence, 1);
   assert.equal(result.effects[0].message.kind, "human");
   assert.equal(result.effects[0].message.targetPosition.x, 0);
+});
+
+test("presence requests include constellation progress for human snapshots", () => {
+  const state = {
+    ...createRoomState(),
+    constellationProgress: { orion: 3 }
+  };
+  const result = reduceGameEvent(state, {
+    type: "network/presence-request",
+    now: 5_000
+  });
+
+  assert.deepEqual(result.effects[0].message.constellationProgress, { orion: 3 });
 });
 
 test("presence requests publish owned shared bots as logical bot participants", () => {

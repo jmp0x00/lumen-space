@@ -1,4 +1,5 @@
-import { DEFAULT_COLOR, hslToHex, mixHexColors } from "../colors.js";
+import { DEFAULT_COLOR, mixHexColors } from "../colors.js";
+import { getConstellationStarPlacement } from "../constellations.js";
 import {
   TOUCH_STAR_CONFIG,
   TOUCH_STAR_COOLDOWN_MS,
@@ -8,7 +9,7 @@ import {
 import { normalizeRoomId } from "../room.js";
 import { createPulse } from "./pulses.js";
 import { getPeerStarCollisionDistance } from "./collision.js?v=peer-collision-radius-20260627";
-import { SPACE_BOUNDS, clamp, planeDistance } from "./vector.js";
+import { planeDistance } from "./vector.js";
 
 export { TOUCH_STAR_COOLDOWN_MS, TOUCH_STAR_COUNT, TOUCH_STAR_RADIUS };
 
@@ -141,27 +142,20 @@ function createTouchStar(
   const safeGeneration = normalizeStarGeneration(generation);
   const safePoolSize = normalizeStarPoolSize(poolSize);
   const seed = `${safeRoomSeed}:${safeIndex}:${safeGeneration}`;
-  const spreadPosition = createSpreadPosition(seed, safeIndex, safePoolSize);
-  const hue = Math.floor(seededText(seed, "hue") * 360);
-  const saturation = scaleBetween(
-    seededText(seed, "saturation"),
-    TOUCH_STAR_CONFIG.saturationMin,
-    TOUCH_STAR_CONFIG.saturationMax
-  );
-  const lightness = scaleBetween(
-    seededText(seed, "lightness"),
-    TOUCH_STAR_CONFIG.lightnessMin,
-    TOUCH_STAR_CONFIG.lightnessMax
-  );
+  const placement = getConstellationStarPlacement(safeRoomSeed, safeIndex, safeGeneration);
   const star = {
     id: `touch-star-${safeIndex}`,
     roomSeed: safeRoomSeed,
     index: safeIndex,
     generation: safeGeneration,
     poolSize: safePoolSize,
-    position: spreadPosition,
-    color: hslToHex(hue, saturation, lightness),
+    position: placement.position,
+    color: placement.constellationColor,
     collisionRadius: TOUCH_STAR_RADIUS,
+    constellationId: placement.constellationId,
+    constellationName: placement.constellationName,
+    constellationNodeIndex: placement.constellationNodeIndex,
+    constellationNodeCount: placement.constellationNodeCount,
     phase: seededText(seed, "phase") * Math.PI * 2,
     availableAt: Number(availableAt) || 0
   };
@@ -207,88 +201,6 @@ function normalizeStarPoolSize(value) {
   return Number.isFinite(poolSize) && poolSize > 0 ? poolSize : TOUCH_STAR_COUNT;
 }
 
-function createSpreadPosition(seed, index, poolSize) {
-  const grid = createSpreadGrid(poolSize);
-  const cell = getProgressiveSpreadCell(index, grid);
-  const cellInset = clamp(TOUCH_STAR_CONFIG.spreadCellInset, 0, 0.45);
-  const cellJitterScale = 1 - cellInset * 2;
-  const xUnit =
-    (cell.column + cellInset + seededText(seed, "cell-x") * cellJitterScale) /
-    grid.columns;
-  const yUnit =
-    (cell.row + cellInset + seededText(seed, "cell-y") * cellJitterScale) /
-    grid.rows;
-
-  return {
-    x: scaleBetween(
-      xUnit,
-      SPACE_BOUNDS.x[0] + TOUCH_STAR_CONFIG.spawnPaddingX,
-      SPACE_BOUNDS.x[1] - TOUCH_STAR_CONFIG.spawnPaddingX
-    ),
-    y: scaleBetween(
-      yUnit,
-      SPACE_BOUNDS.y[0] + TOUCH_STAR_CONFIG.spawnPaddingY,
-      SPACE_BOUNDS.y[1] - TOUCH_STAR_CONFIG.spawnPaddingY
-    ),
-    z: scaleBetween(
-      seededText(seed, "z"),
-      TOUCH_STAR_CONFIG.spawnZMin,
-      TOUCH_STAR_CONFIG.spawnZMax
-    )
-  };
-}
-
-function createSpreadGrid(poolSize) {
-  const width = Math.max(
-    1,
-    SPACE_BOUNDS.x[1] - SPACE_BOUNDS.x[0] - TOUCH_STAR_CONFIG.spawnPaddingX * 2
-  );
-  const height = Math.max(
-    1,
-    SPACE_BOUNDS.y[1] - SPACE_BOUNDS.y[0] - TOUCH_STAR_CONFIG.spawnPaddingY * 2
-  );
-  const aspect = width / height;
-  const columns = Math.max(1, Math.ceil(Math.sqrt(poolSize * aspect)));
-  const rows = Math.max(1, Math.ceil(poolSize / columns));
-  return { columns, rows };
-}
-
-function getProgressiveSpreadCell(index, { columns, rows }) {
-  const safeIndex = normalizeStarIndex(index);
-  const row = safeIndex % rows;
-  const band = Math.floor(safeIndex / rows);
-  const columnStep = findCoprimeStep(Math.round(columns * 0.618), columns);
-  const rowOffset = findCoprimeStep(Math.round(columns / rows), columns);
-  const column = (band * columnStep + row * rowOffset) % columns;
-  return { column, row };
-}
-
-function findCoprimeStep(preferredStep, modulo) {
-  if (modulo <= 1) {
-    return 0;
-  }
-
-  let step = Math.max(1, Math.min(modulo - 1, Math.floor(Number(preferredStep)) || 1));
-  for (let attempts = 0; attempts < modulo; attempts += 1) {
-    if (greatestCommonDivisor(step, modulo) === 1) {
-      return step;
-    }
-    step = step + 1 >= modulo ? 1 : step + 1;
-  }
-  return 1;
-}
-
-function greatestCommonDivisor(first, second) {
-  let a = Math.abs(Math.floor(Number(first)) || 0);
-  let b = Math.abs(Math.floor(Number(second)) || 0);
-  while (b > 0) {
-    const next = a % b;
-    a = b;
-    b = next;
-  }
-  return a;
-}
-
 function seededText(seed, salt) {
   return (hashText(`${seed}:${salt}`) % 1_000_000) / 1_000_000;
 }
@@ -301,8 +213,4 @@ function hashText(value) {
     hash = Math.imul(hash, 16777619);
   }
   return hash >>> 0;
-}
-
-function scaleBetween(value, min, max) {
-  return min + clamp(value, 0, 1) * (max - min);
 }

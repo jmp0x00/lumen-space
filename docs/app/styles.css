@@ -491,6 +491,27 @@ button:focus-visible {
   white-space: nowrap;
 }
 
+.constellation-label {
+  position: fixed;
+  z-index: 1;
+  max-width: 176px;
+  padding: 3px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  overflow: hidden;
+  transform: translate(-50%, -50%);
+  color: #eaf2ff;
+  background: rgba(5, 7, 13, 0.46);
+  box-shadow: 0 0 18px rgba(125, 211, 252, 0.16);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  pointer-events: none;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 @media (max-width: 760px) {
   .top-bar {
     gap: 10px;
