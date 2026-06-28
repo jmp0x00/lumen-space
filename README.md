@@ -9,6 +9,7 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Choose a nickname and color.
 - Fresh rooms start with a generated funny name that can be edited or regenerated.
 - Create or join a room link.
+- Enter the room at a deterministic random-looking off-center point instead of the map center.
 - Move your light by moving the pointer.
 - Travel through a vast space that extends far beyond the first camera view while the camera gently follows your light.
 - Nearby lights use a small size-based collision radius, with local lumes slightly larger and bots smaller.

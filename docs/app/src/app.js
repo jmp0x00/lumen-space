@@ -10,7 +10,7 @@ import {
   sanitizeIdentity
 } from "./domain.js?v=peer-collision-radius-20260627";
 import { APP_CONFIG } from "./config.js";
-import { createInitialGameState, chooseStartPosition } from "./core/game-state.js";
+import { createInitialGameState } from "./core/game-state.js";
 import { reduceGameEvent } from "./core/game-events.js";
 import {
   selectRuntimeStateContext,
@@ -189,7 +189,7 @@ async function enterRoom() {
     identity: game.identity,
     roomId: game.roomId,
     now: Date.now(),
-    startPosition: runtimeConfig.getStartPosition?.() ?? chooseStartPosition(game.identity.name),
+    startPosition: runtimeConfig.getStartPosition?.(),
     sharedBotsEnabled: runtimeConfig.sharedBotsEnabled
   });
   roomLoopStartedAt = performance.now();

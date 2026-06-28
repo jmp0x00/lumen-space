@@ -19,7 +19,7 @@ The preferred long-term game-core model is documented in
 
 - `protocol.js` owns the v2 peer protocol for `hello`, `presence`, and pulse `event` messages. It creates outbound messages, validates inbound messages, rejects non-v2 payloads, normalizes identity/vector/color/timing/progress fields, and exposes sequence/dedup helpers.
 - `core/population.js` owns capped room population policy, shared bot slot ownership, stable bot IDs, and full-catalogue touch-star counts.
-- `core/game-state.js` owns the canonical state shape, room-entry state creation, deterministic local and spread-out shared bot start positions, shared bot participant creation, full touch-star catalogue selection, and participant aggregation.
+- `core/game-state.js` owns the canonical state shape, room-entry state creation, deterministic random-looking off-center local start positions, spread-out shared bot start positions, shared bot participant creation, full touch-star catalogue selection, and participant aggregation.
 - `core/game-events.js` owns pure event reduction for lobby changes, room lifecycle, pointer targets, peer hello/presence, star-touch pulse events, stale-peer pruning, and outbound network effects.
 - `core/simulation.js` owns the tick-based room simulation: local motion, remote participant motion and network correction, shared bot ownership/motion, repulsion, pulse lifecycle, touch-star pulses, local resonance detection, and simulation effects.
 - `core/scene-model.js` owns selectors that derive UI, scene, participant, and runtime-simulator views from canonical game state.
@@ -55,7 +55,7 @@ This shape keeps network and rendering side effects away from the logic covered 
 ## Data Flow
 
 1. The selected UI generator emits action callbacks; `app.js` dispatches reducer events and performs browser-only side effects such as `localStorage`, history updates, clipboard writes, and toasts.
-2. Entering a room creates canonical room state through `core/game-state.js`: local participant, pointer target, the full deterministic 767-node touch-star catalogue mapped onto all-sky constellation nodes around the playable space, empty constellation progress, owned shared bot slots at spread-out map anchors, status, and empty peer/pulse/resonance collections.
+2. Entering a room creates canonical room state through `core/game-state.js`: local participant at a deterministic random-looking off-center start point unless an explicit simulator/test start is supplied, pointer target, the full deterministic 767-node touch-star catalogue mapped onto all-sky constellation nodes around the playable space, empty constellation progress, owned shared bot slots at spread-out map anchors, status, and empty peer/pulse/resonance collections.
 3. `scene.js` starts the WebGL scene, follows the local participant with a smoothed camera, maps pointer positions through the current camera to world-space targets, and renders data selected from canonical game state.
 4. Each animation frame calls `core/simulation.js`, which recalculates shared bot ownership, updates local motion, advances remote participants from their latest intent targets with bounded correction toward short projected network snapshots, updates owned crowd-aware bot AI/motion, collision repulsion, pulse expiry, in-place star opening, star-touch pulses, and local resonance flashes.
 5. `core/game-events.js` returns outbound effects such as v2 pulse events, presence messages, hello messages, toasts, and runtime-simulator state publishing. `app.js` executes those effects against WebRTC, DOM, or `postMessage`.

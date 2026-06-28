@@ -95,6 +95,7 @@
 - Added deterministic adaptive room-song layering after discussing whether discovery-based instruments would become too much. The final approach starts rooms with only a sparse pad/bed, derives persistent bass, kit, lead, and dust/shimmer layers from shared revealed-constellation progress, caps the added layers at four, and keeps star-touch reactions audible even before any constellation is complete.
 - Adjusted adaptive room-song progression after noticing the 88-constellation catalogue would make one layer per reveal feel too reactive; persistent music layers now unlock only on five-constellation milestones while star-touch and resonance highlights still react immediately.
 - Added a constellation reveal border flash after reviewing how completions should feel: every newly visible constellation now creates a brief visual-only flash around all scene edges in that constellation's deterministic color, derived locally from completed progress instead of a network event.
+- Moved normal player starts away from the map center with a deterministic random-looking room/client seed, while preserving explicit simulator and test start-position overrides; this made entry feel more like appearing somewhere in the vast sky map instead of always near origin.
 
 ## AI Tools Used
 

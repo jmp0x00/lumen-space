@@ -3,7 +3,7 @@ import { BOT_CONFIG, TOUCH_STAR_COUNT } from "../config.js";
 import { generateFallbackName } from "../names.js";
 import { createRoomId } from "../room.js";
 import { createTouchStars } from "../physics/touch-stars.js?v=peer-collision-radius-20260627";
-import { clampVector } from "../physics/vector.js";
+import { SPACE_BOUNDS, clampVector } from "../physics/vector.js";
 import { normalizeProtocolIdentity } from "../protocol.js";
 import {
   createSharedBotId,
@@ -62,7 +62,15 @@ export function enterRoomState(
   } = {}
 ) {
   const safeIdentity = normalizeProtocolIdentity(identity) ?? state.identity;
-  const position = clampVector(startPosition ?? chooseStartPosition(safeIdentity.name));
+  const position = clampVector(
+    startPosition ??
+      chooseStartPosition({
+        roomId,
+        clientId: state.clientId,
+        name: safeIdentity.name,
+        color: safeIdentity.color
+      })
+  );
   const localParticipant = {
     ...state.localParticipant,
     clientId: state.clientId,
@@ -111,10 +119,28 @@ export function leaveRoomState(state) {
 }
 
 export function chooseStartPosition(seedText) {
-  const seed = [...String(seedText ?? "")].reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  const x = ((seed % 11) / 10 - 0.5) * 4;
-  const y = ((((seed * 7) % 11) / 10) - 0.5) * 2.6;
-  return clampVector({ x, y, z: 0 });
+  const seed = createStartSeed(seedText);
+  const xRange = createStartRange(SPACE_BOUNDS.x);
+  const yRange = createStartRange(SPACE_BOUNDS.y);
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const position = {
+      x: scaleBetween(seededText(seed, `x:${attempt}`), xRange[0], xRange[1]),
+      y: scaleBetween(seededText(seed, `y:${attempt}`), yRange[0], yRange[1]),
+      z: 0
+    };
+    if (isOutsideCenterSpawnZone(position)) {
+      return clampVector(position);
+    }
+  }
+
+  const angle = seededText(seed, "fallback-angle") * Math.PI * 2;
+  const radius = 1.08 + seededText(seed, "fallback-radius") * 0.54;
+  return clampVector({
+    x: Math.cos(angle) * getCenterSpawnRadius("x") * radius,
+    y: Math.sin(angle) * getCenterSpawnRadius("y") * radius,
+    z: 0
+  });
 }
 
 export function createBotParticipant({
@@ -262,4 +288,51 @@ function createLocalParticipant(identity, clientId) {
     isBot: false,
     lastSeen: Date.now()
   };
+}
+
+function createStartSeed(seedText) {
+  if (typeof seedText === "object" && seedText !== null) {
+    return [
+      seedText.roomId,
+      seedText.clientId,
+      seedText.name,
+      seedText.color
+    ].map((part) => String(part ?? "").trim()).join(":");
+  }
+  return String(seedText ?? "");
+}
+
+function createStartRange(bounds) {
+  const [min, max] = bounds;
+  const padding = (max - min) * 0.08;
+  return [min + padding, max - padding];
+}
+
+function isOutsideCenterSpawnZone(position) {
+  const normalizedX = Number(position.x) / getCenterSpawnRadius("x");
+  const normalizedY = Number(position.y) / getCenterSpawnRadius("y");
+  return Math.hypot(normalizedX, normalizedY) >= 1;
+}
+
+function getCenterSpawnRadius(axis) {
+  const bounds = axis === "x" ? SPACE_BOUNDS.x : SPACE_BOUNDS.y;
+  return ((bounds[1] - bounds[0]) / 2) * 0.22;
+}
+
+function seededText(seed, salt) {
+  return hashText(`${seed}:${salt}`) / 4294967296;
+}
+
+function hashText(value) {
+  let hash = 2166136261;
+  const text = String(value ?? "");
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function scaleBetween(value, min, max) {
+  return min + (max - min) * value;
 }
