@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       name="description"
-      content="Automated Lumen Space simulator for physics, realtime rooms, and procedural audio."
+      content="Automated Lumen Space simulator for physics, realtime rooms, constellation maps, and procedural audio."
     >
     <title>Lumen Space Simulator</title>
     <link rel="stylesheet" href="./physics-sim.css?v=audible-reactions-20260628">
@@ -29,7 +29,7 @@
           <a class="back-link" href="./index.html" aria-label="Back to Lumen Space">←</a>
           <div>
             <h1>Simulator</h1>
-            <p>Physics, realtime, and procedural audio</p>
+            <p>Physics, realtime, sky map, and audio</p>
           </div>
         </header>
 
@@ -42,6 +42,9 @@
           </button>
           <button class="mode-button" type="button" data-mode="song">
             Song
+          </button>
+          <button class="mode-button" type="button" data-mode="map">
+            Map
           </button>
         </div>
 
@@ -240,6 +243,46 @@
             </button>
             <button class="song-reaction-button" type="button" data-song-reaction="resonance">
               Resonance
+            </button>
+          </div>
+        </section>
+
+        <section class="map-controls" id="map-controls" hidden>
+          <label for="map-room-input">
+            Room
+            <output id="map-room-output" for="map-room-input">lumen-map-observer</output>
+          </label>
+          <input id="map-room-input" type="text" value="lumen-map-observer">
+
+          <label for="map-speed-input">
+            Tour
+            <output id="map-speed-output" for="map-speed-input">4.0s</output>
+          </label>
+          <input
+            id="map-speed-input"
+            type="range"
+            min="1.5"
+            max="10"
+            step="0.5"
+            value="4"
+          >
+
+          <div class="map-toggle-grid" aria-label="Constellation map display">
+            <button
+              class="map-toggle-button"
+              id="map-tour-button"
+              type="button"
+              aria-pressed="true"
+            >
+              Tour On
+            </button>
+            <button
+              class="map-toggle-button"
+              id="map-labels-button"
+              type="button"
+              aria-pressed="false"
+            >
+              Names Off
             </button>
           </div>
         </section>

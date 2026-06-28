@@ -161,7 +161,7 @@ test("stepGame emits v2 pulse events when a local participant touches a star", (
   assert.equal(sendEvent.message.trigger, "star-touch");
   assert.equal(sendEvent.message.starId, "touch-star-0");
   assert.equal(sendEvent.message.starGeneration, 1);
-  assert.equal(result.state.constellationProgress.orion, 1);
+  assert.equal(result.state.constellationProgress.andromeda, 1);
 });
 
 test("stepGame emits v2 pulse events when an owned shared bot touches a star", () => {

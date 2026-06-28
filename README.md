@@ -13,11 +13,11 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Travel through a larger space that extends beyond the first camera view while the camera gently follows your light.
 - Nearby lights use a small size-based collision radius, with local lumes slightly larger and bots smaller.
 - Pushed idle lights keep the displaced resting spot until fresh pointer or presence input moves them again.
-- Drift through small colorful touch stars that appear on real-inspired constellation paths to release pulses that blend star and lumen colors; star consumption is the only pulse source.
+- Drift through small colorful touch stars that appear on sky-map constellation paths to release pulses that blend star and lumen colors; star consumption is the only pulse source.
 - Each constellation has one deterministic room color, tracks touched star nodes for the whole room, and reveals its glowing line pattern and name when all nodes have been gathered.
 - Revealed constellations stay visible for everyone while future touch stars keep cycling along those completed paths.
 - Rooms maintain a capped shared population of human players plus automatic star-seeking bots.
-- Touch-star availability scales from the active human and bot population, with a 72-star generated pool distributed across curated real constellation patterns in the playable space.
+- Touch-star availability scales from the active human and bot population, with a 176-star generated pool distributed across all 88 constellations in an equirectangular sky-map projection.
 - When different players' pulse fronts meet, they create a brief resonance flash.
 - Hear the procedural space lo-fi song after the browser unlocks audio through interaction; star-touch pulses create a clear lead/dust bloom, and resonance flashes create a wider pad/space swell while still reshaping the song instead of playing as separate effects.
 - Use compact room controls to copy the invite link, mute or unmute the reactive song, and leave the room.
@@ -58,8 +58,9 @@ HTML, CSS, and JavaScript modules during development.
 To inspect peer collision scenarios without joining a room manually, open
 `http://localhost:4173/simulator.html`. The simulator includes a pure physics
 canvas mode, a realtime mode that embeds multiple scene-only no-bot app clients
-in the same WebRTC room, and a song mode for the shared procedural space lo-fi
-infinite track with tempo, density, space, volume, and reaction audition controls. Realtime
+in the same WebRTC room, a map mode for passively observing the all-88 projected
+constellation catalogue without joining gameplay, and a song mode for the shared
+procedural space lo-fi infinite track with tempo, density, space, volume, and reaction audition controls. Realtime
 simulator lo-fi audio is controlled by one simulator button and is routed
 through a single designated embedded client.
 
@@ -75,11 +76,13 @@ For physics tuning, use `simulator.html`.
 ## Project Structure
 
 - `docs/app/`: static playable app intended for GitDocs hosting.
-- `docs/app/simulator.html`: automated simulator app with physics, realtime, and procedural song modes.
+- `docs/app/simulator.html`: automated simulator app with physics, realtime, constellation-map, and procedural song modes.
 - `docs/app/src/simulation-clients.js`: realtime room simulator presets and scripted client target selection.
+- `docs/app/src/constellation-map-simulation.js`: pure observer model for the simulator's passive all-sky constellation map mode.
 - `docs/app/src/runtime-config.js`: app runtime configuration, including the selected UI generator and scene-only embedded clients.
 - `docs/app/src/config.js`: shared app, gameplay, physics, audio, scene, and simulator configuration values.
-- `docs/app/src/constellations.js`: curated real constellation patterns, deterministic room placement, star-node mapping, and progress/reveal helpers.
+- `docs/app/src/constellation-sky-data.js`: derived all-88 constellation line data from the BSD-licensed `d3-celestial` dataset.
+- `docs/app/src/constellations.js`: sky projection, deterministic room color, star-node mapping, progress/reveal helpers, and completed-constellation selectors.
 - `docs/app/src/app-ui.js`: default and scene-only UI generators that render app state into DOM.
 - `docs/app/src/domain.js`: pure domain facade for identity, presence, and compatibility exports.
 - `docs/app/src/protocol.js`: v2 peer protocol creators and validators for hello, presence, and pulse events.

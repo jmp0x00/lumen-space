@@ -111,7 +111,7 @@ test("network pulse events are deduplicated by eventId", () => {
   assert.equal(first.pulses.length, 1);
   assert.equal(second.pulses.length, 1);
   assert.equal(second.seenEventIds["event-4"], true);
-  assert.equal(second.constellationProgress.orion, 1);
+  assert.equal(second.constellationProgress.andromeda, 1);
 });
 
 test("peer presence merges constellation progress monotonically", () => {

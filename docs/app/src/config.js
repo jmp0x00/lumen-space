@@ -149,12 +149,12 @@ export const SPACE_LOFI_CONFIG = Object.freeze({
 });
 
 export const TOUCH_STAR_CONFIG = Object.freeze({
-  generatedPoolSize: 72,
+  generatedPoolSize: 176,
   radius: 0.48,
   cooldownMs: 7_500,
-  activeMin: 18,
-  activeMax: 72,
-  activeBase: 14,
+  activeMin: 22,
+  activeMax: 88,
+  activeBase: 16,
   activePerLume: 6,
   spawnPaddingX: 1,
   spawnPaddingY: 0.9,
@@ -317,7 +317,11 @@ export const SIMULATOR_CONFIG = Object.freeze({
   realtimeRelaunchDelayMs: 350,
   realtimeSoundSourceIndex: 0,
   songVisualStarCount: 96,
-  defaultSongVolume: 0.84
+  defaultSongVolume: 0.84,
+  mapRoomDefaultId: "lumen-map-observer",
+  mapTourDefaultSeconds: 4,
+  mapTourSpeedMinSeconds: 1.5,
+  mapTourSpeedMaxSeconds: 10
 });
 
 export const PHYSICS_SIM_CONFIG = Object.freeze({

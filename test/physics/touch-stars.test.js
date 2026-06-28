@@ -39,12 +39,14 @@ test("touch stars are deterministic constellation nodes inside bounds", () => {
 });
 
 test("active touch-star prefixes are spread across the playable space", () => {
-  const stars = createTouchStars("lumen-spread", 36).slice(0, 10);
+  const stars = createTouchStars("lumen-spread", 36).slice(0, 18);
   const xBands = new Set(stars.map((star) => getBand(star.position.x, "x", 3)));
   const yBands = new Set(stars.map((star) => getBand(star.position.y, "y", 4)));
+  const constellationIds = new Set(stars.map((star) => star.constellationId));
 
   assert.equal(xBands.size, 3);
   assert.equal(yBands.size, 4);
+  assert.equal(constellationIds.size, 18);
 });
 
 test("touch-star collisions emit one blended pulse and respawn after cooldown", () => {

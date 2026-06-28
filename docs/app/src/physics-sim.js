@@ -1,10 +1,17 @@
 import {
+  CONSTELLATION_MAP_SIMULATION_DEFAULT_ROOM,
+  createConstellationMapSimulationState,
+  getConstellationMapSimulationFrame,
+  getConstellationMapSimulationRows
+} from "./constellation-map-simulation.js";
+import {
   createScenarioParticipants,
   getPhysicsSimScenario,
   getScenarioRouteSegments,
   getScenarioTargetPosition
 } from "./physics-sim-scenarios.js";
 import { SIMULATOR_CONFIG } from "./config.js";
+import { projectSkyToWorld } from "./constellations.js";
 import { normalizeRoomId } from "./room.js";
 import {
   REALTIME_ROOM_CLIENT_COUNT_MAX,
@@ -39,6 +46,7 @@ import { SPACE_BOUNDS, clamp, vectorDistance } from "./physics/vector.js";
 const REALTIME_RELAUNCH_DELAY_MS = SIMULATOR_CONFIG.realtimeRelaunchDelayMs;
 const REALTIME_SOUND_SOURCE_INDEX = SIMULATOR_CONFIG.realtimeSoundSourceIndex;
 const SONG_VISUAL_STAR_COUNT = SIMULATOR_CONFIG.songVisualStarCount;
+const MAP_LABEL_ROW_LIMIT = 12;
 
 const canvas = document.querySelector("#sim-canvas");
 const context = canvas.getContext("2d");
@@ -68,6 +76,13 @@ const elements = {
   songVolume: document.querySelector("#song-volume-input"),
   songVolumeOutput: document.querySelector("#song-volume-output"),
   songReactionButtons: document.querySelectorAll("[data-song-reaction]"),
+  mapControls: document.querySelector("#map-controls"),
+  mapRoom: document.querySelector("#map-room-input"),
+  mapRoomOutput: document.querySelector("#map-room-output"),
+  mapSpeed: document.querySelector("#map-speed-input"),
+  mapSpeedOutput: document.querySelector("#map-speed-output"),
+  mapTour: document.querySelector("#map-tour-button"),
+  mapLabels: document.querySelector("#map-labels-button"),
   debugTitle: document.querySelector("#debug-title"),
   distanceLabel: document.querySelector("#metric-distance-label"),
   repulsionLabel: document.querySelector("#metric-repulsion-label"),
@@ -115,13 +130,21 @@ let songElapsedSeconds = 0;
 let songStartedAt = performance.now() / 1000;
 let songVisualStars = createSongVisualStars(songPlan.seed);
 let songVisualReactions = [];
+let mapSimulation = createConstellationMapSimulationState(CONSTELLATION_MAP_SIMULATION_DEFAULT_ROOM);
+let mapStartedAt = performance.now() / 1000;
+let mapFocusIndex = 0;
+let mapTourEnabled = true;
+let mapLabelsEnabled = false;
+let mapDebugKey = "";
 
 bindControls();
 setScenario("cluster");
 setRealtimePreset("mixed");
 elements.realtimeRoom.value = createDefaultRealtimeRoomId();
 syncRealtimeRoomOutput();
-setMode("physics");
+elements.mapRoom.value = getInitialMapRoomId();
+resetMapSimulation();
+setMode(getInitialMode());
 resizeCanvas();
 requestAnimationFrame(tick);
 
@@ -143,6 +166,10 @@ function bindControls() {
     }
     if (mode === "song") {
       resetSongTimeline();
+      return;
+    }
+    if (mode === "map") {
+      resetMapSimulation({ writeRoomValue: true });
       return;
     }
     resetScenario();
@@ -196,11 +223,32 @@ function bindControls() {
       void auditionSongReaction(button.dataset.songReaction);
     });
   }
+  elements.mapRoom.addEventListener("input", () => {
+    resetMapSimulation({ writeRoomValue: false });
+  });
+  elements.mapRoom.addEventListener("change", () => {
+    resetMapSimulation({ writeRoomValue: true });
+  });
+  elements.mapSpeed.addEventListener("input", syncMapControls);
+  elements.mapTour.addEventListener("click", () => {
+    const frame = getCurrentMapFrame();
+    mapFocusIndex = frame.focusIndex;
+    mapTourEnabled = !mapTourEnabled;
+    if (mapTourEnabled) {
+      mapStartedAt = performance.now() / 1000 - mapFocusIndex * getMapTourSeconds();
+    }
+    syncMapControls();
+  });
+  elements.mapLabels.addEventListener("click", () => {
+    mapLabelsEnabled = !mapLabelsEnabled;
+    syncMapControls();
+  });
   window.addEventListener("message", handleRealtimeClientMessage);
   window.addEventListener("resize", resizeCanvas);
   renderRealtimePresetButtons();
   syncRealtimeSoundButton();
   syncSongControls();
+  syncMapControls();
   syncControlLabels();
 }
 
@@ -218,6 +266,9 @@ function tick(now) {
   } else if (mode === "realtime") {
     pollRealtimeFrames();
     renderRealtimeMetrics();
+  } else if (mode === "map") {
+    drawConstellationMap(now / 1000);
+    renderMapMetrics(now / 1000);
   } else {
     drawSong(now / 1000);
     renderSongMetrics(now / 1000);
@@ -270,6 +321,180 @@ function drawSong(timeSeconds) {
   drawSongOrbit(state, elapsedSeconds);
   drawSongWaveform(state, elapsedSeconds);
   drawSongTimeline(state);
+}
+
+function drawConstellationMap(timeSeconds) {
+  const { width, height } = canvas;
+  const frame = getCurrentMapFrame(timeSeconds);
+  context.clearRect(0, 0, width, height);
+  drawMapBackdrop(frame.elapsedSeconds);
+  drawMapSkyGrid();
+  drawMapConstellationLines(frame);
+  drawMapConstellationNodes(frame);
+  drawMapSparkNodes(frame);
+  drawMapLabels(frame);
+}
+
+function drawMapBackdrop(elapsedSeconds) {
+  const { width, height } = canvas;
+  const gradient = context.createLinearGradient(0, 0, width, height);
+  gradient.addColorStop(0, "#050711");
+  gradient.addColorStop(0.48, "#0b111b");
+  gradient.addColorStop(1, "#09140f");
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, width, height);
+
+  context.save();
+  for (let index = 0; index < 180; index += 1) {
+    const seed = `${mapSimulation.roomId}:map-star:${index}`;
+    const x = seededUnit(`${seed}:x`) * width;
+    const y =
+      ((seededUnit(`${seed}:y`) + elapsedSeconds * (0.0008 + seededUnit(`${seed}:speed`) * 0.0016)) %
+        1) *
+      height;
+    const radius = 0.7 + seededUnit(`${seed}:radius`) * 1.6;
+    const alpha = 0.18 + seededUnit(`${seed}:alpha`) * 0.5;
+    context.globalAlpha = alpha;
+    context.fillStyle = seededUnit(`${seed}:warmth`) > 0.72 ? "#fcd34d" : "#dbeafe";
+    context.beginPath();
+    context.arc(x, y, radius, 0, Math.PI * 2);
+    context.fill();
+  }
+  context.restore();
+}
+
+function drawMapSkyGrid() {
+  context.save();
+  context.lineWidth = 1;
+
+  for (let longitude = -150; longitude <= 180; longitude += 30) {
+    context.strokeStyle = longitude === 0 ? "rgba(252, 211, 77, 0.22)" : "rgba(235, 244, 255, 0.08)";
+    context.beginPath();
+    for (let index = 0; index <= 48; index += 1) {
+      const declination = -90 + (index / 48) * 180;
+      const point = worldToScreen(projectSkyToWorld([longitude, declination]));
+      if (index === 0) {
+        context.moveTo(point.x, point.y);
+      } else {
+        context.lineTo(point.x, point.y);
+      }
+    }
+    context.stroke();
+  }
+
+  for (let declination = -60; declination <= 60; declination += 30) {
+    context.strokeStyle =
+      declination === 0 ? "rgba(134, 239, 172, 0.24)" : "rgba(235, 244, 255, 0.08)";
+    context.beginPath();
+    for (let index = 0; index <= 96; index += 1) {
+      const longitude = -180 + (index / 96) * 360;
+      const point = worldToScreen(projectSkyToWorld([longitude, declination]));
+      if (index === 0) {
+        context.moveTo(point.x, point.y);
+      } else {
+        context.lineTo(point.x, point.y);
+      }
+    }
+    context.stroke();
+  }
+
+  context.strokeStyle = "rgba(252, 211, 77, 0.3)";
+  context.strokeRect(
+    worldToScreen({ x: SPACE_BOUNDS.x[0], y: SPACE_BOUNDS.y[1], z: 0 }).x,
+    worldToScreen({ x: SPACE_BOUNDS.x[0], y: SPACE_BOUNDS.y[1], z: 0 }).y,
+    worldSizeToScreen(SPACE_BOUNDS.x[1] - SPACE_BOUNDS.x[0]),
+    worldSizeToScreen(SPACE_BOUNDS.y[1] - SPACE_BOUNDS.y[0])
+  );
+  context.restore();
+}
+
+function drawMapConstellationLines(frame) {
+  context.save();
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  for (const constellation of mapSimulation.constellations) {
+    const isFocus = constellation.id === frame.focus?.id;
+    context.lineWidth = isFocus ? 2.4 : 1;
+    context.strokeStyle = colorWithAlpha(constellation.color, isFocus ? 0.92 : 0.2);
+    if (isFocus) {
+      context.shadowColor = colorWithAlpha(constellation.color, 0.7);
+      context.shadowBlur = 14;
+    } else {
+      context.shadowBlur = 0;
+    }
+
+    for (const line of constellation.lines) {
+      const start = worldToScreen(line.start);
+      const end = worldToScreen(line.end);
+      context.beginPath();
+      context.moveTo(start.x, start.y);
+      context.lineTo(end.x, end.y);
+      context.stroke();
+    }
+  }
+  context.restore();
+}
+
+function drawMapConstellationNodes(frame) {
+  context.save();
+  for (const constellation of mapSimulation.constellations) {
+    const isFocus = constellation.id === frame.focus?.id;
+    const radius = isFocus ? 3.2 : 1.35;
+    context.fillStyle = colorWithAlpha(constellation.color, isFocus ? 0.95 : 0.45);
+    for (const node of constellation.nodes) {
+      const point = worldToScreen(node.position);
+      context.beginPath();
+      context.arc(point.x, point.y, radius, 0, Math.PI * 2);
+      context.fill();
+    }
+  }
+  context.restore();
+}
+
+function drawMapSparkNodes(frame) {
+  context.save();
+  for (const spark of frame.sparkNodes) {
+    const point = worldToScreen(spark.position);
+    const radius = 7 + spark.intensity * 9;
+    const glow = context.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius);
+    glow.addColorStop(0, colorWithAlpha(spark.color, 0.92));
+    glow.addColorStop(0.42, colorWithAlpha(spark.color, 0.28));
+    glow.addColorStop(1, colorWithAlpha(spark.color, 0));
+    context.fillStyle = glow;
+    context.beginPath();
+    context.arc(point.x, point.y, radius, 0, Math.PI * 2);
+    context.fill();
+  }
+  context.restore();
+}
+
+function drawMapLabels(frame) {
+  context.save();
+  if (mapLabelsEnabled) {
+    for (const constellation of mapSimulation.constellations) {
+      if (constellation.id !== frame.focus?.id) {
+        drawMapLabel(constellation, 10, 0.58);
+      }
+    }
+  }
+  if (frame.focus) {
+    drawMapLabel(frame.focus, 17, 1);
+  }
+  context.restore();
+}
+
+function drawMapLabel(constellation, size, alpha) {
+  const point = worldToScreen(constellation.labelPosition);
+  const x = clamp(point.x, 46, canvas.width - 46);
+  const y = clamp(point.y, 18, canvas.height - 18);
+  context.font = `800 ${size}px Inter, system-ui, sans-serif`;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.lineWidth = Math.max(3, size * 0.26);
+  context.strokeStyle = "rgba(3, 7, 12, 0.82)";
+  context.fillStyle = colorWithAlpha(constellation.color, alpha);
+  context.strokeText(constellation.name, x, y);
+  context.fillText(constellation.name, x, y);
 }
 
 function drawSongBackdrop(elapsedSeconds) {
@@ -642,7 +867,14 @@ function renderRealtimePresetButtons() {
 
 function setMode(nextMode) {
   const previousMode = mode;
-  mode = nextMode === "realtime" ? "realtime" : nextMode === "song" ? "song" : "physics";
+  mode =
+    nextMode === "realtime"
+      ? "realtime"
+      : nextMode === "song"
+        ? "song"
+        : nextMode === "map"
+          ? "map"
+          : "physics";
   if (previousMode === "song" && mode !== "song") {
     void setSongEnabled(false);
   }
@@ -651,6 +883,7 @@ function setMode(nextMode) {
   elements.realtimeStage.hidden = mode !== "realtime";
   elements.realtimeControls.hidden = mode !== "realtime";
   elements.songControls.hidden = mode !== "song";
+  elements.mapControls.hidden = mode !== "map";
   for (const control of elements.physicsControls) {
     control.hidden = mode !== "physics";
   }
@@ -667,6 +900,19 @@ function setMode(nextMode) {
     elements.speedLabel.textContent = "Speed";
     resizeCanvas();
     renderMetrics();
+    return;
+  }
+
+  if (mode === "map") {
+    elements.pause.disabled = true;
+    elements.pause.textContent = "Ⅱ";
+    elements.debugTitle.textContent = "Constellations";
+    elements.distanceLabel.textContent = "Shapes";
+    elements.repulsionLabel.textContent = "Nodes";
+    elements.speedLabel.textContent = "Focus";
+    resizeCanvas();
+    drawConstellationMap(performance.now() / 1000);
+    renderMapMetrics(performance.now() / 1000);
     return;
   }
 
@@ -1125,6 +1371,99 @@ function renderSongMetrics(timeSeconds) {
   );
 }
 
+function renderMapMetrics(timeSeconds) {
+  const frame = getCurrentMapFrame(timeSeconds);
+  const rows = getConstellationMapSimulationRows(mapSimulation, frame, MAP_LABEL_ROW_LIMIT);
+  const debugKey = `${frame.focusIndex}:${rows.map((row) => row.id).join(",")}`;
+  elements.distance.textContent = String(mapSimulation.constellationCount);
+  elements.repulsion.textContent = String(mapSimulation.nodeCount);
+  elements.speed.textContent = frame.focus?.name ?? "None";
+
+  if (debugKey === mapDebugKey) {
+    return;
+  }
+  mapDebugKey = debugKey;
+  elements.debug.replaceChildren(
+    ...rows.map((row) => {
+      const item = document.createElement("button");
+      item.className = "peer-row map-row";
+      item.type = "button";
+      item.setAttribute("aria-pressed", String(row.focused));
+      item.innerHTML = `
+        <span class="peer-swatch" style="--peer-color: ${row.color}"></span>
+        <span class="peer-name"></span>
+        <span class="peer-value"></span>
+      `;
+      item.querySelector(".peer-name").textContent = row.name;
+      item.querySelector(".peer-value").textContent = `${row.nodeCount} nodes`;
+      item.addEventListener("click", () => {
+        const index = mapSimulation.constellations.findIndex(
+          (constellation) => constellation.id === row.id
+        );
+        if (index < 0) {
+          return;
+        }
+        mapFocusIndex = index;
+        mapTourEnabled = false;
+        syncMapControls();
+        drawConstellationMap(performance.now() / 1000);
+        renderMapMetrics(performance.now() / 1000);
+      });
+      return item;
+    })
+  );
+}
+
+function resetMapSimulation({ writeRoomValue = true } = {}) {
+  const roomId = normalizeRoomId(elements.mapRoom.value) ?? CONSTELLATION_MAP_SIMULATION_DEFAULT_ROOM;
+  if (writeRoomValue) {
+    elements.mapRoom.value = roomId;
+  }
+  mapSimulation = createConstellationMapSimulationState(roomId);
+  mapStartedAt = performance.now() / 1000;
+  mapFocusIndex = 0;
+  mapDebugKey = "";
+  syncMapControls();
+  if (mode === "map") {
+    drawConstellationMap(performance.now() / 1000);
+    renderMapMetrics(performance.now() / 1000);
+  }
+}
+
+function syncMapControls() {
+  const roomId = normalizeRoomId(elements.mapRoom.value) ?? CONSTELLATION_MAP_SIMULATION_DEFAULT_ROOM;
+  elements.mapRoomOutput.textContent = roomId;
+  elements.mapSpeedOutput.textContent = `${getMapTourSeconds().toFixed(1)}s`;
+  elements.mapTour.textContent = mapTourEnabled ? "Tour On" : "Tour Off";
+  elements.mapTour.title = mapTourEnabled ? "Pause constellation tour" : "Resume constellation tour";
+  elements.mapTour.setAttribute("aria-label", elements.mapTour.title);
+  elements.mapTour.setAttribute("aria-pressed", String(mapTourEnabled));
+  elements.mapLabels.textContent = mapLabelsEnabled ? "Names On" : "Names Off";
+  elements.mapLabels.title = mapLabelsEnabled ? "Hide constellation names" : "Show constellation names";
+  elements.mapLabels.setAttribute("aria-label", elements.mapLabels.title);
+  elements.mapLabels.setAttribute("aria-pressed", String(mapLabelsEnabled));
+}
+
+function getCurrentMapFrame(timeSeconds = performance.now() / 1000) {
+  return getConstellationMapSimulationFrame(mapSimulation, getMapElapsedSeconds(timeSeconds), {
+    tourEnabled: mapTourEnabled,
+    tourSeconds: getMapTourSeconds(),
+    focusIndex: mapFocusIndex
+  });
+}
+
+function getMapElapsedSeconds(timeSeconds) {
+  return Math.max(0, timeSeconds - mapStartedAt);
+}
+
+function getMapTourSeconds() {
+  return clamp(
+    Number(elements.mapSpeed.value),
+    SIMULATOR_CONFIG.mapTourSpeedMinSeconds,
+    SIMULATOR_CONFIG.mapTourSpeedMaxSeconds
+  );
+}
+
 function syncRealtimeRoomOutput() {
   elements.realtimeRoomOutput.textContent =
     normalizeRoomId(elements.realtimeRoom.value) ?? REALTIME_ROOM_DEFAULT_ID;
@@ -1332,6 +1671,22 @@ function createSongVisualStars(seed) {
   });
 }
 
+function getInitialMode() {
+  const modeParam = new URL(window.location.href).searchParams.get("mode");
+  return ["physics", "realtime", "song", "map"].includes(modeParam) ? modeParam : "physics";
+}
+
+function getInitialMapRoomId() {
+  return (
+    normalizeRoomId(new URL(window.location.href).searchParams.get("mapRoom")) ??
+    CONSTELLATION_MAP_SIMULATION_DEFAULT_ROOM
+  );
+}
+
+function seededUnit(seed) {
+  return (hashString(seed) % 10_000) / 10_000;
+}
+
 function songSeededUnit(seed) {
   return (hashString(seed) % 10_000) / 10_000;
 }
@@ -1357,4 +1712,17 @@ function roundNumber(value, digits = 2) {
 
 function formatVector(vector) {
   return `${clamp(vector.x, -99, 99).toFixed(2)}, ${clamp(vector.y, -99, 99).toFixed(2)}`;
+}
+
+function colorWithAlpha(color, alpha) {
+  const match = /^#?([0-9a-f]{6})$/i.exec(String(color ?? ""));
+  const safeAlpha = clamp(Number(alpha), 0, 1);
+  if (!match) {
+    return `rgba(245, 247, 251, ${safeAlpha})`;
+  }
+  const hex = match[1];
+  const red = Number.parseInt(hex.slice(0, 2), 16);
+  const green = Number.parseInt(hex.slice(2, 4), 16);
+  const blue = Number.parseInt(hex.slice(4, 6), 16);
+  return `rgba(${red}, ${green}, ${blue}, ${safeAlpha})`;
 }

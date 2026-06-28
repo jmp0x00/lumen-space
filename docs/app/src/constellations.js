@@ -1,296 +1,48 @@
 import { hslToHex } from "./colors.js";
+import { SKY_CONSTELLATION_DATA } from "./constellation-sky-data.js";
 import { SPACE_BOUNDS } from "./config.js";
 import { normalizeRoomId } from "./room.js";
 
-export const CONSTELLATION_TEMPLATES = Object.freeze([
-  createTemplate({
-    id: "orion",
-    name: "Orion",
-    points: [
-      [-0.72, 0.78],
-      [0.66, 0.64],
-      [-0.24, 0.08],
-      [0, 0],
-      [0.24, -0.08],
-      [-0.64, -0.78],
-      [0.72, -0.86],
-      [0.04, -0.42]
-    ],
-    lines: [
-      [0, 1],
-      [0, 2],
-      [1, 4],
-      [2, 3],
-      [3, 4],
-      [2, 5],
-      [4, 6],
-      [3, 7]
-    ]
-  }),
-  createTemplate({
-    id: "cassiopeia",
-    name: "Cassiopeia",
-    points: [
-      [-0.92, 0.24],
-      [-0.44, -0.2],
-      [0, 0.3],
-      [0.44, -0.16],
-      [0.92, 0.18]
-    ],
-    lines: [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [3, 4]
-    ]
-  }),
-  createTemplate({
-    id: "ursa-major",
-    name: "Ursa Major",
-    points: [
-      [-0.9, -0.08],
-      [-0.56, 0.12],
-      [-0.2, 0.05],
-      [0.18, 0.18],
-      [0.48, 0.46],
-      [0.84, 0.38],
-      [0.72, -0.1]
-    ],
-    lines: [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [3, 4],
-      [4, 5],
-      [5, 6],
-      [6, 3]
-    ]
-  }),
-  createTemplate({
-    id: "cygnus",
-    name: "Cygnus",
-    points: [
-      [0, 0.92],
-      [0, 0.28],
-      [-0.78, 0.12],
-      [0.78, 0.1],
-      [0, -0.22],
-      [0, -0.9]
-    ],
-    lines: [
-      [0, 1],
-      [1, 4],
-      [4, 5],
-      [2, 1],
-      [1, 3]
-    ]
-  }),
-  createTemplate({
-    id: "lyra",
-    name: "Lyra",
-    points: [
-      [-0.7, 0.72],
-      [-0.16, 0.22],
-      [0.54, 0.36],
-      [0.72, -0.42],
-      [-0.08, -0.62]
-    ],
-    lines: [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [3, 4],
-      [4, 1]
-    ]
-  }),
-  createTemplate({
-    id: "scorpius",
-    name: "Scorpius",
-    points: [
-      [-0.86, 0.64],
-      [-0.46, 0.42],
-      [-0.16, 0.08],
-      [0.1, -0.28],
-      [0.44, -0.58],
-      [0.78, -0.42],
-      [0.88, -0.02],
-      [0.58, 0.24]
-    ],
-    lines: [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [3, 4],
-      [4, 5],
-      [5, 6],
-      [6, 7]
-    ]
-  }),
-  createTemplate({
-    id: "taurus",
-    name: "Taurus",
-    points: [
-      [-0.78, 0.68],
-      [-0.28, 0.12],
-      [0, -0.04],
-      [0.32, 0.12],
-      [0.82, 0.72],
-      [-0.08, -0.42],
-      [-0.6, -0.72]
-    ],
-    lines: [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [3, 4],
-      [2, 5],
-      [5, 6]
-    ]
-  }),
-  createTemplate({
-    id: "leo",
-    name: "Leo",
-    points: [
-      [-0.82, -0.24],
-      [-0.46, 0.28],
-      [-0.16, 0.62],
-      [0.14, 0.32],
-      [0.02, -0.04],
-      [0.44, -0.28],
-      [0.88, -0.1],
-      [0.7, -0.58],
-      [0.16, -0.68]
-    ],
-    lines: [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [3, 4],
-      [4, 5],
-      [5, 6],
-      [5, 8],
-      [8, 7],
-      [7, 6]
-    ]
-  }),
-  createTemplate({
-    id: "pegasus",
-    name: "Pegasus",
-    points: [
-      [-0.64, 0.52],
-      [0.36, 0.58],
-      [0.6, -0.18],
-      [-0.42, -0.36],
-      [-0.88, -0.82],
-      [0.92, -0.7]
-    ],
-    lines: [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [3, 0],
-      [3, 4],
-      [2, 5]
-    ]
-  }),
-  createTemplate({
-    id: "andromeda",
-    name: "Andromeda",
-    points: [
-      [-0.9, -0.12],
-      [-0.38, 0.06],
-      [0.14, 0.22],
-      [0.72, 0.52],
-      [0.24, -0.28],
-      [0.76, -0.56]
-    ],
-    lines: [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [2, 4],
-      [4, 5]
-    ]
-  }),
-  createTemplate({
-    id: "draco",
-    name: "Draco",
-    points: [
-      [-0.86, 0.54],
-      [-0.46, 0.72],
-      [-0.18, 0.36],
-      [-0.42, 0.02],
-      [-0.02, -0.22],
-      [0.42, -0.08],
-      [0.82, -0.36],
-      [0.52, -0.72]
-    ],
-    lines: [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [3, 4],
-      [4, 5],
-      [5, 6],
-      [6, 7]
-    ]
-  }),
-  createTemplate({
-    id: "corona-borealis",
-    name: "Corona Borealis",
-    points: [
-      [-0.9, -0.34],
-      [-0.64, 0.08],
-      [-0.32, 0.42],
-      [0, 0.56],
-      [0.34, 0.42],
-      [0.66, 0.08],
-      [0.92, -0.34]
-    ],
-    lines: [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [3, 4],
-      [4, 5],
-      [5, 6]
-    ]
-  })
-]);
+export const CONSTELLATION_TEMPLATES = Object.freeze(
+  SKY_CONSTELLATION_DATA.map((constellation) =>
+    Object.freeze({
+      id: constellation.id,
+      abbr: constellation.abbr,
+      name: constellation.name,
+      rank: constellation.rank,
+      lineCount: constellation.lines.length
+    })
+  )
+);
 
-const CONSTELLATION_LAYOUTS = Object.freeze([
-  createLayout(-2.2, 0.8, 2.45, -0.04),
-  createLayout(-17.4, 8.5, 2.18, 0.1),
-  createLayout(14.8, -7.2, 2.75, -0.18),
-  createLayout(14.2, 8.1, 2.42, 0.03),
-  createLayout(-15.2, -7.3, 2.05, -0.08),
-  createLayout(18.2, 0.6, 2.52, -0.42),
-  createLayout(-7.8, 8.3, 2.34, 0.04),
-  createLayout(2.4, -7.6, 2.58, 0.12),
-  createLayout(-15.2, 0.2, 2.42, -0.08),
-  createLayout(6.5, 8.4, 2.28, 0.06),
-  createLayout(7.8, 0.2, 2.55, 0.2),
-  createLayout(-6.2, -7.7, 2.08, 0)
-]);
-
+const SKY_PADDING_X = 1.05;
+const SKY_PADDING_Y = 0.92;
 const CONSTELLATION_COLOR_SATURATION_MIN = 64;
 const CONSTELLATION_COLOR_SATURATION_MAX = 88;
 const CONSTELLATION_COLOR_LIGHTNESS_MIN = 58;
 const CONSTELLATION_COLOR_LIGHTNESS_MAX = 72;
-const CONSTELLATION_Z_MIN = -0.76;
-const CONSTELLATION_Z_MAX = 0.26;
+const CONSTELLATION_Z_MIN = -0.82;
+const CONSTELLATION_Z_MAX = 0.18;
+const SLOT_STEP = 47;
+const constellationMapCache = new Map();
 
 export function createConstellationMap(roomId) {
   const roomSeed = normalizeRoomId(roomId) ?? "lumen-room";
-  return CONSTELLATION_TEMPLATES.map((template, index) =>
-    createConstellationModel(roomSeed, template, index)
+  const cached = constellationMapCache.get(roomSeed);
+  if (cached) {
+    return cached;
+  }
+  const map = SKY_CONSTELLATION_DATA.map((constellation) =>
+    createConstellationModel(roomSeed, constellation)
   );
+  constellationMapCache.set(roomSeed, map);
+  return map;
 }
 
 export function getConstellationStarPlacement(roomId, starIndex, generation = 0) {
   const map = createConstellationMap(roomId);
   const safeIndex = normalizeStarIndex(starIndex);
-  const constellation = map[safeIndex % map.length];
+  const constellation = getSlotConstellation(map, safeIndex);
   const trackIndex = Math.floor(safeIndex / map.length);
   const nodeIndex =
     (trackIndex + normalizeStarGeneration(generation)) % constellation.nodes.length;
@@ -392,38 +144,143 @@ export function selectRevealedConstellations(roomId, progress) {
     .filter((constellation) => constellation.complete);
 }
 
+export function projectSkyToWorld([longitude, declination], z = 0) {
+  const halfWidth = (SPACE_BOUNDS.x[1] - SPACE_BOUNDS.x[0]) / 2 - SKY_PADDING_X;
+  const halfHeight = (SPACE_BOUNDS.y[1] - SPACE_BOUNDS.y[0]) / 2 - SKY_PADDING_Y;
+  return {
+    x: clamp((normalizeLongitude(longitude) / 180) * halfWidth, SPACE_BOUNDS.x[0], SPACE_BOUNDS.x[1]),
+    y: clamp((clamp(Number(declination), -90, 90) / 90) * halfHeight, SPACE_BOUNDS.y[0], SPACE_BOUNDS.y[1]),
+    z: clamp(z, SPACE_BOUNDS.z[0], SPACE_BOUNDS.z[1])
+  };
+}
+
 export function parseTouchStarIndex(starId) {
   const match = /^touch-star-(\d+)$/.exec(String(starId ?? ""));
   return match ? Number(match[1]) : null;
 }
 
-function createConstellationModel(roomSeed, template, index) {
-  const layout = CONSTELLATION_LAYOUTS[index % CONSTELLATION_LAYOUTS.length];
+function createConstellationModel(roomSeed, source) {
   const z = scaleBetween(
-    seededText(roomSeed, `${template.id}:z`),
+    seededText(roomSeed, `${source.id}:z`),
     CONSTELLATION_Z_MIN,
     CONSTELLATION_Z_MAX
   );
-  const color = createConstellationColor(roomSeed, template.id);
-  const nodes = template.points.map((point, nodeIndex) => ({
-    index: nodeIndex,
-    position: transformPoint(point, layout, z)
-  }));
-  const labelPosition = createLabelPosition(nodes, layout, z);
+  const color = createConstellationColor(roomSeed, source.id);
+  const nodes = createNodes(source.lines, z);
+  const lines = createLineSegments(source.lines, z);
 
   return {
-    id: template.id,
-    name: template.name,
+    id: source.id,
+    abbr: source.abbr,
+    name: source.name,
+    rank: source.rank,
     color,
     nodes,
-    lines: template.lines.map(([from, to]) => ({
-      from,
-      to,
-      start: nodes[from].position,
-      end: nodes[to].position
-    })),
-    labelPosition
+    lines,
+    labelPosition: projectSkyToWorld(source.label, z)
   };
+}
+
+function createNodes(sourceLines, z) {
+  const seen = new Set();
+  const nodes = [];
+
+  for (const line of sourceLines) {
+    for (const point of line) {
+      const key = createPointKey(point);
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      nodes.push({
+        index: nodes.length,
+        skyPosition: normalizeSkyPoint(point),
+        position: projectSkyToWorld(point, z)
+      });
+    }
+  }
+
+  return nodes.length > 0
+    ? nodes
+    : [
+        {
+          index: 0,
+          skyPosition: [0, 0],
+          position: projectSkyToWorld([0, 0], z)
+        }
+      ];
+}
+
+function createLineSegments(sourceLines, z) {
+  const segments = [];
+
+  for (const sourceLine of sourceLines) {
+    for (let index = 1; index < sourceLine.length; index += 1) {
+      segments.push(...projectSkySegment(sourceLine[index - 1], sourceLine[index], z));
+    }
+  }
+
+  return segments.map((segment, index) => ({
+    from: index * 2,
+    to: index * 2 + 1,
+    start: segment.start,
+    end: segment.end
+  }));
+}
+
+function projectSkySegment(startPoint, endPoint, z) {
+  const [startLon, startDec] = normalizeSkyPoint(startPoint);
+  const [endLon, endDec] = normalizeSkyPoint(endPoint);
+  const delta = endLon - startLon;
+
+  if (Math.abs(delta) <= 180) {
+    return [
+      {
+        start: projectSkyToWorld([startLon, startDec], z),
+        end: projectSkyToWorld([endLon, endDec], z)
+      }
+    ];
+  }
+
+  if (delta > 180) {
+    const adjustedEndLon = endLon - 360;
+    const edgeDec = interpolateDeclination(startLon, startDec, adjustedEndLon, endDec, -180);
+    return [
+      {
+        start: projectSkyToWorld([startLon, startDec], z),
+        end: projectSkyToWorld([-180, edgeDec], z)
+      },
+      {
+        start: projectSkyToWorld([180, edgeDec], z),
+        end: projectSkyToWorld([endLon, endDec], z)
+      }
+    ];
+  }
+
+  const adjustedEndLon = endLon + 360;
+  const edgeDec = interpolateDeclination(startLon, startDec, adjustedEndLon, endDec, 180);
+  return [
+    {
+      start: projectSkyToWorld([startLon, startDec], z),
+      end: projectSkyToWorld([180, edgeDec], z)
+    },
+    {
+      start: projectSkyToWorld([-180, edgeDec], z),
+      end: projectSkyToWorld([endLon, endDec], z)
+    }
+  ];
+}
+
+function interpolateDeclination(startLon, startDec, endLon, endDec, edgeLon) {
+  const span = endLon - startLon;
+  const amount = span === 0 ? 0 : (edgeLon - startLon) / span;
+  return startDec + (endDec - startDec) * clamp(amount, 0, 1);
+}
+
+function getSlotConstellation(map, starIndex) {
+  const safeLength = Math.max(1, map.length);
+  const slot = (normalizeStarIndex(starIndex) * SLOT_STEP) % safeLength;
+  return map[slot] ?? map[0];
 }
 
 function createConstellationColor(roomSeed, constellationId) {
@@ -440,30 +297,6 @@ function createConstellationColor(roomSeed, constellationId) {
     CONSTELLATION_COLOR_LIGHTNESS_MAX
   );
   return hslToHex(hue, saturation, lightness);
-}
-
-function transformPoint(point, layout, z) {
-  const sourceX = Number(point?.[0]) || 0;
-  const sourceY = Number(point?.[1]) || 0;
-  const cos = Math.cos(layout.rotation);
-  const sin = Math.sin(layout.rotation);
-  const x = sourceX * layout.scale;
-  const y = sourceY * layout.scale;
-
-  return {
-    x: clamp(layout.x + x * cos - y * sin, SPACE_BOUNDS.x[0] + 0.8, SPACE_BOUNDS.x[1] - 0.8),
-    y: clamp(layout.y + x * sin + y * cos, SPACE_BOUNDS.y[0] + 0.8, SPACE_BOUNDS.y[1] - 0.8),
-    z: clamp(z, SPACE_BOUNDS.z[0], SPACE_BOUNDS.z[1])
-  };
-}
-
-function createLabelPosition(nodes, layout, z) {
-  const topY = Math.max(...nodes.map((node) => node.position.y));
-  return {
-    x: clamp(layout.x, SPACE_BOUNDS.x[0] + 0.8, SPACE_BOUNDS.x[1] - 0.8),
-    y: clamp(topY + 0.72, SPACE_BOUNDS.y[0] + 0.8, SPACE_BOUNDS.y[1] - 0.8),
-    z
-  };
 }
 
 function markConstellationNode(progress, constellationId, nodeIndex) {
@@ -522,6 +355,26 @@ function normalizeConstellationId(value) {
   return id || null;
 }
 
+function normalizeSkyPoint(point) {
+  return [
+    normalizeLongitude(point?.[0]),
+    clamp(Number(point?.[1]), -90, 90)
+  ];
+}
+
+function normalizeLongitude(value) {
+  const longitude = Number(value);
+  if (!Number.isFinite(longitude)) {
+    return 0;
+  }
+  return ((((longitude + 180) % 360) + 360) % 360) - 180;
+}
+
+function createPointKey(point) {
+  const [longitude, declination] = normalizeSkyPoint(point);
+  return `${longitude.toFixed(4)},${declination.toFixed(4)}`;
+}
+
 function normalizeStarIndex(value) {
   const index = Math.floor(Number(value));
   return Number.isFinite(index) && index >= 0 ? index : 0;
@@ -530,19 +383,6 @@ function normalizeStarIndex(value) {
 function normalizeStarGeneration(value) {
   const generation = Math.floor(Number(value));
   return Number.isFinite(generation) && generation > 0 ? generation : 0;
-}
-
-function createTemplate({ id, name, points, lines }) {
-  return Object.freeze({
-    id,
-    name,
-    points: Object.freeze(points.map((point) => Object.freeze([...point]))),
-    lines: Object.freeze(lines.map((line) => Object.freeze([...line])))
-  });
-}
-
-function createLayout(x, y, scale, rotation) {
-  return Object.freeze({ x, y, scale, rotation });
 }
 
 function seededText(seed, salt) {

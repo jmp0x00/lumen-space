@@ -316,8 +316,8 @@ export async function createSpaceScene({
       const visible = vector.z < 1 && Math.abs(vector.x) <= 1.02 && Math.abs(vector.y) <= 1.02;
       label.hidden = !visible;
       if (visible) {
-        label.style.left = `${((vector.x + 1) / 2) * width}px`;
-        label.style.top = `${((-vector.y + 1) / 2) * height}px`;
+        label.style.left = `${clamp(((vector.x + 1) / 2) * width, 88, width - 88)}px`;
+        label.style.top = `${clamp(((-vector.y + 1) / 2) * height, 18, height - 18)}px`;
       }
     }
   }

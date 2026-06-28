@@ -168,7 +168,8 @@ label,
 .scenario-grid,
 .mode-grid,
 .realtime-preset-grid,
-.song-reaction-grid {
+.song-reaction-grid,
+.map-toggle-grid {
   display: grid;
   gap: 8px;
 }
@@ -178,15 +179,20 @@ label,
 }
 
 .scenario-grid,
-.mode-grid,
 .song-reaction-grid {
   grid-template-columns: repeat(3, 1fr);
+}
+
+.mode-grid,
+.map-toggle-grid {
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .control-row button,
 .scenario-button,
 .mode-button,
 .song-reaction-button,
+.map-toggle-button,
 .sound-toggle-button,
 .launch-button {
   display: grid;
@@ -204,6 +210,7 @@ label,
 .scenario-button[aria-pressed="true"],
 .mode-button[aria-pressed="true"],
 .sound-toggle-button[aria-pressed="true"],
+.map-toggle-button[aria-pressed="true"],
 .realtime-preset-button[aria-pressed="true"] {
   color: #041016;
   background: linear-gradient(135deg, var(--cyan), var(--green));
@@ -215,6 +222,11 @@ label,
 }
 
 .song-controls {
+  display: grid;
+  gap: 12px;
+}
+
+.map-controls {
   display: grid;
   gap: 12px;
 }
@@ -354,6 +366,23 @@ input[type="number"] {
 
 .peer-value {
   color: var(--muted);
+}
+
+.map-row {
+  width: 100%;
+  border: 0;
+  padding: 0;
+  color: #dbe5f3;
+  background: transparent;
+  text-align: left;
+}
+
+.map-row[aria-pressed="true"] .peer-name {
+  color: var(--text);
+}
+
+.map-row[aria-pressed="true"] .peer-value {
+  color: var(--green);
 }
 
 .room-grid {

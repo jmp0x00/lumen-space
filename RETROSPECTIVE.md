@@ -80,6 +80,11 @@
 - Added monotonic constellation progress bitmasks to human presence snapshots so late joiners can see already revealed constellations without a backend.
 - Added completed-constellation rendering to the Three.js scene with subtle additive line segments, node glows, and labels, while leaving incomplete constellations hidden until the room discovers every node.
 - Added deterministic tests for constellation placement, progress merging, reveal completion, protocol progress normalization, reducer sync, and local star-touch progress.
+- Replaced the 12 hand-placed constellation sketches with a derived all-88 constellation sky dataset from `d3-celestial`, preserving the BSD license notice in source.
+- Mapped constellation longitude/declination into the game world with a simple equirectangular all-sky projection, including wraparound line splitting so edge-crossing constellations do not draw through the entire room.
+- Merged the two source Serpens line features into one official Serpens constellation, which preserved the canonical 88-count while keeping both separated sky parts.
+- Raised the generated touch-star pool to 176 slots so every constellation can appear in the room economy while preserving population-scaled active-star limits.
+- Added a passive constellation-map simulator mode after the all-sky data landed, because inspecting the projected map without playing is a faster way to validate placement, labels, colors, and line readability.
 
 ## AI Tools Used
 
@@ -102,6 +107,8 @@
 - Using temporary room instrumentation made multiplayer movement easier to reason about early, and moving that diagnostic role into the simulator kept the final room UI simpler.
 - Keeping audio planning separate from Web Audio playback made it possible to evolve sound design from effects into music without losing unit-test coverage.
 - The existing star generation/event model was flexible enough to support collaborative constellation discovery with a small pure module and a compact progress snapshot.
+- Moving from hand-authored constellation sketches to sourced sky coordinates was mostly a data-model change because the previous feature already separated star placement, progress, and rendering.
+- Turning the constellation data into a separate observer mode reinforced the value of pure selectors: the same source map can now support gameplay, tests, and visual inspection without a parallel debug-only data path.
 - A static app shape matched the GitDocs sharing goal and avoided backend credentials.
 
 ## What Did Not Work Well
@@ -110,6 +117,7 @@
 - WebRTC behavior can vary by network, NAT, and browser, so local tests cannot fully prove hosted multiplayer reliability.
 - GitDocs deployment details are environment-specific and need final verification after repository creation.
 - Hidden product-surface diagnostics were useful for tuning but became documentation and UI debt once the simulator covered the same questions more cleanly.
+- Real constellation lines are not formally standardized by the IAU in the same way constellation boundaries are, so the feature uses a practical asterism-line dataset rather than claiming official line art.
 
 ## Surprises And Discoveries
 

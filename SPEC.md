@@ -10,7 +10,7 @@ Lumen Space is a social visual game without scoring or winners. The goal is to c
 4. The playable space is larger than the first camera view; the camera gently follows the local light as it travels.
 5. Nearby lights use a small collision radius derived from their visual size so contacts are gentle and bounded.
 6. Touching a small environmental star emits a pulse from the local light, colored by blending the star and lumen colors.
-7. Touch stars are generated on curated real constellation paths placed around the playable space.
+7. Touch stars are generated on real constellation line paths projected into the playable space as a simplified all-sky map.
 8. Each constellation has one deterministic room color and tracks which of its nodes have been touched by any player or bot.
 9. When all nodes in a constellation have been touched, the constellation reveals its glowing line pattern and name for everyone in the room.
 10. Revealed constellations stay visible, and future touch stars continue cycling along their nodes.
@@ -29,10 +29,11 @@ In scope:
 - Peer-to-peer realtime rooms for 2-8 participants.
 - Nickname and color identity stored locally.
 - Three.js visual scene with participant lights and pulse rings.
-- Curated real-inspired constellation patterns that act as deterministic touch-star paths and shared room discoveries.
+- All 88 recognized constellations represented as deterministic touch-star paths and shared room discoveries.
 - Crowd-aware star-seeking bots with deterministic ownership, capped by room population, that move through the shared motion physics and consume stars.
 - Automated browser simulator for inspecting peer repulsion without manual multiplayer setup.
 - Realtime multi-user simulator mode that embeds several scene-only no-bot app clients in one WebRTC room and drives those peers with scripted user presets plus a configurable 1-8 client count.
+- Passive constellation-map simulator mode that shows the projected all-sky map without joining a playable room.
 - Simulator song mode that plays the shared procedural space lo-fi infinite song and visualizes the current musical state.
 - Unit tests for pure domain logic.
 - Required challenge documentation.
@@ -65,12 +66,16 @@ Out of scope:
 - The physics simulator must show visible peer positions, repulsion vectors, closest-distance metrics, average repulsion, average speed, and per-peer coordinates.
 - The simulator and room audio must share a JavaScript module that generates a soft space-themed lo-fi song indefinitely after user audio activation.
 - The simulator song mode must expose start/stop, seed-regeneration, tempo, density, space, volume, and reaction audition controls and show current bar, chord, tempo, active voice state, and reaction-influenced voice changes.
+- The simulator map mode must render all 88 projected constellation paths without creating a player, bot, WebRTC room, or room audio session.
+- The simulator map mode must expose a room seed, deterministic constellation colors, auto-tour speed, optional constellation names, current focus, constellation count, and node count.
 - The app runtime must support a configurable UI generator that receives app view state and action callbacks, then decides what UI to render.
 - The default app runtime must use the full lobby and room UI generator.
 - The physics simulator must include a realtime room mode where each simulated user is visible in its own embedded app screen, joins the same room through the normal WebRTC connection, starts without bots, uses a scene-only UI generator, follows a chosen preset such as star chasing, scripted paths, orbiting, or chasing another user, and can be launched with a selected 1-8 client count.
 - Scripted realtime star-chasing clients must target only the currently active population-scaled touch-star subset, so they cannot idle on inactive generated stars.
-- Rooms must render deterministic touch stars from a capped 72-star pool, using constellation-node placement so even the active subset is distributed across the playable space.
-- The constellation catalogue must include recognizable real constellation patterns such as Orion, Cassiopeia, Ursa Major, Cygnus, Lyra, Scorpius, Taurus, Leo, Pegasus, Andromeda, Draco, and Corona Borealis.
+- Rooms must render deterministic touch stars from a capped 176-star pool, using constellation-node placement so even the active subset is distributed across the playable space.
+- The constellation catalogue must include all 88 recognized constellations, with Serpens merged into one official constellation even though the source asterism data contains its two separated sky parts.
+- Constellation positions must be projected from celestial longitude/declination into the game world with a simplified equirectangular all-sky map.
+- Constellation line segments should follow sourced star-line coordinates where available; wraparound line segments near the sky-map edge must render without crossing the entire game world.
 - Each room must assign one deterministic color to each constellation, and every active touch star on that constellation must use that color.
 - Each touch-star slot must map deterministically from room ID, star index, and generation to one constellation node.
 - After a touch, the star must temporarily disappear and respawn on a new deterministic node along its constellation path.
@@ -111,8 +116,9 @@ Out of scope:
 - In `simulator.html`, selecting the crossing scenario shows two peers following intersecting routes through the center.
 - In `simulator.html`, selecting realtime mode launches the selected number of scene-only embedded app clients in the same no-bot WebRTC room; changing the client count in realtime mode relaunches the embedded room with that count, and each client screen shows scripted movement through the normal app/WebRTC runtime.
 - In `simulator.html`, selecting song mode shows a procedural music visualization; pressing the Song mode audio control starts and stops the shared space lo-fi infinite song, changing the song sliders updates tempo, density, space, and volume, and reaction audition controls let star-touch and resonance reactions be heard.
+- In `simulator.html`, selecting map mode shows the complete projected constellation catalogue, advances a focus tour automatically, lets the user pause on a constellation, and does not require entering the game.
 - Touching an environmental star emits a blended-color pulse and temporarily hides that star.
-- Touching all nodes of a constellation reveals its glowing real-inspired line pattern and name for all connected players.
+- Touching all nodes of a constellation reveals its glowing sky-map line pattern and name for all connected players.
 - A new player joining after a reveal receives constellation progress through presence and sees already revealed constellations.
 - Entering or interacting with a room starts the soft procedural space lo-fi song after browser audio is unlocked.
 - Star-touch pulses clearly brighten the song's lead/dust texture and open the tone quickly, while pulse resonances create a broader pad/space swell and soften the kit.
