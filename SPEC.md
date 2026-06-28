@@ -7,14 +7,15 @@ Lumen Space is a social visual game without scoring or winners. The goal is to c
 1. A player enters a nickname, chooses a color, and joins a room.
 2. Every connected player appears as a glowing light.
 3. Moving the pointer pulls the local light through the space with inertia.
-4. Nearby lights use a small collision radius derived from their visual size so contacts are gentle and bounded.
-5. Touching a small environmental star emits a pulse from the local light, colored by blending the star and lumen colors.
-6. Pulses are not an explicit player or bot action; consuming a touch star is the only way to emit a colored pulse.
-7. When pulse fronts from different sources meet, they create a brief resonance flash.
-8. After browser audio is unlocked by user interaction, the room plays the procedural space lo-fi song; star-touch pulses and resonance flashes briefly reshape the song's density, space, tone, and voices.
-9. The player can mute or unmute the local lo-fi room audio.
-10. Other players in the same room see the player's latest position, shared bots, star-touch pulses, and resonances.
-11. Rooms are ephemeral. When all players leave, no room state remains.
+4. The playable space is larger than the first camera view; the camera gently follows the local light as it travels.
+5. Nearby lights use a small collision radius derived from their visual size so contacts are gentle and bounded.
+6. Touching a small environmental star emits a pulse from the local light, colored by blending the star and lumen colors.
+7. Pulses are not an explicit player or bot action; consuming a touch star is the only way to emit a colored pulse.
+8. When pulse fronts from different sources meet, they create a brief resonance flash.
+9. After browser audio is unlocked by user interaction, the room plays the procedural space lo-fi song; star-touch pulses and resonance flashes briefly reshape the song's density, space, tone, and voices.
+10. The player can mute or unmute the local lo-fi room audio.
+11. Other players in the same room see the player's latest position, shared bots, star-touch pulses, and resonances.
+12. Rooms are ephemeral. When all players leave, no room state remains.
 
 ## Scope
 
@@ -48,6 +49,7 @@ Out of scope:
 - Invite URLs must include `?room=<room-id>`.
 - The app must sanitize nickname, color, room ID, presence, and pulse inputs.
 - The local light must remain within defined world bounds.
+- The world bounds must be larger than a single camera view, with pointer movement and camera follow allowing the local light to travel into off-screen regions.
 - Remote peer motion must interpolate smoothly instead of snapping.
 - Live-room lumes must derive collision radius from participant visual size, with local lumes slightly larger than remote lumes and bots smaller.
 - Peer collision radius must be used for peer-to-peer repulsion and peer-to-star touch detection.
@@ -62,7 +64,7 @@ Out of scope:
 - The default app runtime must use the full lobby and room UI generator.
 - The physics simulator must include a realtime room mode where each simulated user is visible in its own embedded app screen, joins the same room through the normal WebRTC connection, starts without bots, uses a scene-only UI generator, follows a chosen preset such as star chasing, scripted paths, orbiting, or chasing another user, and can be launched with a selected 1-8 client count.
 - Scripted realtime star-chasing clients must target only the currently active population-scaled touch-star subset, so they cannot idle on inactive generated stars.
-- Rooms must render deterministic random-looking touch stars from a capped 36-star pool, using progressive spread placement so even the active subset is distributed across the playable space.
+- Rooms must render deterministic random-looking touch stars from a capped 72-star pool, using progressive spread placement so even the active subset is distributed across the playable space.
 - After a touch, the star must temporarily disappear and respawn in a new deterministic random-looking position and color.
 - Star-touch pulse colors must blend the touched star color with the triggering lumen color.
 - Star-touch pulses must temporarily suppress and respawn the matching star for other clients through existing pulse metadata.
@@ -89,6 +91,7 @@ Out of scope:
 - A user can enter the lobby, regenerate a nickname, create a room, and copy an invite link.
 - Two browser tabs using the same room show each other as separate colored lights.
 - Pointer movement updates the local light and propagates to peers.
+- Holding the pointer toward an edge lets the local light travel beyond the initial viewport while the camera follows smoothly.
 - Nearby lumes and bots use size-based collision contact while remaining inside the playable bounds, and bots continuously pursue available stars while avoiding overcrowded targets and stale skipped-target state.
 - When a moving participant pushes an idle peer, the idle peer remains at the pushed resting position until new input or presence data moves it again.
 - Opening `simulator.html` starts an automated peer simulation that visibly shows repulsion without requiring network setup.

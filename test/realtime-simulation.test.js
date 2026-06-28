@@ -181,7 +181,7 @@ test("path and chase targets are deterministic and bounded", () => {
   );
 
   const startPosition = getSimulationClientStartPosition(pathConfig);
-  assert.ok(Math.abs(startPosition.x - -5.632) < 1e-12);
+  assert.ok(Math.abs(startPosition.x - -15.36) < 1e-12);
   assert.equal(startPosition.y, -0.92);
   assert.equal(startPosition.z, 0);
   assert.deepEqual(

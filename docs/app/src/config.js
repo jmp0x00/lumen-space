@@ -74,9 +74,9 @@ export const NETWORK_CONFIG = Object.freeze({
 });
 
 export const SPACE_BOUNDS = Object.freeze({
-  x: Object.freeze([-8.8, 8.8]),
-  y: Object.freeze([-4.8, 4.8]),
-  z: Object.freeze([-2.2, 2.2])
+  x: Object.freeze([-24, 24]),
+  y: Object.freeze([-13.5, 13.5]),
+  z: Object.freeze([-3.6, 2.8])
 });
 
 export const MOTION_CONFIG = Object.freeze({
@@ -142,13 +142,13 @@ export const SPACE_LOFI_CONFIG = Object.freeze({
 });
 
 export const TOUCH_STAR_CONFIG = Object.freeze({
-  generatedPoolSize: 36,
+  generatedPoolSize: 72,
   radius: 0.48,
   cooldownMs: 7_500,
-  activeMin: 10,
-  activeMax: 36,
-  activeBase: 8,
-  activePerLume: 3,
+  activeMin: 18,
+  activeMax: 72,
+  activeBase: 14,
+  activePerLume: 6,
   spawnPaddingX: 1,
   spawnPaddingY: 0.9,
   spreadCellInset: 0.18,
@@ -208,7 +208,12 @@ export const BOT_CONFIG = Object.freeze({
 
 export const SCENE_CONFIG = Object.freeze({
   threeUrl: "https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js",
-  backgroundStarCount: 640,
+  backgroundStarCount: 6_000,
+  backgroundStarOverscanX: 52,
+  backgroundStarOverscanY: 34,
+  backgroundStarDepth: 48,
+  cameraDistance: 18,
+  cameraFollowLerp: 0.075,
   maxPixelRatio: 2
 });
 

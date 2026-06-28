@@ -149,7 +149,7 @@ test("formatParticipantDebugRows returns rounded lume state for the debug panel"
       speed: 5,
       ai: {
         targetStarId: "touch-star-2",
-        targetDistance: 1.3,
+        targetDistance: 18.8,
         bestDistance: 1.2,
         chaserCount: 3,
         decision: "redirect",

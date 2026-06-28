@@ -1,4 +1,4 @@
-import { SCENE_CONFIG } from "./config.js";
+import { SCENE_CONFIG, SPACE_BOUNDS } from "./config.js";
 import { getPeerVisualScale, getPulseRadius } from "./domain.js?v=peer-collision-radius-20260627";
 
 export async function createSpaceScene({
@@ -11,10 +11,10 @@ export async function createSpaceScene({
   const THREE = await import(SCENE_CONFIG.threeUrl);
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x05070d, 0.035);
+  scene.fog = new THREE.FogExp2(0x05070d, 0.026);
 
   const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 100);
-  camera.position.set(0, 0, 14);
+  camera.position.set(0, 0, SCENE_CONFIG.cameraDistance);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setClearColor(0x05070d, 1);
@@ -31,6 +31,7 @@ export async function createSpaceScene({
   const touchStarMeshes = new Map();
   const labels = new Map();
   const glowTexture = createGlowTexture(THREE);
+  const cameraFocus = new THREE.Vector3(0, 0, 0);
 
   scene.add(createStars(THREE));
   scene.add(new THREE.AmbientLight(0x6ea8ff, 0.26));
@@ -59,7 +60,9 @@ export async function createSpaceScene({
   }
 
   function render() {
-    syncParticipants(THREE);
+    const participants = getParticipants();
+    syncCamera(participants);
+    syncParticipants(THREE, participants);
     syncTouchStars(THREE);
     syncPulses(THREE);
     syncResonances(THREE);
@@ -67,8 +70,26 @@ export async function createSpaceScene({
     syncLabels(THREE);
   }
 
-  function syncParticipants(THREERef) {
-    const participants = getParticipants();
+  function syncCamera(participants) {
+    const focusParticipant =
+      participants.find((participant) => participant?.isLocal) ?? participants[0];
+    if (!focusParticipant?.position) {
+      return;
+    }
+
+    const followLerp = clamp01(SCENE_CONFIG.cameraFollowLerp);
+    cameraFocus.set(
+      clamp(focusParticipant.position.x, SPACE_BOUNDS.x[0], SPACE_BOUNDS.x[1]),
+      clamp(focusParticipant.position.y, SPACE_BOUNDS.y[0], SPACE_BOUNDS.y[1]),
+      0
+    );
+    camera.position.x += (cameraFocus.x - camera.position.x) * followLerp;
+    camera.position.y += (cameraFocus.y - camera.position.y) * followLerp;
+    camera.position.z += (SCENE_CONFIG.cameraDistance - camera.position.z) * followLerp;
+    camera.lookAt(camera.position.x, camera.position.y, 0);
+  }
+
+  function syncParticipants(THREERef, participants) {
     const activeIds = new Set(participants.map((participant) => participant.id));
 
     for (const participant of participants) {
@@ -215,7 +236,7 @@ export async function createSpaceScene({
         continue;
       }
       vector.copy(mesh.group.position).project(camera);
-      const visible = vector.z < 1;
+      const visible = vector.z < 1 && Math.abs(vector.x) <= 1.08 && Math.abs(vector.y) <= 1.08;
       label.hidden = !visible;
       if (visible) {
         label.style.left = `${((vector.x + 1) / 2) * width}px`;
@@ -372,12 +393,18 @@ function createStars(THREE) {
   const geometry = new THREE.BufferGeometry();
   const count = SCENE_CONFIG.backgroundStarCount;
   const positions = new Float32Array(count * 3);
+  const width =
+    SPACE_BOUNDS.x[1] - SPACE_BOUNDS.x[0] + SCENE_CONFIG.backgroundStarOverscanX;
+  const height =
+    SPACE_BOUNDS.y[1] - SPACE_BOUNDS.y[0] + SCENE_CONFIG.backgroundStarOverscanY;
+  const minX = SPACE_BOUNDS.x[0] - SCENE_CONFIG.backgroundStarOverscanX / 2;
+  const minY = SPACE_BOUNDS.y[0] - SCENE_CONFIG.backgroundStarOverscanY / 2;
 
   for (let index = 0; index < count; index += 1) {
     const seed = index + 1;
-    positions[index * 3] = seeded(seed, 12.9898) * 28 - 14;
-    positions[index * 3 + 1] = seeded(seed, 78.233) * 18 - 9;
-    positions[index * 3 + 2] = seeded(seed, 37.719) * -24 - 4;
+    positions[index * 3] = minX + seeded(seed, 12.9898) * width;
+    positions[index * 3 + 1] = minY + seeded(seed, 78.233) * height;
+    positions[index * 3 + 2] = seeded(seed, 37.719) * -SCENE_CONFIG.backgroundStarDepth - 4;
   }
 
   geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
@@ -430,4 +457,16 @@ function disposeGroup(group) {
 function seeded(index, salt) {
   const value = Math.sin(index * salt) * 43758.5453;
   return value - Math.floor(value);
+}
+
+function clamp(value, min, max) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return min;
+  }
+  return Math.min(max, Math.max(min, numeric));
+}
+
+function clamp01(value) {
+  return clamp(value, 0, 1);
 }

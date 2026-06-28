@@ -67,6 +67,8 @@
 - Centralized app, gameplay, physics, audio, scene, and simulator tunables in `docs/app/src/config.js`, then raised the generated touch-star pool and active cap from 24 to 36 so busier rooms have more environmental pulse opportunities.
 - Replaced plain seeded-random touch-star placement with deterministic progressive spread cells, after noticing that the active prefix could clump and leave parts of the space visually underused.
 - Generated a small favicon and touch/app icon set from the lobby's luminous brand-mark direction, then wired the static page to use those assets explicitly so browser logs no longer include the default missing-icon request.
+- Expanded the playable world beyond a single camera view and added smooth camera follow, after visual review showed the room still felt like a small rectangle instead of open space.
+- Increased ambient and touch-star density after the larger world felt too empty, keeping the same deterministic placement and population-scaling model instead of adding a new system.
 
 ## AI Tools Used
 
