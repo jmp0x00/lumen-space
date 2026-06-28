@@ -30,10 +30,9 @@ export function createRuntimeConfig(locationLike) {
     usePointerInput: false,
     soundEffects: scriptedSoundEffects,
     soundInitiallyEnabled: scriptedSoundEffects && scriptedClient.soundInitiallyEnabled,
-    initialBotCount: scriptedClient.disableBots ? 0 : 2,
+    sharedBotsEnabled: !scriptedClient.disableBots,
     uiMode: scriptedUiMode,
     createUi: getUiGenerator(scriptedUiMode),
-    pulseEveryMs: scriptedClient.pulseEveryMs,
     getStartPosition() {
       return getSimulationClientStartPosition(scriptedClient);
     },
@@ -59,6 +58,7 @@ export function createRuntimeConfig(locationLike) {
         status: context.status,
         peerCount: context.peerCount,
         botCount: context.botCount,
+        touchStarCount: context.touchStarCount,
         position: roundStateVector(context.position),
         target: roundStateVector(context.target),
         sound: {
@@ -79,10 +79,9 @@ function createDefaultRuntimeConfig(uiMode, { soundEffects = true } = {}) {
     usePointerInput: true,
     soundEffects,
     soundInitiallyEnabled: soundEffects,
-    initialBotCount: 2,
+    sharedBotsEnabled: true,
     uiMode,
     createUi: getUiGenerator(uiMode),
-    pulseEveryMs: 0,
     getStartPosition: null,
     getTarget: null,
     createState: null

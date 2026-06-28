@@ -51,7 +51,7 @@ test("createRoomLofiSongPlan uses the shared infinite space lo-fi song", () => {
   );
 });
 
-test("createPulseSongReaction maps local manual pulses to song changes", () => {
+test("createPulseSongReaction ignores non-star-touch pulses", () => {
   const reaction = createPulseSongReaction(
     {
       id: "manual-1",
@@ -63,14 +63,7 @@ test("createPulseSongReaction maps local manual pulses to song changes", () => {
     { localClientId: "client-local" }
   );
 
-  assert.deepEqual(reaction, {
-    id: "pulse:manual-1",
-    type: "song-reaction",
-    interactionType: "manual-pulse",
-    color: "#7dd3fc",
-    intensity: 0.681,
-    pan: 0.5
-  });
+  assert.equal(reaction, null);
 });
 
 test("createPulseSongReaction gives star-touch pulses a stronger song reaction", () => {
@@ -119,6 +112,7 @@ test("collectNewSoundCues emits each pulse and resonance reaction once", () => {
         sourceId: "client-local",
         color: "#7dd3fc",
         strength: 1,
+        trigger: "star-touch",
         origin: { x: 0, y: 0, z: 0 }
       }
     ],
@@ -135,7 +129,7 @@ test("collectNewSoundCues emits each pulse and resonance reaction once", () => {
   assert.deepEqual(
     first.cues.map((cue) => `${cue.type}:${cue.id}:${cue.interactionType}`),
     [
-      "song-reaction:pulse:pulse-1:manual-pulse",
+      "song-reaction:pulse:pulse-1:star-touch",
       "song-reaction:resonance:resonance:pulse-1:pulse-2:resonance"
     ]
   );
@@ -147,6 +141,7 @@ test("collectNewSoundCues emits each pulse and resonance reaction once", () => {
         sourceId: "client-local",
         color: "#7dd3fc",
         strength: 1,
+        trigger: "star-touch",
         origin: { x: 0, y: 0, z: 0 }
       }
     ],

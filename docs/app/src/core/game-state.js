@@ -1,8 +1,17 @@
 import { DEFAULT_COLOR } from "../colors.js";
+import { generateFallbackName } from "../names.js";
 import { createRoomId } from "../room.js";
 import { createTouchStars } from "../physics/touch-stars.js?v=peer-collision-radius-20260627";
 import { SPACE_BOUNDS, clampVector } from "../physics/vector.js";
 import { normalizeProtocolIdentity } from "../protocol.js";
+import {
+  MAX_TOUCH_STARS,
+  createSharedBotId,
+  getActiveTouchStarCount,
+  getOwnedSharedBotSlots,
+  getTargetSharedBotCount,
+  normalizeHumanClientIds
+} from "./population.js";
 
 export const DEFAULT_LOBBY_NOTE = "Room links are ephemeral and peer-to-peer.";
 export const DEFAULT_STATUS = Object.freeze({ text: "Starting", state: "pending" });
@@ -32,6 +41,7 @@ export function createInitialGameState({
     peers: {},
     botParticipants: [],
     touchStars: [],
+    sharedBotsEnabled: true,
     pulses: [],
     resonances: [],
     networkSequence: 0,
@@ -47,7 +57,7 @@ export function enterRoomState(
     roomId = state.roomId,
     startPosition,
     now = Date.now(),
-    initialBotCount = 2,
+    sharedBotsEnabled = true,
     createBotName
   } = {}
 ) {
@@ -66,7 +76,7 @@ export function enterRoomState(
     isBot: false
   };
 
-  return {
+  const nextState = {
     ...state,
     phase: "room",
     identity: safeIdentity,
@@ -79,14 +89,11 @@ export function enterRoomState(
     peers: {},
     pulses: [],
     resonances: [],
-    touchStars: createTouchStars(roomId),
-    botParticipants: createInitialBotParticipants({
-      roomId,
-      createdAt: now,
-      count: initialBotCount,
-      createBotName
-    })
+    touchStars: createTouchStars(roomId, MAX_TOUCH_STARS),
+    sharedBotsEnabled: Boolean(sharedBotsEnabled),
+    botParticipants: []
   };
+  return syncOwnedSharedBotParticipants(nextState, { now, createBotName });
 }
 
 export function leaveRoomState(state) {
@@ -114,6 +121,7 @@ export function createBotParticipant({
   index = 0,
   roomId = "lumen-room",
   createdAt = Date.now(),
+  ownerClientId = null,
   createBotName
 } = {}) {
   const safeIndex = Math.max(0, Math.floor(Number(index) || 0));
@@ -126,12 +134,18 @@ export function createBotParticipant({
   ];
   const template = botPositions[safeIndex % botPositions.length];
   const driftSeed = 2.4 + safeIndex * 1.7;
-  const seed = `bot-${roomId}-${safeIndex}-${createdAt}`;
+  const seed = `bot-${roomId}-${safeIndex}`;
   const name =
-    typeof createBotName === "function" ? createBotName(seed, safeIndex) : `Bot ${safeIndex + 1}`;
+    typeof createBotName === "function"
+      ? createBotName(seed, safeIndex)
+      : generateFallbackName(seed);
+  const id = createSharedBotId(roomId, safeIndex);
 
   return {
-    id: `bot-${safeIndex + 1}-${createdAt}`,
+    id,
+    clientId: id,
+    ownerClientId: ownerClientId ? String(ownerClientId) : null,
+    botSlot: safeIndex,
     name,
     color: template.color,
     basePosition: template.basePosition,
@@ -139,9 +153,8 @@ export function createBotParticipant({
     targetPosition: template.basePosition,
     velocity: { x: 0, y: 0, z: 0 },
     driftSeed,
-    pulseEveryMs: 4_500 + (safeIndex % 5) * 650,
-    nextPulseAt: createdAt + 900 + (safeIndex % 5) * 520,
-    pulseStrength: 0.72 + (safeIndex % 3) * 0.08,
+    createdAt,
+    lastSeen: createdAt,
     isBot: true
   };
 }
@@ -150,6 +163,7 @@ export function createInitialBotParticipants({
   roomId,
   createdAt = Date.now(),
   count = 2,
+  ownerClientId = null,
   createBotName
 } = {}) {
   return Array.from({ length: Math.max(0, Number(count) || 0) }, (_, index) =>
@@ -157,6 +171,7 @@ export function createInitialBotParticipants({
       index,
       roomId,
       createdAt: createdAt + index,
+      ownerClientId,
       createBotName
     })
   );
@@ -164,7 +179,80 @@ export function createInitialBotParticipants({
 
 export function getParticipants(state) {
   const local = state?.localParticipant ? [state.localParticipant] : [];
-  return [...local, ...Object.values(state?.peers ?? {}), ...(state?.botParticipants ?? [])];
+  const ownedBots = state?.botParticipants ?? [];
+  const localIds = new Set([...local, ...ownedBots].map((participant) => participant.id));
+  const remote = Object.values(state?.peers ?? {}).filter(
+    (participant) => participant?.id && !localIds.has(participant.id)
+  );
+  return [...local, ...remote, ...ownedBots];
+}
+
+export function getActiveHumanClientIds(state) {
+  const localId = String(state?.clientId ?? "").trim();
+  const remoteHumanIds = Object.values(state?.peers ?? {})
+    .filter((peer) => peer?.clientId && !peer.isBot)
+    .map((peer) => peer.clientId);
+  return normalizeHumanClientIds([localId, ...remoteHumanIds]);
+}
+
+export function getRoomPopulationPolicy(state) {
+  const humanClientIds = getActiveHumanClientIds(state);
+  const botCount = state?.sharedBotsEnabled === false ? 0 : getTargetSharedBotCount(humanClientIds.length);
+  const activeLumes = humanClientIds.length + botCount;
+  return {
+    humanClientIds,
+    humanCount: humanClientIds.length,
+    botCount,
+    activeLumes,
+    touchStarCount: getActiveTouchStarCount(activeLumes)
+  };
+}
+
+export function getActiveTouchStars(state) {
+  const policy = getRoomPopulationPolicy(state);
+  return (state?.touchStars ?? []).slice(0, policy.touchStarCount);
+}
+
+export function syncOwnedSharedBotParticipants(state, { now = Date.now(), createBotName } = {}) {
+  if (state?.phase !== "room" || state.sharedBotsEnabled === false) {
+    return {
+      ...state,
+      botParticipants: []
+    };
+  }
+
+  const policy = getRoomPopulationPolicy(state);
+  const ownedSlots = getOwnedSharedBotSlots({
+    localClientId: state.clientId,
+    humanClientIds: policy.humanClientIds,
+    botCount: policy.botCount
+  });
+  const existingBySlot = new Map(
+    (state.botParticipants ?? []).map((participant) => [participant.botSlot, participant])
+  );
+  const botParticipants = ownedSlots.map((slot) => {
+    const existing = existingBySlot.get(slot);
+    if (existing) {
+      return {
+        ...existing,
+        ownerClientId: state.clientId,
+        clientId: existing.clientId ?? existing.id,
+        isBot: true
+      };
+    }
+    return createBotParticipant({
+      index: slot,
+      roomId: state.roomId,
+      createdAt: now + slot,
+      ownerClientId: state.clientId,
+      createBotName
+    });
+  });
+
+  return {
+    ...state,
+    botParticipants
+  };
 }
 
 function createLocalParticipant(identity, clientId) {

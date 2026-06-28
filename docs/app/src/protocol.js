@@ -69,10 +69,14 @@ export function createPresenceMessage({
   position,
   velocity,
   targetPosition,
+  kind = "human",
+  ownerClientId = null,
+  botSlot = null,
   timestamp = Date.now()
 }) {
   const normalizedIdentity = normalizeProtocolIdentity(identity);
-  return {
+  const safeKind = normalizePresenceKind(kind);
+  const message = {
     protocol: PROTOCOL_NAME,
     type: "presence",
     version: PROTOCOL_VERSION,
@@ -83,8 +87,16 @@ export function createPresenceMessage({
     position: clampVector(position),
     velocity: normalizeFiniteVector(velocity) ?? { x: 0, y: 0, z: 0 },
     targetPosition: clampVector(targetPosition ?? position),
+    kind: safeKind,
     timestamp: normalizeTimestamp(timestamp)
   };
+
+  if (safeKind === "bot") {
+    message.ownerClientId = normalizeRequiredText(ownerClientId);
+    message.botSlot = readNonNegativeInteger(botSlot);
+  }
+
+  return message;
 }
 
 export function normalizePresenceMessage(data, receivedAt = Date.now()) {
@@ -98,6 +110,9 @@ export function normalizePresenceMessage(data, receivedAt = Date.now()) {
   const position = normalizeFiniteVector(data.position);
   const velocity = normalizeFiniteVector(data.velocity);
   const targetPosition = normalizeFiniteVector(data.targetPosition);
+  const kind = normalizePresenceKind(data.kind);
+  const ownerClientId = kind === "bot" ? normalizeRequiredText(data.ownerClientId) : null;
+  const botSlot = kind === "bot" ? readNonNegativeInteger(data.botSlot) : null;
   const timestamp = readPositiveTimestamp(data.timestamp, receivedAt);
   if (
     !clientId ||
@@ -106,6 +121,7 @@ export function normalizePresenceMessage(data, receivedAt = Date.now()) {
     !position ||
     !velocity ||
     !targetPosition ||
+    (kind === "bot" && (!ownerClientId || botSlot === null)) ||
     timestamp === null
   ) {
     return null;
@@ -122,6 +138,9 @@ export function normalizePresenceMessage(data, receivedAt = Date.now()) {
     position: clampVector(position),
     velocity,
     targetPosition: clampVector(targetPosition),
+    kind,
+    ownerClientId,
+    botSlot,
     timestamp,
     receivedAt
   };
@@ -135,11 +154,15 @@ export function createPulseEventMessage({
   color,
   strength = 1,
   timestamp = Date.now(),
-  trigger = "manual",
+  trigger = "star-touch",
   starId = null,
-  starGeneration = null
+  starGeneration = null,
+  sourceKind = "human",
+  ownerClientId = null,
+  botSlot = null
 }) {
   const safeTrigger = normalizePulseTrigger(trigger);
+  const safeSourceKind = normalizePresenceKind(sourceKind);
   const message = {
     protocol: PROTOCOL_NAME,
     type: "event",
@@ -152,12 +175,18 @@ export function createPulseEventMessage({
     color: normalizeHexColor(color),
     strength: clamp(strength, 0.2, 2.5),
     timestamp: normalizeTimestamp(timestamp),
-    trigger: safeTrigger
+    trigger: safeTrigger,
+    sourceKind: safeSourceKind
   };
 
   if (safeTrigger === "star-touch") {
-    message.starId = normalizeRequiredText(starId) || "touch-star-0";
+    message.starId = normalizeRequiredText(starId);
     message.starGeneration = normalizeStarGeneration(starGeneration);
+  }
+
+  if (safeSourceKind === "bot") {
+    message.ownerClientId = normalizeRequiredText(ownerClientId);
+    message.botSlot = readNonNegativeInteger(botSlot);
   }
 
   return message;
@@ -176,9 +205,11 @@ export function normalizePulseEventMessage(data, receivedAt = Date.now()) {
   const strength = readStrength(data.strength);
   const timestamp = readPositiveTimestamp(data.timestamp, receivedAt);
   const trigger = normalizePulseTrigger(data.trigger);
-  const starId = trigger === "star-touch" ? normalizeRequiredText(data.starId) : null;
-  const starGeneration =
-    trigger === "star-touch" ? readPositiveInteger(data.starGeneration) : null;
+  const starId = normalizeRequiredText(data.starId);
+  const starGeneration = readPositiveInteger(data.starGeneration);
+  const sourceKind = normalizePresenceKind(data.sourceKind);
+  const ownerClientId = sourceKind === "bot" ? normalizeRequiredText(data.ownerClientId) : null;
+  const botSlot = sourceKind === "bot" ? readNonNegativeInteger(data.botSlot) : null;
 
   if (
     !eventId ||
@@ -188,8 +219,10 @@ export function normalizePulseEventMessage(data, receivedAt = Date.now()) {
     !color ||
     strength === null ||
     timestamp === null ||
-    !trigger ||
-    (trigger === "star-touch" && (!starId || starGeneration === null))
+    trigger !== "star-touch" ||
+    !starId ||
+    starGeneration === null ||
+    (sourceKind === "bot" && (!ownerClientId || botSlot === null))
   ) {
     return null;
   }
@@ -207,13 +240,14 @@ export function normalizePulseEventMessage(data, receivedAt = Date.now()) {
     strength,
     timestamp,
     trigger,
+    sourceKind,
+    ownerClientId,
+    botSlot,
     receivedAt
   };
 
-  if (trigger === "star-touch") {
-    message.starId = starId;
-    message.starGeneration = starGeneration;
-  }
+  message.starId = starId;
+  message.starGeneration = starGeneration;
 
   return message;
 }
@@ -272,7 +306,11 @@ function normalizeCapabilities(capabilities) {
 }
 
 function normalizePulseTrigger(value) {
-  return value === "star-touch" ? "star-touch" : value === "manual" ? "manual" : null;
+  return value === "star-touch" ? "star-touch" : null;
+}
+
+function normalizePresenceKind(value) {
+  return value === "bot" ? "bot" : "human";
 }
 
 function normalizeProtocolColor(value) {
@@ -346,6 +384,11 @@ function normalizeStarGeneration(value) {
 function readPositiveInteger(value) {
   const numeric = Math.floor(Number(value));
   return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
+function readNonNegativeInteger(value) {
+  const numeric = Math.floor(Number(value));
+  return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
 }
 
 function isObject(value) {

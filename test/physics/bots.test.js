@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  collectDueBotPulses,
   getBotInputTarget,
   updateBotParticipants
 } from "../../docs/app/src/physics/bots.js";
@@ -266,30 +265,4 @@ test("bot movement falls back to drift and clears target state when no stars are
   assert.equal(next.botSkippedStarUntil, 0);
   assert.equal(next.botTargetIdleSince, null);
   assert.equal(next.botTargetBestDistance, null);
-});
-
-test("bot pulse timing emits only due pulses and advances the next due time", () => {
-  const participants = [
-    {
-      id: "bot-1",
-      name: "Bot",
-      color: "#86efac",
-      position: { x: 1, y: 2, z: 0 },
-      nextPulseAt: 2_000,
-      pulseEveryMs: 5_000,
-      pulseStrength: 0.75,
-      isBot: true
-    }
-  ];
-
-  const early = collectDueBotPulses(participants, 1_999);
-  assert.deepEqual(early.pulses, []);
-  assert.equal(early.participants[0], participants[0]);
-
-  const due = collectDueBotPulses(participants, 2_000);
-  assert.equal(due.pulses.length, 1);
-  assert.deepEqual(due.pulses[0].origin, { x: 1, y: 2, z: 0 });
-  assert.equal(due.pulses[0].sourceId, "bot-1");
-  assert.equal(due.pulses[0].strength, 0.75);
-  assert.equal(due.participants[0].nextPulseAt, 7_000);
 });

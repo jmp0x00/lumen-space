@@ -12,15 +12,12 @@ export const REALTIME_ROOM_PRESETS = Object.freeze({
     label: "Mixed",
     description: "Stars, paths, chase, orbit",
     clients: Object.freeze([
-      createPresetClient("Ada Star", COLORS[0], "star", { pulseEveryMs: 5_200 }),
+      createPresetClient("Ada Star", COLORS[0], "star"),
       createPresetClient("Lin Lane", COLORS[1], "path", { path: "horizontal" }),
       createPresetClient("Grace Gate", COLORS[2], "path", { path: "vertical", phase: 0.18 }),
-      createPresetClient("Hedy Hunt", COLORS[4], "chase", {
-        targetName: "Ada Star",
-        pulseEveryMs: 7_200
-      }),
+      createPresetClient("Hedy Hunt", COLORS[4], "chase", { targetName: "Ada Star" }),
       createPresetClient("Radia Ring", COLORS[5], "orbit", { phase: 1.8 }),
-      createPresetClient("Mae Anchor", COLORS[3], "idle", { pulseEveryMs: 8_600 })
+      createPresetClient("Mae Anchor", COLORS[3], "idle")
     ])
   }),
   stars: Object.freeze({
@@ -28,10 +25,10 @@ export const REALTIME_ROOM_PRESETS = Object.freeze({
     label: "Star Race",
     description: "Everyone chases touch stars",
     clients: Object.freeze([
-      createPresetClient("Ada Star", COLORS[0], "star", { pulseEveryMs: 5_400 }),
-      createPresetClient("Lin Star", COLORS[1], "star", { phase: 0.7, pulseEveryMs: 6_100 }),
-      createPresetClient("Grace Star", COLORS[2], "star", { phase: 1.4, pulseEveryMs: 6_800 }),
-      createPresetClient("Hedy Star", COLORS[4], "star", { phase: 2.1, pulseEveryMs: 7_500 })
+      createPresetClient("Ada Star", COLORS[0], "star"),
+      createPresetClient("Lin Star", COLORS[1], "star", { phase: 0.7 }),
+      createPresetClient("Grace Star", COLORS[2], "star", { phase: 1.4 }),
+      createPresetClient("Hedy Star", COLORS[4], "star", { phase: 2.1 })
     ])
   }),
   routes: Object.freeze({
@@ -141,7 +138,6 @@ export function getSimulationClientConfig(locationLike) {
     index,
     count,
     phase: readFiniteNumber(params.get("simPhase"), index * 0.57),
-    pulseEveryMs: readNonNegativeInteger(params.get("simPulseEveryMs"), 0),
     startPosition,
     disableBots: readFeatureFlag(params, "appBots") !== true,
     soundSource: readFeatureFlag(params, "appSound") === true,
@@ -215,8 +211,7 @@ function createPresetClient(name, color, behavior, options = {}) {
     behavior,
     path: options.path ?? "loop",
     targetName: options.targetName ?? "",
-    phase: options.phase ?? 0,
-    pulseEveryMs: options.pulseEveryMs ?? 0
+    phase: options.phase ?? 0
   });
 }
 
@@ -244,7 +239,6 @@ function normalizePresetClient(client, index, count) {
     path: normalizePath(client.path, "loop"),
     targetName: normalizeClientName(client.targetName, "", { allowEmpty: true }),
     phase: readFiniteNumber(client.phase, index * 0.57),
-    pulseEveryMs: readNonNegativeInteger(client.pulseEveryMs, 0),
     index,
     count,
     startPosition: null
@@ -274,7 +268,6 @@ function createSimulationClientUrl(baseUrl, roomId, roomPreset, config) {
   url.searchParams.set("simIndex", String(config.index));
   url.searchParams.set("simCount", String(config.count));
   url.searchParams.set("simPhase", String(config.phase));
-  url.searchParams.set("simPulseEveryMs", String(config.pulseEveryMs));
   url.searchParams.set("appBots", "0");
   url.searchParams.set("appUi", "none");
   url.searchParams.set("appSound", config.soundSource ? "1" : "0");

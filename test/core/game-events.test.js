@@ -18,7 +18,7 @@ function createRoomState() {
     }),
     {
       now: 1_000,
-      initialBotCount: 0,
+      sharedBotsEnabled: false,
       startPosition: { x: 0, y: 0, z: 0 }
     }
   );
@@ -44,10 +44,11 @@ test("peer presence snapshots update peers and reject stale sequences", () => {
     message: firstPresence
   }).state;
 
-  assert.equal(first.peers["transport-1"].name, "Lin");
-  assert.equal(first.peers["transport-1"].sequence, 2);
-  assert.deepEqual(first.peers["transport-1"].targetPosition, { x: 3, y: 0, z: 0 });
-  assert.deepEqual(first.peers["transport-1"].inputTargetPosition, { x: 4, y: 0, z: 0 });
+  assert.equal(first.peers["client-peer"].name, "Lin");
+  assert.equal(first.peers["client-peer"].sequence, 2);
+  assert.equal(first.peers["client-peer"].transportPeerId, "transport-1");
+  assert.deepEqual(first.peers["client-peer"].targetPosition, { x: 3, y: 0, z: 0 });
+  assert.deepEqual(first.peers["client-peer"].inputTargetPosition, { x: 4, y: 0, z: 0 });
 
   const stalePresence = normalizePresenceMessage(
     createPresenceMessage({
@@ -67,11 +68,11 @@ test("peer presence snapshots update peers and reject stale sequences", () => {
     message: stalePresence
   }).state;
 
-  assert.equal(stale.peers["transport-1"].name, "Lin");
-  assert.equal(stale.peers["transport-1"].targetPosition.x, 3);
+  assert.equal(stale.peers["client-peer"].name, "Lin");
+  assert.equal(stale.peers["client-peer"].targetPosition.x, 3);
 });
 
-test("local pulse requests add a pulse and emit one v2 pulse event", () => {
+test("local pulse requests are ignored because pulses only come from star touches", () => {
   const state = createRoomState();
   const result = reduceGameEvent(state, {
     type: "pulse/local-request",
@@ -79,15 +80,8 @@ test("local pulse requests add a pulse and emit one v2 pulse event", () => {
     trigger: "manual"
   });
 
-  assert.equal(result.state.pulses.length, 1);
-  assert.equal(result.state.networkSequence, 1);
-  assert.equal(result.state.pulseSequence, 1);
-  assert.equal(result.effects.length, 1);
-  assert.equal(result.effects[0].type, "sendEvent");
-  assert.equal(result.effects[0].message.protocol, "lumen-space");
-  assert.equal(result.effects[0].message.type, "event");
-  assert.equal(result.effects[0].message.eventType, "pulse");
-  assert.equal(result.effects[0].message.trigger, "manual");
+  assert.equal(result.state, state);
+  assert.deepEqual(result.effects, []);
 });
 
 test("network pulse events are deduplicated by eventId", () => {
@@ -101,7 +95,9 @@ test("network pulse events are deduplicated by eventId", () => {
       color: "#fcd34d",
       strength: 1,
       timestamp: 4_000,
-      trigger: "manual"
+      trigger: "star-touch",
+      starId: "touch-star-0",
+      starGeneration: 1
     }),
     4_050
   );
@@ -123,19 +119,81 @@ test("presence requests increment sequence and emit a v2 presence effect", () =>
   assert.equal(result.state.networkSequence, 1);
   assert.deepEqual(result.effects.map((effect) => effect.type), ["sendPresence"]);
   assert.equal(result.effects[0].message.sequence, 1);
+  assert.equal(result.effects[0].message.kind, "human");
   assert.equal(result.effects[0].message.targetPosition.x, 0);
 });
 
-test("bot add and remove events update state and describe toast effects", () => {
-  const added = reduceGameEvent(createRoomState(), {
-    type: "bot/add",
-    now: 6_000,
-    createBotName: () => "Test Bot"
+test("presence requests publish owned shared bots as logical bot participants", () => {
+  const state = enterRoomState(
+    createInitialGameState({
+      clientId: "client-local",
+      identity: { name: "Ada", color: "#7dd3fc" },
+      roomId: "room-1"
+    }),
+    {
+      now: 1_000,
+      startPosition: { x: 0, y: 0, z: 0 }
+    }
+  );
+  const result = reduceGameEvent(state, {
+    type: "network/presence-request",
+    now: 5_000
   });
-  assert.equal(added.state.botParticipants.length, 1);
-  assert.equal(added.effects[0].message, "Test Bot joined as a bot.");
 
-  const removed = reduceGameEvent(added.state, { type: "bot/remove" });
-  assert.equal(removed.state.botParticipants.length, 0);
-  assert.equal(removed.effects[0].message, "Test Bot removed.");
+  assert.equal(result.effects.length, 7);
+  assert.deepEqual(
+    result.effects.map((effect) => effect.message.kind),
+    ["human", "bot", "bot", "bot", "bot", "bot", "bot"]
+  );
+  assert.equal(result.effects[1].message.clientId, "bot:room-1:0");
+  assert.equal(result.effects[1].message.ownerClientId, "client-local");
+  assert.equal(result.effects[1].message.botSlot, 0);
+});
+
+test("one transport peer can publish human and bot logical participants", () => {
+  const state = createRoomState();
+  const human = normalizePresenceMessage(
+    createPresenceMessage({
+      clientId: "client-peer",
+      sequence: 1,
+      identity: { name: "Lin", color: "#86efac" },
+      position: { x: 2, y: 0, z: 0 },
+      velocity: { x: 0, y: 0, z: 0 },
+      targetPosition: { x: 2, y: 0, z: 0 },
+      timestamp: 6_000
+    }),
+    6_050
+  );
+  const bot = normalizePresenceMessage(
+    createPresenceMessage({
+      clientId: "bot:room-1:0",
+      sequence: 2,
+      identity: { name: "Shared Bot", color: "#fcd34d" },
+      position: { x: -2, y: 0, z: 0 },
+      velocity: { x: 0, y: 0, z: 0 },
+      targetPosition: { x: -2, y: 0, z: 0 },
+      kind: "bot",
+      ownerClientId: "client-peer",
+      botSlot: 0,
+      timestamp: 6_100
+    }),
+    6_150
+  );
+
+  const withHuman = reduceGameEvent(state, {
+    type: "peer/presence",
+    peerId: "transport-1",
+    message: human
+  }).state;
+  const withBot = reduceGameEvent(withHuman, {
+    type: "peer/presence",
+    peerId: "transport-1",
+    message: bot
+  }).state;
+
+  assert.deepEqual(Object.keys(withBot.peers).sort(), ["bot:room-1:0", "client-peer"]);
+  assert.equal(withBot.peers["bot:room-1:0"].isBot, true);
+
+  const afterLeave = reduceGameEvent(withBot, { type: "peer/leave", peerId: "transport-1" }).state;
+  assert.deepEqual(afterLeave.peers, {});
 });

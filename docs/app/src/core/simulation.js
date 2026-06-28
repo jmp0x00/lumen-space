@@ -1,7 +1,7 @@
 import { applyPeerRepulsionToParticipants } from "../physics/repulsion.js?v=peer-collision-radius-20260627";
 import { updateMotion } from "../physics/motion.js";
 import { lerpVector, clampVector } from "../physics/vector.js";
-import { updateBotParticipants, collectDueBotPulses } from "../physics/bots.js?v=peer-collision-radius-20260627";
+import { updateBotParticipants } from "../physics/bots.js?v=peer-collision-radius-20260627";
 import { updatePulseResonances, updatePulses } from "../physics/pulses.js";
 import {
   collectTouchStarPulses,
@@ -9,6 +9,7 @@ import {
 } from "../physics/touch-stars.js?v=peer-collision-radius-20260627";
 import { createPulseEventMessage } from "../protocol.js";
 import { addPulseToState, nextNetworkSequence } from "./game-events.js";
+import { getActiveTouchStars, syncOwnedSharedBotParticipants } from "./game-state.js";
 
 export function stepGame(state, { now = Date.now(), deltaSeconds = 1 / 60, runtimeTarget = null } = {}) {
   if (state.phase !== "room") {
@@ -20,6 +21,7 @@ export function stepGame(state, { now = Date.now(), deltaSeconds = 1 / 60, runti
     pointerTarget: runtimeTarget ? clampVector(runtimeTarget) : state.pointerTarget
   };
   const effects = [];
+  nextState = syncOwnedSharedBotParticipants(nextState, { now });
 
   const motion = updateMotion(nextState.localParticipant, nextState.pointerTarget, deltaSeconds);
   nextState = {
@@ -49,23 +51,12 @@ export function stepGame(state, { now = Date.now(), deltaSeconds = 1 / 60, runti
     nextState = {
       ...nextState,
       botParticipants: updateBotParticipants(nextState.botParticipants, now, deltaSeconds, {
-        touchStars: nextState.touchStars
+        touchStars: getActiveTouchStars(nextState)
       })
     };
   }
 
   nextState = applyParticipantRepulsion(nextState, deltaSeconds);
-
-  if (nextState.botParticipants.length > 0) {
-    const botPulseResult = collectDueBotPulses(nextState.botParticipants, now);
-    nextState = {
-      ...nextState,
-      botParticipants: botPulseResult.participants
-    };
-    for (const pulse of botPulseResult.pulses) {
-      nextState = addPulseToState(nextState, pulse);
-    }
-  }
 
   nextState = {
     ...nextState,
@@ -78,15 +69,16 @@ export function stepGame(state, { now = Date.now(), deltaSeconds = 1 / 60, runti
 
   const starTouchParticipants = [nextState.localParticipant, ...nextState.botParticipants];
   const starTouchResult = collectTouchStarPulses(
-    nextState.touchStars,
+    getActiveTouchStars(nextState),
     starTouchParticipants,
     now
   );
   nextState = {
     ...nextState,
-    touchStars: starTouchResult.touchStars
+    touchStars: mergeTouchStars(nextState.touchStars, starTouchResult.touchStars)
   };
   for (const pulse of starTouchResult.pulses) {
+    const sourceParticipant = findSourceParticipant(starTouchParticipants, pulse.sourceId);
     nextState = addPulseToState(nextState, pulse);
     const sequence = nextNetworkSequence(nextState);
     nextState = {
@@ -100,7 +92,7 @@ export function stepGame(state, { now = Date.now(), deltaSeconds = 1 / 60, runti
     effects.push({
       type: "sendEvent",
       message: createPulseEventMessage({
-        clientId: nextState.clientId,
+        clientId: pulse.sourceId,
         sequence,
         eventId: pulse.id,
         origin: pulse.origin,
@@ -109,7 +101,10 @@ export function stepGame(state, { now = Date.now(), deltaSeconds = 1 / 60, runti
         timestamp: pulse.timestamp,
         trigger: "star-touch",
         starId: pulse.starId,
-        starGeneration: pulse.starGeneration
+        starGeneration: pulse.starGeneration,
+        sourceKind: sourceParticipant?.isBot ? "bot" : "human",
+        ownerClientId: sourceParticipant?.isBot ? nextState.clientId : null,
+        botSlot: sourceParticipant?.isBot ? sourceParticipant.botSlot : null
       })
     });
   }
@@ -121,6 +116,17 @@ export function stepGame(state, { now = Date.now(), deltaSeconds = 1 / 60, runti
 
   effects.push({ type: "publishRuntimeState", now });
   return { state: nextState, effects };
+}
+
+function mergeTouchStars(allTouchStars, changedTouchStars) {
+  const changedById = new Map((changedTouchStars ?? []).map((star) => [star.id, star]));
+  return (allTouchStars ?? []).map((star) => changedById.get(star.id) ?? star);
+}
+
+function findSourceParticipant(participants, sourceId) {
+  return (participants ?? []).find(
+    (participant) => String(participant?.clientId ?? participant?.id ?? "") === String(sourceId)
+  );
 }
 
 function applyParticipantRepulsion(state, deltaSeconds) {

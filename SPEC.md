@@ -9,11 +9,11 @@ Lumen Space is a social visual game without scoring or winners. The goal is to c
 3. Moving the pointer pulls the local light through the space with inertia.
 4. Nearby lights use a small collision radius derived from their visual size so contacts are gentle and bounded.
 5. Touching a small environmental star emits a pulse from the local light, colored by blending the star and lumen colors.
-6. Pressing `Send Pulse`, pressing Space, or double-clicking the scene emits a colored pulse from the local light.
+6. Pulses are not an explicit player or bot action; consuming a touch star is the only way to emit a colored pulse.
 7. When pulse fronts from different sources meet, they create a brief resonance flash.
-8. After browser audio is unlocked by user interaction, the room plays the procedural space lo-fi song; manual pulses, star-touch pulses, and resonance flashes briefly reshape the song's density, space, tone, and voices.
+8. After browser audio is unlocked by user interaction, the room plays the procedural space lo-fi song; star-touch pulses and resonance flashes briefly reshape the song's density, space, tone, and voices.
 9. The player can mute or unmute the local lo-fi room audio.
-10. Other players in the same room see the player's latest position and pulses.
+10. Other players in the same room see the player's latest position, shared bots, star-touch pulses, and resonances.
 11. Rooms are ephemeral. When all players leave, no room state remains.
 
 ## Scope
@@ -24,9 +24,9 @@ In scope:
 - Peer-to-peer realtime rooms for 2-8 participants.
 - Nickname and color identity stored locally.
 - Three.js visual scene with participant lights and pulse rings.
-- Local star-seeking bots that appear when a room starts, receive deterministic AI movement targets, move through the shared motion physics, and pulse.
+- Shared star-seeking bots with deterministic ownership, capped by room population, that move through the shared motion physics and consume stars.
 - Automated browser simulator for inspecting peer repulsion without manual multiplayer setup.
-- Realtime multi-user simulator mode that embeds several scene-only no-bot app clients in one WebRTC room and drives them with scripted user presets plus a configurable 1-8 client count.
+- Realtime multi-user simulator mode that embeds several scene-only no-bot app clients in one WebRTC room and drives those peers with scripted user presets plus a configurable 1-8 client count.
 - Simulator song mode that plays the shared procedural space lo-fi infinite song and visualizes the current musical state.
 - Unit tests for pure domain logic.
 - Required challenge documentation.
@@ -61,24 +61,26 @@ Out of scope:
 - The app runtime must support a configurable UI generator that receives app view state and action callbacks, then decides what UI to render.
 - The default app runtime must use the full lobby and room UI generator.
 - The physics simulator must include a realtime room mode where each simulated user is visible in its own embedded app screen, joins the same room through the normal WebRTC connection, starts without bots, uses a scene-only UI generator, follows a chosen preset such as star chasing, scripted paths, orbiting, or chasing another user, and can be launched with a selected 1-8 client count.
-- Rooms must render deterministic random-looking touch stars that can trigger pulses when crossed.
+- Scripted realtime star-chasing clients must target only the currently active population-scaled touch-star subset, so they cannot idle on inactive generated stars.
+- Rooms must render deterministic random-looking touch stars from a capped 24-star pool, activating a population-scaled subset for collision and rendering.
 - After a touch, the star must temporarily disappear and respawn in a new deterministic random-looking position and color.
 - Star-touch pulse colors must blend the touched star color with the triggering lumen color.
 - Star-touch pulses must temporarily suppress and respawn the matching star for other clients through existing pulse metadata.
+- Star-touch pulses must be the only accepted pulse event type; manual pulse messages must be ignored safely.
 - Stale peers must be removed after the heartbeat timeout.
 - Duplicate pulse messages must not create duplicate visuals.
 - Pulse fronts from different sources must create a short-lived resonance visual when they meet.
 - Local room audio must use the Web Audio API to synthesize the shared space lo-fi song and convert newly observed pulse and resonance events into song reactions after a user gesture unlocks audio.
-- Manual pulses, star-touch pulses, and resonance flashes must noticeably tune existing song voices, density, space, and tone in distinct ways while avoiding separate sound-effect stabs during repeated play.
+- Star-touch pulses and resonance flashes must noticeably tune existing song voices, density, space, and tone in distinct ways while avoiding separate sound-effect stabs during repeated play.
 - The default room UI must expose a mute/unmute Lo-Fi control.
 - Muted room audio must stop the song and must not replay old pulse or resonance reactions when unmuted again.
 - Scripted realtime simulator clients must use a single designated sound-source client so many iframe clients do not play over one another.
 - The realtime simulator parent must expose one mute/unmute Lo-Fi control instead of a separate control in every embedded client.
 - Malformed network messages and non-v2 Lumen Space protocol messages must be ignored safely.
 - If realtime connection fails, the app must keep retrying without switching into a separate offline mode.
-- Rooms must start with visible local bots, and users must be able to add and remove local bots.
-- Bot names must use the same generated-name flow as player defaults.
-- Bots must chase the closest available touch star on each update, ignore cooling stars, move through the same motion integration as user-driven lumes, preserve existing velocity, remain within world bounds, consume touch stars, and emit occasional pulses.
+- Rooms must maintain automatic shared bots according to active human count, with a hard total lume limit of 12, desired room population of 8, and maximum of 6 generated bots.
+- Shared bot IDs must be stable room-level participant IDs, and sorted active human client IDs must assign bot slots round-robin.
+- Bots must chase the closest available touch star on each update, ignore cooling stars, move through the same motion integration as user-driven lumes, preserve existing velocity, remain within world bounds, consume touch stars, and emit pulses only through star consumption.
 - A hidden debug toggle must show current lume positions, velocities, speed, and bot AI target/distance state for physics tuning without adding a visible player-facing control.
 
 ## Acceptance Criteria
@@ -92,18 +94,17 @@ Out of scope:
 - Opening `simulator.html` starts an automated peer simulation that visibly shows repulsion without requiring network setup.
 - In `simulator.html`, selecting the crossing scenario shows two peers following intersecting routes through the center.
 - In `simulator.html`, selecting realtime mode launches the selected number of scene-only embedded app clients in the same no-bot WebRTC room; changing the client count in realtime mode relaunches the embedded room with that count, and each client screen shows scripted movement through the normal app/WebRTC runtime.
-- In `simulator.html`, selecting song mode shows a procedural music visualization; pressing the Song mode audio control starts and stops the shared space lo-fi infinite song, changing the song sliders updates tempo, density, space, and volume, and reaction audition controls let manual pulse, star-touch, and resonance reactions be heard.
+- In `simulator.html`, selecting song mode shows a procedural music visualization; pressing the Song mode audio control starts and stops the shared space lo-fi infinite song, changing the song sliders updates tempo, density, space, and volume, and reaction audition controls let star-touch and resonance reactions be heard.
 - Touching an environmental star emits a blended-color pulse and temporarily hides that star.
 - Entering or interacting with a room starts the soft procedural space lo-fi song after browser audio is unlocked.
-- Manual pulse actions noticeably shift the song's lead, bass, and mix after browser audio is unlocked.
 - Star-touch pulses brighten the song's lead/dust texture and open the tone quickly, while pulse resonances open the song's pad/space and soften the kit.
 - The room Lo-Fi control can mute and unmute local room audio without replaying old reactions.
 - In realtime simulator mode, only one embedded client is configured as the audio source, and the simulator shell provides the only Lo-Fi control.
 - Pulse events appear locally and remotely.
-- Peers exchange only v2 `hello`, `presence`, and pulse `event` messages; old v1 presence/pulse payloads are ignored safely.
+- Peers exchange only v2 `hello`, `presence`, and star-touch pulse `event` messages; old v1 presence/pulse payloads and manual pulse events are ignored safely.
 - Overlapping pulse fronts from different sources create a resonance flash without a separate network message.
-- The user can add a bot, see it move and pulse, and remove it again.
-- Connecting to a room immediately shows local bots without requiring the user to press `Add Bot`.
+- Connecting to a room automatically shows shared bots when human population leaves room under the target population.
+- Closing a bot owner tab causes remaining clients to recalculate deterministic bot ownership and continue publishing shared bot presence.
 - Double-clicking the room label toggles a debug overlay whose position, velocity, and bot AI rows update as lumes move.
 - Closing one tab removes that participant from the other tab within the stale-peer window.
 - `npm test` passes.

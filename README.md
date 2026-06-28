@@ -1,6 +1,6 @@
 # Lumen Space
 
-Lumen Space is a small social visual game for the AI-native development challenge. Players enter an ephemeral shared room, appear as glowing lights in a calm 3D space, drift with cursor movement, and send colored pulse waves to one another.
+Lumen Space is a small social visual game for the AI-native development challenge. Players enter an ephemeral shared room, appear as glowing lights in a calm 3D space, drift with cursor movement, and release colored pulse waves by consuming touch stars.
 
 Playable link: TODO after the repository is created under `rc-ai-learning/vadim-kiryukhin-lumen-space` and GitDocs is enabled.
 
@@ -12,12 +12,13 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Move your light by moving the pointer.
 - Nearby lights use a small size-based collision radius, with local lumes slightly larger and bots smaller.
 - Pushed idle lights keep the displaced resting spot until fresh pointer or presence input moves them again.
-- Drift through small colorful touch stars to release pulses that blend star and lumen colors.
-- Send pulses that expand through the shared space.
+- Drift through small colorful touch stars to release pulses that blend star and lumen colors; star consumption is the only pulse source.
+- Rooms maintain a capped shared population of human players plus automatic star-seeking bots.
+- Touch-star availability scales from the active human and bot population, with a hard cap on the generated star pool.
 - When different players' pulse fronts meet, they create a brief resonance flash.
-- Hear the procedural space lo-fi song after the browser unlocks audio through interaction; manual pulses, star-touch pulses, and resonance flashes briefly and noticeably reshape the song's density, space, tone, and voices instead of playing as separate effects.
+- Hear the procedural space lo-fi song after the browser unlocks audio through interaction; star-touch pulses and resonance flashes briefly and noticeably reshape the song's density, space, tone, and voices instead of playing as separate effects.
 - Use the room Lo-Fi control to mute or unmute the reactive song.
-- Rooms start with passive AI-driven local bots that seek touch stars, and you can add or remove more bots.
+- Shared AI-driven bots seek touch stars automatically and are simulated by the connected players through deterministic ownership.
 - Rooms are peer-to-peer and ephemeral; no account, backend server, or database is used.
 - If realtime networking is unavailable, the app keeps retrying while the visual room stays usable.
 

@@ -4,7 +4,9 @@ import {
   chooseStartPosition,
   createInitialGameState,
   enterRoomState,
+  getActiveTouchStars,
   getParticipants,
+  getRoomPopulationPolicy,
   leaveRoomState
 } from "../../docs/app/src/core/game-state.js";
 import { SPACE_BOUNDS } from "../../docs/app/src/physics/vector.js";
@@ -31,7 +33,6 @@ test("enterRoomState creates deterministic room state with local bots and touch 
   });
   const state = enterRoomState(lobby, {
     now: 10_000,
-    initialBotCount: 2,
     startPosition: { x: 1, y: 2, z: 0 },
     createBotName: (seed, index) => `Bot ${index}:${seed}`
   });
@@ -39,9 +40,19 @@ test("enterRoomState creates deterministic room state with local bots and touch 
   assert.equal(state.phase, "room");
   assert.deepEqual(state.pointerTarget, { x: 1, y: 2, z: 0 });
   assert.equal(state.localParticipant.lastSeen, 10_000);
-  assert.equal(state.touchStars.length, 7);
-  assert.equal(state.botParticipants.length, 2);
-  assert.match(state.botParticipants[0].name, /^Bot 0:bot-room-1-0-10000$/);
+  assert.equal(state.touchStars.length, 24);
+  assert.equal(getActiveTouchStars(state).length, 20);
+  assert.equal(state.botParticipants.length, 6);
+  assert.equal(state.botParticipants[0].id, "bot:room-1:0");
+  assert.equal(state.botParticipants[0].ownerClientId, "client-1");
+  assert.match(state.botParticipants[0].name, /^Bot 0:bot-room-1-0$/);
+  assert.deepEqual(getRoomPopulationPolicy(state), {
+    humanClientIds: ["client-1"],
+    humanCount: 1,
+    botCount: 6,
+    activeLumes: 7,
+    touchStarCount: 20
+  });
 });
 
 test("leaveRoomState clears ephemeral room data without losing lobby identity", () => {
@@ -51,7 +62,7 @@ test("leaveRoomState clears ephemeral room data without losing lobby identity", 
       identity: { name: "Ada", color: "#7dd3fc" },
       roomId: "room-1"
     }),
-    { initialBotCount: 1 }
+    { sharedBotsEnabled: false }
   );
   const state = leaveRoomState({
     ...room,

@@ -124,9 +124,6 @@ function queryDefaultElements(document) {
     peopleList: document.querySelector("#people-list"),
     peerCount: document.querySelector("#peer-count"),
     copyLinkButton: document.querySelector("#copy-link-button"),
-    addBotButton: document.querySelector("#add-bot-button"),
-    removeBotButton: document.querySelector("#remove-bot-button"),
-    pulseButton: document.querySelector("#pulse-button"),
     soundButton: document.querySelector("#sound-button"),
     leaveButton: document.querySelector("#leave-button"),
     debugPanel: document.querySelector("#debug-panel"),
@@ -154,15 +151,6 @@ function bindDefaultUi(elements, actions) {
   });
   elements.copyLinkButton.addEventListener("click", () => {
     actions.onCopyInvite?.();
-  });
-  elements.addBotButton.addEventListener("click", () => {
-    actions.onAddBot?.();
-  });
-  elements.removeBotButton.addEventListener("click", () => {
-    actions.onRemoveBot?.();
-  });
-  elements.pulseButton.addEventListener("click", () => {
-    actions.onPulse?.();
   });
   elements.soundButton.addEventListener("click", () => {
     actions.onToggleSound?.();

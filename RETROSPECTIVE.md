@@ -58,6 +58,11 @@
 - Promoted the simulator's procedural space lo-fi song into the game room by exposing a reusable song controller, then softened pulse and resonance effects so interactions decorate the song instead of competing with it.
 - Reworked room audio again after the effects still felt too distinct: pulses and resonances now become deterministic song reactions that temporarily tune density, space, pad, bass, lead, dust, and kit softness, with simulator audition buttons for listening-based iteration.
 - Retuned the song reactions after environmental interactions became too hard to hear, removing accidental double-softening in the reaction mix and adding an immediate tone/wet-mix bloom on the existing song bus.
+- Reframed pulses as environmental reactions instead of explicit commands: players and bots no longer pulse manually or on timers, and touching stars is now the only pulse source.
+- Reworked bots from local room extras into shared room participants with stable bot IDs, deterministic round-robin ownership among active humans, and presence/pulse publication through the same v2 protocol.
+- Added capped population and star-density policy so rooms stay lively with few humans, avoid unbounded bot growth, and generate more active touch stars as total lumes increase.
+- Removed player-facing bot add/remove controls after the shared-bot model made bot count a room rule rather than a user command.
+- Fixed a realtime simulator regression where scripted star racers could chase inactive generated stars and appear idle; the simulator now uses the active star selector for target selection while keeping embedded clients bot-free so the scripted peers remain the controlled population.
 
 ## AI Tools Used
 

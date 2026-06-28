@@ -79,12 +79,40 @@ test("presence messages carry replaceable snapshots with monotonic sequences", (
   const normalized = normalizePresenceMessage(message, 2_050);
 
   assert.equal(normalized.sequence, 7);
+  assert.equal(normalized.kind, "human");
+  assert.equal(normalized.ownerClientId, null);
+  assert.equal(normalized.botSlot, null);
   assert.deepEqual(normalized.position, { x: SPACE_BOUNDS.x[1], y: 1, z: 0 });
   assert.equal(isNewerSequence(6, normalized.sequence), true);
   assert.equal(isNewerSequence(7, normalized.sequence), false);
 });
 
-test("pulse event messages dedupe by eventId and require star metadata for star touches", () => {
+test("bot presence messages require shared ownership metadata", () => {
+  const message = createPresenceMessage({
+    clientId: "bot:room-1:2",
+    sequence: 8,
+    identity: { name: "Sparkly Bot", color: "#fcd34d" },
+    position: { x: 0, y: 0, z: 0 },
+    velocity: { x: 0, y: 0, z: 0 },
+    targetPosition: { x: 1, y: 0, z: 0 },
+    kind: "bot",
+    ownerClientId: "client-owner",
+    botSlot: 2,
+    timestamp: 2_100
+  });
+  const normalized = normalizePresenceMessage(message, 2_150);
+
+  assert.equal(normalized.clientId, "bot:room-1:2");
+  assert.equal(normalized.kind, "bot");
+  assert.equal(normalized.ownerClientId, "client-owner");
+  assert.equal(normalized.botSlot, 2);
+
+  const missingOwner = { ...message };
+  delete missingOwner.ownerClientId;
+  assert.equal(normalizePresenceMessage(missingOwner), null);
+});
+
+test("pulse event messages dedupe by eventId and require star-touch metadata", () => {
   const manual = createPulseEventMessage({
     clientId: "client-3",
     sequence: 2,
@@ -95,11 +123,7 @@ test("pulse event messages dedupe by eventId and require star metadata for star 
     timestamp: 3_000,
     trigger: "manual"
   });
-  const normalizedManual = normalizePulseEventMessage(manual, 3_050);
-
-  assert.equal(normalizedManual.eventType, "pulse");
-  assert.equal(normalizedManual.trigger, "manual");
-  assert.equal(getEventDedupKey(normalizedManual), "pulse-client-3-2");
+  assert.equal(normalizePulseEventMessage(manual, 3_050), null);
 
   const starTouch = createPulseEventMessage({
     clientId: "client-3",
@@ -113,11 +137,38 @@ test("pulse event messages dedupe by eventId and require star metadata for star 
     starId: "touch-star-2",
     starGeneration: 4
   });
-  assert.equal(normalizePulseEventMessage(starTouch).starGeneration, 4);
+  const normalizedStarTouch = normalizePulseEventMessage(starTouch);
+  assert.equal(normalizedStarTouch.starGeneration, 4);
+  assert.equal(normalizedStarTouch.trigger, "star-touch");
+  assert.equal(getEventDedupKey(normalizedStarTouch), "pulse-client-3-star");
 
   const missingStarId = { ...starTouch };
   delete missingStarId.starId;
   assert.equal(normalizePulseEventMessage(missingStarId), null);
+});
+
+test("bot star-touch pulse events carry source ownership metadata", () => {
+  const message = createPulseEventMessage({
+    clientId: "bot:room-1:1",
+    sequence: 4,
+    eventId: "pulse-bot-star",
+    origin: { x: 0, y: 0, z: 0 },
+    color: "#86efac",
+    strength: 0.84,
+    timestamp: 4_000,
+    trigger: "star-touch",
+    starId: "touch-star-1",
+    starGeneration: 2,
+    sourceKind: "bot",
+    ownerClientId: "client-owner",
+    botSlot: 1
+  });
+  const normalized = normalizePulseEventMessage(message, 4_050);
+
+  assert.equal(normalized.clientId, "bot:room-1:1");
+  assert.equal(normalized.sourceKind, "bot");
+  assert.equal(normalized.ownerClientId, "client-owner");
+  assert.equal(normalized.botSlot, 1);
 });
 
 test("client IDs are deterministic when time and randomness are injected", () => {

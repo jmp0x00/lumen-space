@@ -7,8 +7,7 @@ export async function createSpaceScene({
   getParticipants,
   getPulses,
   getResonances = () => [],
-  getTouchStars = () => [],
-  onPulse
+  getTouchStars = () => []
 }) {
   const THREE = await import(THREE_URL);
 
@@ -46,7 +45,6 @@ export async function createSpaceScene({
   let width = 1;
   let height = 1;
 
-  renderer.domElement.addEventListener("dblclick", () => onPulse?.());
   window.addEventListener("resize", resize);
   resize();
 

@@ -149,16 +149,16 @@ export function createPulseSongReaction(pulse, { localClientId = "" } = {}) {
   const color = normalizeHexColor(pulse.color);
   const strength = clamp(pulse.strength ?? 1, 0.2, 2.5);
   const isStarTouch = pulse.trigger === "star-touch";
-  const isLocal =
-    localClientId !== "" && String(pulse.sourceId ?? "") === String(localClientId);
-  const baseIntensity = isStarTouch ? 0.76 : isLocal ? 0.56 : 0.42;
+  if (!isStarTouch) {
+    return null;
+  }
 
   return {
     id: `pulse:${pulseId}`,
     type: "song-reaction",
-    interactionType: isStarTouch ? "star-touch" : "manual-pulse",
+    interactionType: "star-touch",
     color,
-    intensity: roundNumber(clamp(baseIntensity + strength * 0.11, 0.24, isStarTouch ? 0.98 : 0.78), 3),
+    intensity: roundNumber(clamp(0.76 + strength * 0.11, 0.24, 0.98), 3),
     pan: getCuePan(pulse.origin)
   };
 }

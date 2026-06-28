@@ -1,8 +1,6 @@
-import { createPulse } from "./pulses.js";
 import { updateMotion } from "./motion.js";
 import { clampVector, planeDistance, sanitizeVector } from "./vector.js";
 
-export const BOT_PULSE_DEFAULT_INTERVAL_MS = 4_800;
 export const BOT_MOTION_OPTIONS = Object.freeze({
   responsiveness: 4.8,
   damping: 0.92,
@@ -18,34 +16,6 @@ export function updateBotParticipants(
   return participants.map((participant, index) =>
     updateBotParticipant(participant, now, deltaSeconds, index, options)
   );
-}
-
-export function collectDueBotPulses(participants, now = Date.now()) {
-  const nextParticipants = [];
-  const duePulses = [];
-
-  for (const participant of participants) {
-    const nextPulseAt = Number(participant.nextPulseAt ?? now);
-    if (now >= nextPulseAt) {
-      const pulse = createPulse({
-        id: `pulse-${participant.id}-${Math.floor(now)}`,
-        origin: participant.position,
-        color: participant.color,
-        strength: participant.pulseStrength ?? 0.82,
-        timestamp: now,
-        sourceId: participant.id
-      });
-      duePulses.push(pulse);
-      nextParticipants.push({
-        ...participant,
-        nextPulseAt: now + Number(participant.pulseEveryMs ?? BOT_PULSE_DEFAULT_INTERVAL_MS)
-      });
-    } else {
-      nextParticipants.push(participant);
-    }
-  }
-
-  return { participants: nextParticipants, pulses: duePulses };
 }
 
 export function getBotInputTarget(participant, now = Date.now(), botIndex = 0, options = {}) {

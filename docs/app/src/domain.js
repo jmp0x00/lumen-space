@@ -1,7 +1,5 @@
 import { COLORS, DEFAULT_COLOR, isValidHexColor, normalizeHexColor } from "./colors.js";
 import {
-  BOT_PULSE_DEFAULT_INTERVAL_MS,
-  collectDueBotPulses,
   updateBotParticipants
 } from "./physics/bots.js?v=peer-collision-radius-20260627";
 import {
@@ -88,8 +86,6 @@ export {
   calculatePeerRepulsionVelocityDelta
 };
 export {
-  BOT_PULSE_DEFAULT_INTERVAL_MS,
-  collectDueBotPulses,
   updateBotParticipants
 };
 export {

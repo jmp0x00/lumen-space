@@ -8,7 +8,6 @@ import {
   TOUCH_STAR_COOLDOWN_MS,
   addPulse,
   clampVector,
-  collectDueBotPulses,
   collectTouchStarPulses,
   createInviteUrl,
   createPresenceMessage,
@@ -550,30 +549,4 @@ test("bot participants drift deterministically within bounds", () => {
   assert.ok(second[0].position.x >= SPACE_BOUNDS.x[0] && second[0].position.x <= SPACE_BOUNDS.x[1]);
   assert.ok(second[0].position.y >= SPACE_BOUNDS.y[0] && second[0].position.y <= SPACE_BOUNDS.y[1]);
   assert.ok(second[0].position.z >= SPACE_BOUNDS.z[0] && second[0].position.z <= SPACE_BOUNDS.z[1]);
-});
-
-test("bot pulses only when a bot participant is due", () => {
-  const participants = [
-    {
-      id: "bot-1",
-      name: "Bot",
-      color: "#86efac",
-      position: { x: 1, y: 2, z: 0 },
-      nextPulseAt: 2_000,
-      pulseEveryMs: 5_000,
-      pulseStrength: 0.75,
-      isBot: true
-    }
-  ];
-
-  const early = collectDueBotPulses(participants, 1_999);
-  assert.deepEqual(early.pulses, []);
-  assert.equal(early.participants[0], participants[0]);
-
-  const due = collectDueBotPulses(participants, 2_000);
-  assert.equal(due.pulses.length, 1);
-  assert.deepEqual(due.pulses[0].origin, { x: 1, y: 2, z: 0 });
-  assert.equal(due.pulses[0].sourceId, "bot-1");
-  assert.equal(due.pulses[0].strength, 0.75);
-  assert.equal(due.participants[0].nextPulseAt, 7_000);
 });

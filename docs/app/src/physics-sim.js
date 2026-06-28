@@ -977,15 +977,6 @@ function getSongParameterValues() {
 }
 
 function getAuditionReactionInput(interactionType) {
-  if (interactionType === "star-touch") {
-    return {
-      id: `sim-star-${Date.now()}`,
-      interactionType: "star-touch",
-      color: "#fcd34d",
-      intensity: 0.74,
-      pan: 0.28
-    };
-  }
   if (interactionType === "resonance") {
     return {
       id: `sim-resonance-${Date.now()}`,
@@ -996,11 +987,11 @@ function getAuditionReactionInput(interactionType) {
     };
   }
   return {
-    id: `sim-manual-${Date.now()}`,
-    interactionType: "manual-pulse",
-    color: "#7dd3fc",
-    intensity: 0.52,
-    pan: -0.22
+    id: `sim-star-${Date.now()}`,
+    interactionType: "star-touch",
+    color: "#fcd34d",
+    intensity: 0.74,
+    pan: 0.28
   };
 }
 

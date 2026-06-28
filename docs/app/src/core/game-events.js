@@ -4,16 +4,14 @@ import { createPulse } from "../physics/pulses.js";
 import {
   createHelloMessage,
   createPresenceMessage,
-  createPulseEventMessage,
   getEventDedupKey,
   isNewerSequence,
   normalizeProtocolIdentity
 } from "../protocol.js";
 import {
-  createBotParticipant,
   enterRoomState,
-  getParticipants,
-  leaveRoomState
+  leaveRoomState,
+  syncOwnedSharedBotParticipants
 } from "./game-state.js";
 
 export function reduceGameEvent(state, event = {}) {
@@ -59,15 +57,9 @@ export function reduceGameEvent(state, event = {}) {
     case "peers/prune-stale":
       return withoutEffects(pruneStalePeers(state, event.now, event.timeoutMs));
     case "peers/clear":
-      return withoutEffects({ ...state, peers: {} });
+      return withoutEffects(syncOwnedSharedBotParticipants({ ...state, peers: {} }));
     case "network/pulse":
       return withoutEffects(applyNetworkPulseEvent(state, event.message));
-    case "pulse/local-request":
-      return createLocalPulse(state, event);
-    case "bot/add":
-      return addBot(state, event);
-    case "bot/remove":
-      return removeBot(state);
     case "network/hello-request":
       return createHelloEffect(state, event.now);
     case "network/presence-request":
@@ -136,26 +128,39 @@ function addPeerPlaceholder(state, peerId, now = Date.now()) {
 }
 
 function removePeer(state, peerId) {
-  if (!Object.hasOwn(state.peers, peerId)) {
+  const nextPeers = Object.fromEntries(
+    Object.entries(state.peers).filter(
+      ([logicalId, peer]) => logicalId !== peerId && peer.transportPeerId !== peerId
+    )
+  );
+  if (Object.keys(nextPeers).length === Object.keys(state.peers).length) {
     return state;
   }
-  const nextPeers = { ...state.peers };
-  delete nextPeers[peerId];
-  return { ...state, peers: nextPeers };
+  return syncOwnedSharedBotParticipants({ ...state, peers: nextPeers });
 }
 
 function applyPeerHello(state, peerId, message) {
   if (!peerId || !message) {
     return state;
   }
-  const existing = state.peers[peerId] ?? addPeerPlaceholder(state, peerId, message.receivedAt).peers[peerId];
-  return {
+  if (message.clientId === state.clientId) {
+    return state;
+  }
+
+  const peerKey = message.clientId;
+  const peers = { ...state.peers };
+  const placeholder = peers[peerId];
+  if (peerKey !== peerId) {
+    delete peers[peerId];
+  }
+  const existing = peers[peerKey] ?? placeholder ?? addPeerPlaceholder(state, peerId, message.receivedAt).peers[peerId];
+  return syncOwnedSharedBotParticipants({
     ...state,
     peers: {
-      ...state.peers,
-      [peerId]: {
+      ...peers,
+      [peerKey]: {
         ...existing,
-        id: peerId,
+        id: peerKey,
         transportPeerId: peerId,
         clientId: message.clientId,
         name: message.name,
@@ -165,7 +170,7 @@ function applyPeerHello(state, peerId, message) {
         lastSeen: message.receivedAt
       }
     }
-  };
+  });
 }
 
 function applyPeerPresence(state, peerId, message) {
@@ -173,20 +178,36 @@ function applyPeerPresence(state, peerId, message) {
     return state;
   }
 
-  const existing = state.peers[peerId];
-  if (existing && !isNewerSequence(existing.sequence, message.sequence)) {
+  const peerKey = message.clientId;
+  if (peerKey === state.clientId || state.botParticipants.some((bot) => bot.id === peerKey)) {
+    return state;
+  }
+
+  const peers = { ...state.peers };
+  const placeholder = peers[peerId];
+  if (peerKey !== peerId) {
+    delete peers[peerId];
+  }
+
+  const existing = peers[peerKey];
+  const samePublisher =
+    existing &&
+    existing.transportPeerId === peerId &&
+    String(existing.ownerClientId ?? existing.clientId ?? "") ===
+      String(message.ownerClientId ?? message.clientId ?? "");
+  if (existing && samePublisher && !isNewerSequence(existing.sequence, message.sequence)) {
     return state;
   }
 
   const hasExistingPeer = Boolean(existing);
-  const base = existing ?? addPeerPlaceholder(state, peerId, message.receivedAt).peers[peerId];
-  return {
+  const base = existing ?? placeholder ?? addPeerPlaceholder(state, peerId, message.receivedAt).peers[peerId];
+  const nextState = {
     ...state,
     peers: {
-      ...state.peers,
-      [peerId]: {
+      ...peers,
+      [peerKey]: {
         ...base,
-        id: peerId,
+        id: peerKey,
         transportPeerId: peerId,
         clientId: message.clientId,
         name: message.name,
@@ -198,20 +219,23 @@ function applyPeerPresence(state, peerId, message) {
         sequence: message.sequence,
         timestamp: message.timestamp,
         lastSeen: message.receivedAt,
+        ownerClientId: message.ownerClientId,
+        botSlot: message.botSlot,
         isLocal: false,
-        isBot: false
+        isBot: message.kind === "bot"
       }
     }
   };
+  return syncOwnedSharedBotParticipants(nextState);
 }
 
 function pruneStalePeers(state, now = Date.now(), timeoutMs = 10_000) {
-  return {
+  return syncOwnedSharedBotParticipants({
     ...state,
     peers: Object.fromEntries(
       Object.entries(state.peers).filter(([, peer]) => now - Number(peer.lastSeen ?? 0) <= timeoutMs)
     )
-  };
+  });
 }
 
 function applyNetworkPulseEvent(state, message) {
@@ -245,84 +269,6 @@ function applyNetworkPulseEvent(state, message) {
   );
 }
 
-function createLocalPulse(state, event) {
-  const now = event.now ?? Date.now();
-  const eventId = event.eventId ?? `pulse-${state.clientId}-${now}-${state.pulseSequence}`;
-  const pulse = createPulse({
-    id: eventId,
-    origin: event.origin ?? state.localParticipant.position,
-    color: event.color ?? state.identity.color,
-    strength: event.strength ?? 1.1,
-    timestamp: now,
-    sourceId: state.clientId,
-    trigger: event.trigger === "star-touch" ? "star-touch" : null,
-    starId: event.starId,
-    starGeneration: event.starGeneration
-  });
-  const sequence = nextNetworkSequence(state);
-  const message = createPulseEventMessage({
-    clientId: state.clientId,
-    sequence,
-    eventId,
-    origin: pulse.origin,
-    color: pulse.color,
-    strength: pulse.strength,
-    timestamp: pulse.timestamp,
-    trigger: event.trigger ?? "manual",
-    starId: event.starId,
-    starGeneration: event.starGeneration
-  });
-  const nextState = addPulseToState(
-    {
-      ...state,
-      networkSequence: sequence,
-      pulseSequence: state.pulseSequence + 1,
-      seenEventIds: {
-        ...state.seenEventIds,
-        [eventId]: true
-      }
-    },
-    pulse
-  );
-  return {
-    state: nextState,
-    effects: [{ type: "sendEvent", message }]
-  };
-}
-
-function addBot(state, event) {
-  const bot = createBotParticipant({
-    index: state.botParticipants.length,
-    roomId: state.roomId,
-    createdAt: event.now ?? Date.now(),
-    createBotName: event.createBotName
-  });
-  return {
-    state: {
-      ...state,
-      botParticipants: [...state.botParticipants, bot]
-    },
-    effects: [{ type: "toast", message: `${bot.name} joined as a bot.` }]
-  };
-}
-
-function removeBot(state) {
-  const removedBot = state.botParticipants.at(-1);
-  if (!removedBot) {
-    return {
-      state,
-      effects: [{ type: "toast", message: "No bots to remove." }]
-    };
-  }
-  return {
-    state: {
-      ...state,
-      botParticipants: state.botParticipants.slice(0, -1)
-    },
-    effects: [{ type: "toast", message: `${removedBot.name} removed.` }]
-  };
-}
-
 function createHelloEffect(state, now = Date.now()) {
   return {
     state,
@@ -340,27 +286,56 @@ function createHelloEffect(state, now = Date.now()) {
 }
 
 function createPresenceEffect(state, now = Date.now()) {
-  const sequence = nextNetworkSequence(state);
+  let sequence = Math.max(0, Math.floor(Number(state.networkSequence) || 0));
+  const effects = [];
+  const addPresenceEffect = ({ clientId, identity, position, velocity, targetPosition, kind, ownerClientId, botSlot }) => {
+    sequence += 1;
+    effects.push({
+      type: "sendPresence",
+      message: createPresenceMessage({
+        clientId,
+        sequence,
+        identity,
+        position,
+        velocity,
+        targetPosition,
+        kind,
+        ownerClientId,
+        botSlot,
+        timestamp: now
+      })
+    });
+  };
+
+  addPresenceEffect({
+    clientId: state.clientId,
+    identity: state.identity,
+    position: state.localParticipant.position,
+    velocity: state.localParticipant.velocity,
+    targetPosition: state.pointerTarget,
+    kind: "human"
+  });
+
+  for (const bot of state.botParticipants) {
+    addPresenceEffect({
+      clientId: bot.id,
+      identity: { name: bot.name, color: bot.color },
+      position: bot.position,
+      velocity: bot.velocity,
+      targetPosition: bot.targetPosition,
+      kind: "bot",
+      ownerClientId: state.clientId,
+      botSlot: bot.botSlot
+    });
+  }
+
   const nextState = {
     ...state,
     networkSequence: sequence
   };
   return {
     state: nextState,
-    effects: [
-      {
-        type: "sendPresence",
-        message: createPresenceMessage({
-          clientId: state.clientId,
-          sequence,
-          identity: state.identity,
-          position: state.localParticipant.position,
-          velocity: state.localParticipant.velocity,
-          targetPosition: state.pointerTarget,
-          timestamp: now
-        })
-      }
-    ]
+    effects
   };
 }
 

@@ -11,7 +11,7 @@ const SCHEDULE_AHEAD_SECONDS = 0.42;
 const SCHEDULER_INTERVAL_MS = 55;
 const NOISE_LOOP_FADE_SECONDS = 0.08;
 const DEFAULT_SEED = "lumen-space-song";
-const REACTION_TYPES = new Set(["manual-pulse", "star-touch", "resonance"]);
+const REACTION_TYPES = new Set(["star-touch", "resonance"]);
 const PROGRESSION = [
   {
     name: "Am9",
@@ -995,8 +995,8 @@ function normalizeReaction(reaction, song) {
 }
 
 function normalizeReactionType(type) {
-  const normalized = String(type ?? "manual-pulse").trim().toLowerCase();
-  return REACTION_TYPES.has(normalized) ? normalized : "manual-pulse";
+  const normalized = String(type ?? "star-touch").trim().toLowerCase();
+  return REACTION_TYPES.has(normalized) ? normalized : "star-touch";
 }
 
 function createEmptyReactionState(song = null) {
@@ -1103,12 +1103,12 @@ function getReactionPadLift(type, intensity, song) {
 }
 
 function getReactionBassLift(type, intensity, song) {
-  const base = type === "resonance" ? 0.12 : type === "manual-pulse" ? 0.09 : 0.05;
+  const base = type === "resonance" ? 0.12 : 0.05;
   return base * intensity;
 }
 
 function getReactionLeadLift(type, intensity, song) {
-  const base = type === "star-touch" ? 0.3 : type === "manual-pulse" ? 0.16 : 0.12;
+  const base = type === "star-touch" ? 0.3 : 0.12;
   return base * intensity;
 }
 

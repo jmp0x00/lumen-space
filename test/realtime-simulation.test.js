@@ -74,7 +74,7 @@ test("realtime room client count clamps to the supported simulator range", () =>
 
 test("simulation client config parses URL parameters and disables bots by default", () => {
   const config = getSimulationClientConfig(
-    "http://localhost:4173/index.html?simClient=1&simName=Long%20Simulation%20User%20Name&simColor=%23fb7185&simBehavior=chase&simTarget=Ada%20Star&simIndex=2&simCount=6&simPulseEveryMs=4200"
+    "http://localhost:4173/index.html?simClient=1&simName=Long%20Simulation%20User%20Name&simColor=%23fb7185&simBehavior=chase&simTarget=Ada%20Star&simIndex=2&simCount=6"
   );
 
   assert.equal(config.name, "Long Simulation Us");
@@ -83,7 +83,6 @@ test("simulation client config parses URL parameters and disables bots by defaul
   assert.equal(config.targetName, "Ada Star");
   assert.equal(config.index, 2);
   assert.equal(config.count, 6);
-  assert.equal(config.pulseEveryMs, 4_200);
   assert.equal(config.disableBots, true);
   assert.equal(config.soundSource, false);
   assert.equal(config.soundInitiallyEnabled, false);
@@ -96,6 +95,14 @@ test("simulation client config parses the single sound source flags", () => {
 
   assert.equal(config.soundSource, true);
   assert.equal(config.soundInitiallyEnabled, true);
+});
+
+test("simulation client config can explicitly enable shared bots for harness experiments", () => {
+  const config = getSimulationClientConfig(
+    "http://localhost:4173/index.html?simClient=1&appBots=1"
+  );
+
+  assert.equal(config.disableBots, false);
 });
 
 test("realtime room clients keep sound assigned to only one source", () => {
@@ -214,7 +221,7 @@ test("runtime config uses the full default UI outside scripted clients", () => {
   assert.equal(config.usePointerInput, true);
   assert.equal(config.soundEffects, true);
   assert.equal(config.soundInitiallyEnabled, true);
-  assert.equal(config.initialBotCount, 2);
+  assert.equal(config.sharedBotsEnabled, true);
   assert.equal(config.uiMode, "default");
   assert.equal(config.createUi.name, "createDefaultAppUi");
 });
@@ -247,7 +254,7 @@ test("runtime config drives scripted clients through app-level configuration", (
   assert.equal(config.usePointerInput, false);
   assert.equal(config.soundEffects, false);
   assert.equal(config.soundInitiallyEnabled, false);
-  assert.equal(config.initialBotCount, 0);
+  assert.equal(config.sharedBotsEnabled, false);
   assert.equal(config.identity.name, "Ada Star");
   assert.equal(config.identity.color, "#7dd3fc");
   assert.equal(config.uiMode, "scene-only");
@@ -262,6 +269,7 @@ test("runtime config drives scripted clients through app-level configuration", (
     status: "Online",
     peerCount: 2,
     botCount: 0,
+    touchStarCount: 8,
     position: { x: 1.234, y: -2.345, z: 0.456 },
     target: { x: 3.333, y: 2.222, z: -1.111 },
     sound: { available: false, enabled: false },
@@ -278,6 +286,7 @@ test("runtime config drives scripted clients through app-level configuration", (
     status: "Online",
     peerCount: 2,
     botCount: 0,
+    touchStarCount: 8,
     position: { x: 1.23, y: -2.35, z: 0.46 },
     target: { x: 3.33, y: 2.22, z: -1.11 },
     sound: { available: false, enabled: false },

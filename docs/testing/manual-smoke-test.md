@@ -13,8 +13,8 @@ Use this checklist after any UI or networking change.
 9. Double-click the room label and confirm the hidden debug panel shows position, velocity, and speed rows that update as lumes move.
 10. Double-click the room label again and confirm the debug panel hides.
 11. Move through a small touch star and confirm a pulse appears and the star temporarily disappears.
-12. Click `Send Pulse` in each tab and confirm pulse rings appear in both tabs.
-13. Close one tab and confirm the peer disappears within the stale-peer window.
-14. Click `Add Bot` and confirm a bot appears, moves, and eventually pulses.
-15. Click `Remove Bot` and confirm the latest bot disappears.
+12. Confirm there is no `Send Pulse`, `Add Bot`, or `Remove Bot` room control.
+13. Press Space and double-click the scene, then confirm no pulse appears unless a touch star is consumed.
+14. Confirm shared bots appear automatically, chase stars, and create pulses only when they consume stars.
+15. Close one tab and confirm the peer disappears within the stale-peer window while remaining clients continue showing shared bots.
 16. Block network access or CDN loading, reload, and confirm the app keeps reporting retry status rather than a blank screen.

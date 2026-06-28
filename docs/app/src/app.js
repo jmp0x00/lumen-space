@@ -13,6 +13,7 @@ import { createInitialGameState, chooseStartPosition } from "./core/game-state.j
 import { reduceGameEvent } from "./core/game-events.js";
 import {
   selectRuntimeStateContext,
+  selectRuntimeTargetContext,
   selectSceneModel,
   selectUiView
 } from "./core/scene-model.js";
@@ -57,7 +58,6 @@ let reconnectTimer = 0;
 let animationFrame = 0;
 let lastFrameAt = performance.now();
 let roomLoopStartedAt = performance.now();
-let nextRuntimePulseAt = 0;
 let runtimeStatePostedAt = 0;
 let connectionAttempt = 0;
 let pointerAbortController = null;
@@ -83,9 +83,6 @@ const ui = runtimeConfig.createUi({
     onJoinRoom: joinRoomFromLobby,
     onSelectColor: selectColor,
     onCopyInvite: copyInviteLink,
-    onAddBot: addBot,
-    onRemoveBot: removeBot,
-    onPulse: sendLocalPulse,
     onToggleSound: toggleSound,
     onLeaveRoom: leaveRoom,
     onToggleDebug: toggleDebugPanel
@@ -193,14 +190,9 @@ async function enterRoom() {
     roomId: game.roomId,
     now: Date.now(),
     startPosition: runtimeConfig.getStartPosition?.() ?? chooseStartPosition(game.identity.name),
-    initialBotCount: runtimeConfig.initialBotCount,
-    createBotName: (seed) => generateDisplayNameSync(seed)
+    sharedBotsEnabled: runtimeConfig.sharedBotsEnabled
   });
   roomLoopStartedAt = performance.now();
-  nextRuntimePulseAt = runtimeConfig.pulseEveryMs
-    ? Date.now() + Math.max(1_000, runtimeConfig.pulseEveryMs)
-    : 0;
-  window.addEventListener("keydown", handleKeydown);
 
   startRoomLoop();
 
@@ -210,8 +202,7 @@ async function enterRoom() {
       getParticipants: () => selectSceneModel(game).participants,
       getPulses: () => selectSceneModel(game).pulses,
       getResonances: () => selectSceneModel(game).resonances,
-      getTouchStars: () => selectSceneModel(game).touchStars,
-      onPulse: sendLocalPulse
+      getTouchStars: () => selectSceneModel(game).touchStars
     });
     sceneController.start();
     if (runtimeConfig.usePointerInput) {
@@ -361,19 +352,17 @@ function startRoomLoop() {
 
     const nowMs = Date.now();
     const runtimeTarget = runtimeConfig.getTarget
-      ? runtimeConfig.getTarget({
-          localParticipant: game.localParticipant,
-          peers: Object.values(game.peers),
-          touchStars: game.touchStars,
-          elapsedSeconds: Math.max(0, (now - roomLoopStartedAt) / 1000),
-          now: nowMs
-        })
+      ? runtimeConfig.getTarget(
+          selectRuntimeTargetContext(game, {
+            elapsedSeconds: Math.max(0, (now - roomLoopStartedAt) / 1000),
+            now: nowMs
+          })
+        )
       : null;
 
     applyCoreResult(stepGame(game, { now: nowMs, deltaSeconds, runtimeTarget }), {
       render: false
     });
-    maybeSendRuntimePulse(nowMs);
     if (game.debugVisible) {
       renderUi();
     }
@@ -413,23 +402,6 @@ function sendPresence() {
   dispatch({ type: "network/presence-request", now: Date.now() }, { render: false });
 }
 
-function sendLocalPulse() {
-  if (game.phase !== "room") {
-    return;
-  }
-  unlockPulseAudio();
-  dispatch({ type: "pulse/local-request", now: Date.now(), trigger: "manual" }, { render: false });
-}
-
-function maybeSendRuntimePulse(nowMs) {
-  if (!runtimeConfig.pulseEveryMs || !connection || nowMs < nextRuntimePulseAt) {
-    return;
-  }
-
-  sendLocalPulse();
-  nextRuntimePulseAt = nowMs + runtimeConfig.pulseEveryMs;
-}
-
 function publishRuntimeState(nowMs) {
   if (!runtimeConfig.createState) {
     return;
@@ -448,18 +420,6 @@ function publishRuntimeState(nowMs) {
     runtimeStatePostedAt = nowMs;
     window.parent.postMessage(state, window.location.origin);
   }
-}
-
-function addBot() {
-  dispatch({
-    type: "bot/add",
-    now: Date.now(),
-    createBotName: (seed) => generateDisplayNameSync(seed)
-  });
-}
-
-function removeBot() {
-  dispatch({ type: "bot/remove" });
 }
 
 async function copyInviteLink() {
@@ -483,16 +443,7 @@ function leaveRoom() {
   window.clearTimeout(reconnectTimer);
   stopPresenceLoop();
   window.cancelAnimationFrame(animationFrame);
-  window.removeEventListener("keydown", handleKeydown);
   dispatch({ type: "room/leave" });
-}
-
-function handleKeydown(event) {
-  if (event.code === "Space" && !event.repeat) {
-    event.preventDefault();
-    unlockPulseAudio();
-    sendLocalPulse();
-  }
 }
 
 function toggleSound() {

@@ -4,7 +4,7 @@ import { createPulse } from "./pulses.js";
 import { getPeerStarCollisionDistance } from "./collision.js?v=peer-collision-radius-20260627";
 import { SPACE_BOUNDS, clamp, planeDistance } from "./vector.js";
 
-export const TOUCH_STAR_COUNT = 7;
+export const TOUCH_STAR_COUNT = 24;
 export const TOUCH_STAR_RADIUS = 0.48;
 export const TOUCH_STAR_COOLDOWN_MS = 7_500;
 
@@ -26,7 +26,7 @@ export function collectTouchStarPulses(
   const nextTouchStars = touchStars.map((star) => ({ ...star }));
 
   for (const participant of participants) {
-    const participantId = String(participant?.id ?? "");
+    const participantId = String(participant?.clientId ?? participant?.id ?? "");
     if (!participantId) {
       continue;
     }
