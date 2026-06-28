@@ -14,7 +14,7 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Pushed idle lights keep the displaced resting spot until fresh pointer or presence input moves them again.
 - Drift through small colorful touch stars to release pulses that blend star and lumen colors; star consumption is the only pulse source.
 - Rooms maintain a capped shared population of human players plus automatic star-seeking bots.
-- Touch-star availability scales from the active human and bot population, with a 36-star generated pool and active cap.
+- Touch-star availability scales from the active human and bot population, with a 36-star generated pool and active cap spread across the playable space.
 - When different players' pulse fronts meet, they create a brief resonance flash.
 - Hear the procedural space lo-fi song after the browser unlocks audio through interaction; star-touch pulses and resonance flashes briefly and noticeably reshape the song's density, space, tone, and voices instead of playing as separate effects.
 - Use the room Lo-Fi control to mute or unmute the reactive song.

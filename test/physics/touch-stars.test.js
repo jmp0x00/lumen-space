@@ -6,6 +6,7 @@ import {
   createTouchStars,
   suppressTouchStarsFromPulses
 } from "../../docs/app/src/physics/touch-stars.js";
+import { TOUCH_STAR_CONFIG } from "../../docs/app/src/config.js";
 import {
   createPulse,
   createPulseMessage,
@@ -32,6 +33,15 @@ test("touch-star fields are deterministic per room and stay inside bounds", () =
     assert.ok(star.position.y >= SPACE_BOUNDS.y[0] && star.position.y <= SPACE_BOUNDS.y[1]);
     assert.ok(star.position.z >= SPACE_BOUNDS.z[0] && star.position.z <= SPACE_BOUNDS.z[1]);
   }
+});
+
+test("active touch-star prefixes are spread across the playable space", () => {
+  const stars = createTouchStars("lumen-spread", 36).slice(0, 10);
+  const xBands = new Set(stars.map((star) => getBand(star.position.x, "x", 3)));
+  const yBands = new Set(stars.map((star) => getBand(star.position.y, "y", 4)));
+
+  assert.equal(xBands.size, 3);
+  assert.equal(yBands.size, 4);
 });
 
 test("touch-star collisions emit one blended pulse and respawn after cooldown", () => {
@@ -158,3 +168,11 @@ test("remote star-touch pulses suppress and respawn the matching star determinis
   assert.equal(remoteSuppressed[0].color, localTouch.touchStars[0].color);
   assert.equal(remoteSuppressed[0].availableAt, 2_250 + TOUCH_STAR_COOLDOWN_MS);
 });
+
+function getBand(value, axis, count) {
+  const padding =
+    axis === "x" ? TOUCH_STAR_CONFIG.spawnPaddingX : TOUCH_STAR_CONFIG.spawnPaddingY;
+  const [min, max] = SPACE_BOUNDS[axis];
+  const unit = (value - (min + padding)) / (max - min - padding * 2);
+  return Math.max(0, Math.min(count - 1, Math.floor(unit * count)));
+}

@@ -32,7 +32,7 @@ The preferred long-term game-core model is documented in
 - `physics/repulsion.js` owns bounded peer-to-peer velocity nudges and visible movement-plane separation correction using pair collision distances from `physics/collision.js`.
 - Peer repulsion also carries each participant's current movement target by the same displacement, preventing idle local or remote lumes from easing back to stale targets after a push.
 - `physics/bots.js` owns deterministic crowd-aware bot AI target generation toward available touch stars and shared motion integration for bot participants.
-- `physics/touch-stars.js` owns deterministic touch-star placement, peer-radius-aware plane-distance collision, cooldown, respawn, and remote suppression.
+- `physics/touch-stars.js` owns deterministic progressive-spread touch-star placement, peer-radius-aware plane-distance collision, cooldown, respawn, and remote suppression.
 - `physics/pulses.js` owns pulse normalization, progression, radius calculation, deduplication, expiry, and resonance detection.
 - `network.js` dynamically imports Trystero and exposes a small room adapter with `sendHello`, `sendPresence`, `sendEvent`, and `leave`.
 - `names.js` dynamically imports Unique Names Generator and falls back to a small deterministic local generator if the CDN is unavailable.
@@ -52,7 +52,7 @@ This shape keeps network and rendering side effects away from the logic covered 
 ## Data Flow
 
 1. The selected UI generator emits action callbacks; `app.js` dispatches reducer events and performs browser-only side effects such as `localStorage`, history updates, clipboard writes, and toasts.
-2. Entering a room creates canonical room state through `core/game-state.js`: local participant, pointer target, a capped deterministic touch-star pool, owned shared bot slots, status, and empty peer/pulse/resonance collections.
+2. Entering a room creates canonical room state through `core/game-state.js`: local participant, pointer target, a capped deterministic touch-star pool spread across the playable space, owned shared bot slots, status, and empty peer/pulse/resonance collections.
 3. `scene.js` starts the WebGL scene, maps pointer positions to world-space targets, and renders data selected from canonical game state.
 4. Each animation frame calls `core/simulation.js`, which recalculates shared bot ownership, updates local motion, remote interpolation, owned crowd-aware bot AI/motion, collision repulsion, pulse expiry, touch-star cooldowns, star-touch pulses, and resonances.
 5. `core/game-events.js` returns outbound effects such as v2 pulse events, presence messages, hello messages, toasts, and runtime-simulator state publishing. `app.js` executes those effects against WebRTC, DOM, or `postMessage`.

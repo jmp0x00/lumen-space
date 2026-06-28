@@ -151,6 +151,7 @@ export const TOUCH_STAR_CONFIG = Object.freeze({
   activePerLume: 3,
   spawnPaddingX: 1,
   spawnPaddingY: 0.9,
+  spreadCellInset: 0.18,
   spawnZMin: -0.9,
   spawnZMax: 0.4,
   saturationMin: 68,

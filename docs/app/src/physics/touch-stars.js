@@ -14,7 +14,10 @@ export { TOUCH_STAR_COOLDOWN_MS, TOUCH_STAR_COUNT, TOUCH_STAR_RADIUS };
 
 export function createTouchStars(roomId, count = TOUCH_STAR_COUNT) {
   const roomSeed = normalizeRoomId(roomId) ?? "lumen-room";
-  return Array.from({ length: count }, (_, index) => createTouchStar(roomSeed, index));
+  const poolSize = normalizeStarCount(count);
+  return Array.from({ length: poolSize }, (_, index) =>
+    createTouchStar(roomSeed, index, 0, 0, undefined, poolSize)
+  );
 }
 
 export function collectTouchStarPulses(
@@ -125,11 +128,20 @@ export function suppressTouchStarsFromPulses(
   });
 }
 
-function createTouchStar(roomSeed, index, generation = 0, availableAt = 0, touchedAt = undefined) {
+function createTouchStar(
+  roomSeed,
+  index,
+  generation = 0,
+  availableAt = 0,
+  touchedAt = undefined,
+  poolSize = TOUCH_STAR_COUNT
+) {
   const safeRoomSeed = normalizeRoomId(roomSeed) ?? "lumen-room";
   const safeIndex = normalizeStarIndex(index);
   const safeGeneration = normalizeStarGeneration(generation);
+  const safePoolSize = normalizeStarPoolSize(poolSize);
   const seed = `${safeRoomSeed}:${safeIndex}:${safeGeneration}`;
+  const spreadPosition = createSpreadPosition(seed, safeIndex, safePoolSize);
   const hue = Math.floor(seededText(seed, "hue") * 360);
   const saturation = scaleBetween(
     seededText(seed, "saturation"),
@@ -146,23 +158,8 @@ function createTouchStar(roomSeed, index, generation = 0, availableAt = 0, touch
     roomSeed: safeRoomSeed,
     index: safeIndex,
     generation: safeGeneration,
-    position: {
-      x: scaleBetween(
-        seededText(seed, "x"),
-        SPACE_BOUNDS.x[0] + TOUCH_STAR_CONFIG.spawnPaddingX,
-        SPACE_BOUNDS.x[1] - TOUCH_STAR_CONFIG.spawnPaddingX
-      ),
-      y: scaleBetween(
-        seededText(seed, "y"),
-        SPACE_BOUNDS.y[0] + TOUCH_STAR_CONFIG.spawnPaddingY,
-        SPACE_BOUNDS.y[1] - TOUCH_STAR_CONFIG.spawnPaddingY
-      ),
-      z: scaleBetween(
-        seededText(seed, "z"),
-        TOUCH_STAR_CONFIG.spawnZMin,
-        TOUCH_STAR_CONFIG.spawnZMax
-      )
-    },
+    poolSize: safePoolSize,
+    position: spreadPosition,
     color: hslToHex(hue, saturation, lightness),
     collisionRadius: TOUCH_STAR_RADIUS,
     phase: seededText(seed, "phase") * Math.PI * 2,
@@ -180,7 +177,8 @@ function createNextTouchStar(star, generation, availableAt, touchedAt) {
     star?.index ?? parseStarIndex(star?.id),
     generation,
     availableAt,
-    touchedAt
+    touchedAt,
+    star?.poolSize
   );
 }
 
@@ -197,6 +195,98 @@ function parseStarIndex(starId) {
 function normalizeStarGeneration(value) {
   const generation = Math.floor(Number(value));
   return Number.isFinite(generation) && generation > 0 ? generation : 0;
+}
+
+function normalizeStarCount(value) {
+  const count = Math.floor(Number(value));
+  return Number.isFinite(count) && count > 0 ? count : 0;
+}
+
+function normalizeStarPoolSize(value) {
+  const poolSize = Math.floor(Number(value));
+  return Number.isFinite(poolSize) && poolSize > 0 ? poolSize : TOUCH_STAR_COUNT;
+}
+
+function createSpreadPosition(seed, index, poolSize) {
+  const grid = createSpreadGrid(poolSize);
+  const cell = getProgressiveSpreadCell(index, grid);
+  const cellInset = clamp(TOUCH_STAR_CONFIG.spreadCellInset, 0, 0.45);
+  const cellJitterScale = 1 - cellInset * 2;
+  const xUnit =
+    (cell.column + cellInset + seededText(seed, "cell-x") * cellJitterScale) /
+    grid.columns;
+  const yUnit =
+    (cell.row + cellInset + seededText(seed, "cell-y") * cellJitterScale) /
+    grid.rows;
+
+  return {
+    x: scaleBetween(
+      xUnit,
+      SPACE_BOUNDS.x[0] + TOUCH_STAR_CONFIG.spawnPaddingX,
+      SPACE_BOUNDS.x[1] - TOUCH_STAR_CONFIG.spawnPaddingX
+    ),
+    y: scaleBetween(
+      yUnit,
+      SPACE_BOUNDS.y[0] + TOUCH_STAR_CONFIG.spawnPaddingY,
+      SPACE_BOUNDS.y[1] - TOUCH_STAR_CONFIG.spawnPaddingY
+    ),
+    z: scaleBetween(
+      seededText(seed, "z"),
+      TOUCH_STAR_CONFIG.spawnZMin,
+      TOUCH_STAR_CONFIG.spawnZMax
+    )
+  };
+}
+
+function createSpreadGrid(poolSize) {
+  const width = Math.max(
+    1,
+    SPACE_BOUNDS.x[1] - SPACE_BOUNDS.x[0] - TOUCH_STAR_CONFIG.spawnPaddingX * 2
+  );
+  const height = Math.max(
+    1,
+    SPACE_BOUNDS.y[1] - SPACE_BOUNDS.y[0] - TOUCH_STAR_CONFIG.spawnPaddingY * 2
+  );
+  const aspect = width / height;
+  const columns = Math.max(1, Math.ceil(Math.sqrt(poolSize * aspect)));
+  const rows = Math.max(1, Math.ceil(poolSize / columns));
+  return { columns, rows };
+}
+
+function getProgressiveSpreadCell(index, { columns, rows }) {
+  const safeIndex = normalizeStarIndex(index);
+  const row = safeIndex % rows;
+  const band = Math.floor(safeIndex / rows);
+  const columnStep = findCoprimeStep(Math.round(columns * 0.618), columns);
+  const rowOffset = findCoprimeStep(Math.round(columns / rows), columns);
+  const column = (band * columnStep + row * rowOffset) % columns;
+  return { column, row };
+}
+
+function findCoprimeStep(preferredStep, modulo) {
+  if (modulo <= 1) {
+    return 0;
+  }
+
+  let step = Math.max(1, Math.min(modulo - 1, Math.floor(Number(preferredStep)) || 1));
+  for (let attempts = 0; attempts < modulo; attempts += 1) {
+    if (greatestCommonDivisor(step, modulo) === 1) {
+      return step;
+    }
+    step = step + 1 >= modulo ? 1 : step + 1;
+  }
+  return 1;
+}
+
+function greatestCommonDivisor(first, second) {
+  let a = Math.abs(Math.floor(Number(first)) || 0);
+  let b = Math.abs(Math.floor(Number(second)) || 0);
+  while (b > 0) {
+    const next = a % b;
+    a = b;
+    b = next;
+  }
+  return a;
 }
 
 function seededText(seed, salt) {

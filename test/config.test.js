@@ -13,6 +13,7 @@ test("touch-star limits are centralized and increased", () => {
   assert.equal(TOUCH_STAR_CONFIG.activeMax, 36);
   assert.equal(TOUCH_STAR_CONFIG.activeMin, 10);
   assert.equal(TOUCH_STAR_CONFIG.activePerLume, 3);
+  assert.equal(TOUCH_STAR_CONFIG.spreadCellInset, 0.18);
   assert.equal(TOUCH_STAR_COUNT, TOUCH_STAR_CONFIG.generatedPoolSize);
   assert.equal(MAX_TOUCH_STARS, TOUCH_STAR_CONFIG.activeMax);
   assert.equal(MIN_TOUCH_STARS, TOUCH_STAR_CONFIG.activeMin);
