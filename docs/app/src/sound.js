@@ -1,4 +1,5 @@
 import { normalizeHexColor } from "./colors.js";
+import { selectRevealedConstellations } from "./constellations.js";
 import {
   LOFI_LOOP_BPM,
   ROOM_LOFI_SONG_BPM,
@@ -10,9 +11,10 @@ import {
 } from "./config.js";
 import { clamp, SPACE_BOUNDS } from "./physics/vector.js";
 import {
+  createSpaceLofiDiscoveryState,
   createSpaceLofiSongController,
   createSpaceLofiSongPlan
-} from "./space-lofi-song.js?v=obvious-lofi-reactions-20260628";
+} from "./space-lofi-song.js?v=adaptive-discovery-audio-20260628";
 
 export {
   LOFI_LOOP_BPM,
@@ -74,7 +76,8 @@ export function createRoomLofiSongPlan(options = {}) {
     seed: options.seed ?? ROOM_LOFI_SONG_SEED,
     bpm: options.bpm ?? ROOM_LOFI_SONG_BPM,
     density: options.density ?? ROOM_LOFI_SONG_DENSITY,
-    space: options.space ?? ROOM_LOFI_SONG_SPACE
+    space: options.space ?? ROOM_LOFI_SONG_SPACE,
+    discoveryCount: options.discoveryCount ?? options.discoveredConstellationCount ?? 0
   });
 }
 
@@ -97,11 +100,38 @@ export function createLofiLoopPattern({ bpm = LOFI_LOOP_BPM } = {}) {
   };
 }
 
-export function createSoundCueSnapshot({ pulseIds = [], resonanceIds = [] } = {}) {
+export function createSoundCueSnapshot(input = {}) {
+  const { pulseIds = [], resonanceIds = [], discoveryCount = 0 } = input ?? {};
+  const discovery = createSpaceLofiDiscoveryState(discoveryCount);
   return {
     pulseIds: Array.isArray(pulseIds) ? pulseIds.map(String).filter(Boolean) : [],
-    resonanceIds: Array.isArray(resonanceIds) ? resonanceIds.map(String).filter(Boolean) : []
+    resonanceIds: Array.isArray(resonanceIds) ? resonanceIds.map(String).filter(Boolean) : [],
+    discoveryCount: discovery.discoveryCount,
+    discoveryLevel: discovery.level
   };
+}
+
+export function createRoomDiscoverySongState(stateOrOptions = {}, options = {}) {
+  const source = stateOrOptions ?? {};
+  const settings = options ?? {};
+  const explicitCount =
+    source.discoveryCount ??
+    source.discoveredConstellationCount ??
+    settings.discoveryCount ??
+    settings.discoveredConstellationCount;
+  if (explicitCount !== undefined) {
+    return createSpaceLofiDiscoveryState(explicitCount);
+  }
+
+  const roomId = source.roomId ?? settings.roomId;
+  const progress = source.constellationProgress ?? settings.constellationProgress;
+  if (!roomId) {
+    return createSpaceLofiDiscoveryState(0);
+  }
+
+  return createSpaceLofiDiscoveryState(
+    selectRevealedConstellations(roomId, progress).length
+  );
 }
 
 export function collectNewSoundCues(snapshot, state, options = {}) {
@@ -110,6 +140,7 @@ export function collectNewSoundCues(snapshot, state, options = {}) {
   const previousResonanceIds = new Set(previous.resonanceIds);
   const nextPulseIds = new Set(previousPulseIds);
   const nextResonanceIds = new Set(previousResonanceIds);
+  const discovery = createRoomDiscoverySongState(state, options);
   const cues = [];
 
   for (const pulse of state?.pulses ?? []) {
@@ -146,8 +177,11 @@ export function collectNewSoundCues(snapshot, state, options = {}) {
     cues,
     snapshot: {
       pulseIds: limitIds(nextPulseIds),
-      resonanceIds: limitIds(nextResonanceIds)
-    }
+      resonanceIds: limitIds(nextResonanceIds),
+      discoveryCount: discovery.discoveryCount,
+      discoveryLevel: discovery.level
+    },
+    discovery
   };
 }
 
@@ -268,6 +302,7 @@ export function createPulseSoundPlayer({
   let lofiLoop = null;
   let isEnabled = Boolean(enabled);
   let disposed = false;
+  let discoveryCount = 0;
   const queuedCues = [];
 
   return {
@@ -321,6 +356,15 @@ export function createPulseSoundPlayer({
         }
       }
       return played;
+    },
+    setDiscoveryCount(nextDiscoveryCount) {
+      const discovery = createSpaceLofiDiscoveryState(nextDiscoveryCount);
+      if (discovery.discoveryCount === discoveryCount) {
+        return discovery;
+      }
+      discoveryCount = discovery.discoveryCount;
+      lofiLoop?.setDiscoveryCount(discoveryCount);
+      return discovery;
     },
     stopMusic() {
       stopLofiLoop();
@@ -398,7 +442,7 @@ export function createPulseSoundPlayer({
 
     if (!lofiLoop) {
       lofiLoop = createSpaceLofiSongController(audioContext, masterGain, {
-        plan: createRoomLofiSongPlan(),
+        plan: createRoomLofiSongPlan({ discoveryCount }),
         outputGain: 0.3
       });
     }

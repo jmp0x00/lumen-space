@@ -1,7 +1,9 @@
 import { normalizeHexColor } from "./colors.js";
 import {
   SPACE_LOFI_CONFIG,
+  SPACE_LOFI_CONSTELLATIONS_PER_DISCOVERY_LAYER,
   SPACE_LOFI_DENSITY,
+  SPACE_LOFI_DISCOVERY_LAYER_CAP,
   SPACE_LOFI_REACTION_MIX,
   SPACE_LOFI_SONG_BPM,
   SPACE_LOFI_SPACE,
@@ -10,7 +12,9 @@ import {
 } from "./config.js";
 
 export {
+  SPACE_LOFI_CONSTELLATIONS_PER_DISCOVERY_LAYER,
   SPACE_LOFI_DENSITY,
+  SPACE_LOFI_DISCOVERY_LAYER_CAP,
   SPACE_LOFI_REACTION_MIX,
   SPACE_LOFI_SONG_BPM,
   SPACE_LOFI_SPACE,
@@ -22,6 +26,8 @@ const SCHEDULE_AHEAD_SECONDS = SPACE_LOFI_CONFIG.scheduleAheadSeconds;
 const SCHEDULER_INTERVAL_MS = SPACE_LOFI_CONFIG.schedulerIntervalMs;
 const NOISE_LOOP_FADE_SECONDS = SPACE_LOFI_CONFIG.noiseLoopFadeSeconds;
 const DEFAULT_SEED = SPACE_LOFI_CONFIG.defaultSeed;
+const DEFAULT_DISCOVERY_COUNT =
+  SPACE_LOFI_DISCOVERY_LAYER_CAP * SPACE_LOFI_CONSTELLATIONS_PER_DISCOVERY_LAYER;
 const REACTION_TYPES = new Set(["star-touch", "resonance"]);
 const PROGRESSION = [
   {
@@ -77,18 +83,27 @@ const LEAD_SCALE = [
   220, 246.94, 261.63, 293.66, 329.63, 369.99, 392, 440, 493.88, 523.25
 ];
 const MOTIF_STEPS = [2, 5, 7, 10, 13, 15];
+const VOICE_DEFINITIONS = Object.freeze([
+  Object.freeze({ id: "pad", label: "nebula pad", minDiscoveryLevel: 0 }),
+  Object.freeze({ id: "bass", label: "tape bass", minDiscoveryLevel: 1 }),
+  Object.freeze({ id: "drums", label: "soft kit", minDiscoveryLevel: 2 }),
+  Object.freeze({ id: "signal", label: "satellite lead", minDiscoveryLevel: 3 }),
+  Object.freeze({ id: "dust", label: "star noise", minDiscoveryLevel: 4 })
+]);
 
 export function createSpaceLofiSongPlan({
   seed = DEFAULT_SEED,
   bpm = SPACE_LOFI_SONG_BPM,
   density = SPACE_LOFI_DENSITY,
   space = SPACE_LOFI_SPACE,
-  reactionMix = SPACE_LOFI_REACTION_MIX
+  reactionMix = SPACE_LOFI_REACTION_MIX,
+  discoveryCount = DEFAULT_DISCOVERY_COUNT
 } = {}) {
   const normalizedSeed = normalizeSeed(seed);
   const safeBpm = clamp(Number(bpm) || SPACE_LOFI_SONG_BPM, 58, 92);
   const safeDensity = clamp(density, 0, 1);
   const safeSpace = clamp(space, 0, 1);
+  const discovery = createSpaceLofiDiscoveryState(discoveryCount);
   return {
     type: "space-lofi-infinite-song",
     seed: normalizedSeed,
@@ -96,6 +111,9 @@ export function createSpaceLofiSongPlan({
     density: roundNumber(safeDensity, 2),
     space: roundNumber(safeSpace, 2),
     reactionMix: roundNumber(clamp(reactionMix, 0, 1), 2),
+    discoveryCount: discovery.discoveryCount,
+    discoveryLevel: discovery.level,
+    discovery,
     stepsPerBar: SPACE_LOFI_STEPS_PER_BAR,
     stepSeconds: roundNumber(60 / safeBpm / 4, 4),
     swing: SPACE_LOFI_SWING,
@@ -105,13 +123,35 @@ export function createSpaceLofiSongPlan({
       space: roundNumber(safeSpace, 2)
     })),
     motif: createMotif(normalizedSeed),
-    voices: [
-      { id: "pad", label: "nebula pad" },
-      { id: "bass", label: "tape bass" },
-      { id: "drums", label: "soft kit" },
-      { id: "signal", label: "satellite lead" },
-      { id: "dust", label: "star noise" }
-    ]
+    voices: createVoiceDescriptors(discovery)
+  };
+}
+
+export function createSpaceLofiDiscoveryState(discoveryCount = 0) {
+  const safeCount = Math.max(0, Math.floor(Number(discoveryCount) || 0));
+  const level = Math.min(
+    SPACE_LOFI_DISCOVERY_LAYER_CAP,
+    Math.floor(safeCount / SPACE_LOFI_CONSTELLATIONS_PER_DISCOVERY_LAYER)
+  );
+  const activeVoiceIds = VOICE_DEFINITIONS
+    .filter((voice) => voice.minDiscoveryLevel <= level)
+    .map((voice) => voice.id);
+  const nextLayer = VOICE_DEFINITIONS.find(
+    (voice) => voice.minDiscoveryLevel > level
+  );
+
+  return {
+    type: "space-lofi-discovery-state",
+    discoveryCount: safeCount,
+    level,
+    layerCap: SPACE_LOFI_DISCOVERY_LAYER_CAP,
+    constellationsPerLayer: SPACE_LOFI_CONSTELLATIONS_PER_DISCOVERY_LAYER,
+    activeVoiceIds,
+    nextLayerId: nextLayer?.id ?? null,
+    nextLayerAt:
+      nextLayer?.minDiscoveryLevel !== undefined
+        ? nextLayer.minDiscoveryLevel * SPACE_LOFI_CONSTELLATIONS_PER_DISCOVERY_LAYER
+        : null
   };
 }
 
@@ -222,9 +262,13 @@ export function getSpaceLofiSongStep(plan, absoluteStep = 0, options = {}) {
     density: reaction.density,
     space: reaction.space
   };
-  const bassStep = getBassStep(reactiveSong, bar, step);
-  const motif = song.motif.find((event) => event.step === step);
-  const reactiveLead = reaction.activeCount > 0 && step % 4 === reaction.phase;
+  const bassActive = isVoiceActive(song, "bass") || reaction.bassLift > 0.08;
+  const drumsActive = isVoiceActive(song, "drums") || reaction.densityBoost > 0.18;
+  const signalActive = isVoiceActive(song, "signal") || reaction.leadLift > 0.12;
+  const dustActive = isVoiceActive(song, "dust") || reaction.dustLift > 0.12;
+  const bassStep = bassActive ? getBassStep(reactiveSong, bar, step) : null;
+  const motif = signalActive ? song.motif.find((event) => event.step === step) : null;
+  const reactiveLead = signalActive && reaction.activeCount > 0 && step % 4 === reaction.phase;
   const melody = createStepMelody({
     song,
     reactiveSong,
@@ -237,14 +281,16 @@ export function getSpaceLofiSongStep(plan, absoluteStep = 0, options = {}) {
   });
   const drums = [];
 
-  if (step === 0 || (step === 11 && seededUnit(`${stepSeed}:kick`) > getDensityThreshold(reactiveSong, 0.52))) {
-    drums.push("kick");
-  }
-  if (step === 8) {
-    drums.push("snare");
-  }
-  if (step % 4 === 2 || (step % 8 === 6 && seededUnit(`${stepSeed}:hat`) > getDensityThreshold(reactiveSong, 0.36))) {
-    drums.push("hat");
+  if (drumsActive) {
+    if (step === 0 || (step === 11 && seededUnit(`${stepSeed}:kick`) > getDensityThreshold(reactiveSong, 0.52))) {
+      drums.push("kick");
+    }
+    if (step === 8) {
+      drums.push("snare");
+    }
+    if (step % 4 === 2 || (step % 8 === 6 && seededUnit(`${stepSeed}:hat`) > getDensityThreshold(reactiveSong, 0.36))) {
+      drums.push("hat");
+    }
   }
 
   return {
@@ -263,9 +309,13 @@ export function getSpaceLofiSongStep(plan, absoluteStep = 0, options = {}) {
     melody,
     drums,
     dust:
-      seededUnit(`${stepSeed}:dust`) > getDensityThreshold(reactiveSong, 0.9) ||
-      (reaction.dustLift > 0.08 && step % 4 === (reaction.phase + 2) % 4),
-    comet: step === 14 && seededUnit(`${song.seed}:${bar}:comet`) > getDensityThreshold(reactiveSong, 0.42),
+      dustActive &&
+      (seededUnit(`${stepSeed}:dust`) > getDensityThreshold(reactiveSong, 0.9) ||
+        (reaction.dustLift > 0.08 && step % 4 === (reaction.phase + 2) % 4)),
+    comet:
+      dustActive &&
+      step === 14 &&
+      seededUnit(`${song.seed}:${bar}:comet`) > getDensityThreshold(reactiveSong, 0.42),
     reaction
   };
 }
@@ -286,12 +336,13 @@ export function createSpaceLofiSongController(
     density = SPACE_LOFI_DENSITY,
     space = SPACE_LOFI_SPACE,
     reactionMix = SPACE_LOFI_REACTION_MIX,
+    discoveryCount = DEFAULT_DISCOVERY_COUNT,
     outputGain = 0.36
   } = {}
 ) {
   let songPlan = plan?.type === "space-lofi-infinite-song"
     ? plan
-    : createSpaceLofiSongPlan({ seed, bpm, density, space, reactionMix });
+    : createSpaceLofiSongPlan({ seed, bpm, density, space, reactionMix, discoveryCount });
   let output = null;
   let timer = 0;
   let nextStep = 0;
@@ -367,13 +418,29 @@ export function createSpaceLofiSongController(
         bpm: options.bpm ?? songPlan.bpm,
         density: options.density ?? songPlan.density,
         space: options.space ?? songPlan.space,
-        reactionMix: options.reactionMix ?? songPlan.reactionMix
+        reactionMix: options.reactionMix ?? songPlan.reactionMix,
+        discoveryCount: options.discoveryCount ?? songPlan.discoveryCount
       });
       activeReactions = [];
       if (wasPlaying) {
         this.start({ reset: true });
       }
       return songPlan;
+    },
+    setDiscoveryCount(discoveryCount) {
+      const previousLevel = songPlan.discoveryLevel ?? songPlan.discovery?.level ?? 0;
+      songPlan = createSpaceLofiSongPlan({
+        seed: songPlan.seed,
+        bpm: songPlan.bpm,
+        density: songPlan.density,
+        space: songPlan.space,
+        reactionMix: songPlan.reactionMix,
+        discoveryCount
+      });
+      if (songPlan.discoveryLevel > previousLevel) {
+        applyDiscoveryLayerBloom(songPlan.discoveryLevel - previousLevel);
+      }
+      return songPlan.discovery;
     },
     get plan() {
       return songPlan;
@@ -467,6 +534,26 @@ export function createSpaceLofiSongController(
     mixNodes.feedback.gain.setTargetAtTime(targetFeedback, now, 0.12);
     mixNodes.feedback.gain.setTargetAtTime(baseFeedback, now + release, 0.55);
   }
+
+  function applyDiscoveryLayerBloom(levelDelta) {
+    if (!mixNodes || !output || !context || levelDelta <= 0) {
+      return;
+    }
+
+    const now = context.currentTime;
+    const lift = clamp(levelDelta * 0.045 + songPlan.discoveryLevel * 0.012, 0.04, 0.18);
+    const baseWet = 0.1 + songPlan.space * 0.2;
+    const baseTone = getBaseToneFrequency(songPlan);
+    mixNodes.output.gain.cancelScheduledValues(now);
+    mixNodes.output.gain.setTargetAtTime(clamp(outputGain + lift, 0.01, 1), now, 0.35);
+    mixNodes.output.gain.setTargetAtTime(outputGain, now + 4.2, 1.4);
+    mixNodes.toneFilter.frequency.cancelScheduledValues(now);
+    mixNodes.toneFilter.frequency.setTargetAtTime(baseTone + 1_200 + songPlan.discoveryLevel * 520, now, 0.42);
+    mixNodes.toneFilter.frequency.setTargetAtTime(baseTone, now + 4.8, 1.6);
+    mixNodes.wetGain.gain.cancelScheduledValues(now);
+    mixNodes.wetGain.gain.setTargetAtTime(clamp(baseWet + lift * 0.62, 0.02, 0.72), now, 0.55);
+    mixNodes.wetGain.gain.setTargetAtTime(baseWet, now + 5.2, 1.8);
+  }
 }
 
 export function createSpaceLofiSongPlayer({
@@ -476,6 +563,7 @@ export function createSpaceLofiSongPlayer({
   density = SPACE_LOFI_DENSITY,
   space = SPACE_LOFI_SPACE,
   reactionMix = SPACE_LOFI_REACTION_MIX,
+  discoveryCount = DEFAULT_DISCOVERY_COUNT,
   enabled = true,
   volume = 1
 } = {}) {
@@ -485,7 +573,7 @@ export function createSpaceLofiSongPlayer({
   let isEnabled = Boolean(enabled);
   let disposed = false;
   let masterVolume = clamp(volume, 0, 1);
-  let plan = createSpaceLofiSongPlan({ seed, bpm, density, space, reactionMix });
+  let plan = createSpaceLofiSongPlan({ seed, bpm, density, space, reactionMix, discoveryCount });
 
   return {
     async start({ reset = false } = {}) {
@@ -522,6 +610,18 @@ export function createSpaceLofiSongPlayer({
       }
       return songLoop.react(input);
     },
+    setDiscoveryCount(nextDiscoveryCount) {
+      plan = createSpaceLofiSongPlan({
+        seed: plan.seed,
+        bpm: plan.bpm,
+        density: plan.density,
+        space: plan.space,
+        reactionMix: plan.reactionMix,
+        discoveryCount: nextDiscoveryCount
+      });
+      songLoop?.setDiscoveryCount(plan.discoveryCount);
+      return plan.discovery;
+    },
     setEnabled(nextEnabled) {
       isEnabled = Boolean(nextEnabled);
       if (!isEnabled) {
@@ -535,7 +635,8 @@ export function createSpaceLofiSongPlayer({
         bpm: options.bpm ?? plan.bpm,
         density: options.density ?? plan.density,
         space: options.space ?? plan.space,
-        reactionMix: options.reactionMix ?? plan.reactionMix
+        reactionMix: options.reactionMix ?? plan.reactionMix,
+        discoveryCount: options.discoveryCount ?? plan.discoveryCount
       });
       return plan;
     },
@@ -618,6 +719,14 @@ function createMotif(seed) {
     step,
     noteIndex: Math.floor(seededUnit(`${seed}:motif:${index}`) * LEAD_SCALE.length),
     octave: seededUnit(`${seed}:octave:${index}`) > 0.72
+  }));
+}
+
+function createVoiceDescriptors(discovery) {
+  const activeVoiceIds = new Set(discovery.activeVoiceIds);
+  return VOICE_DEFINITIONS.map((voice) => ({
+    ...voice,
+    active: activeVoiceIds.has(voice.id)
   }));
 }
 
@@ -1008,6 +1117,14 @@ function normalizeReaction(reaction, song) {
 function normalizeReactionType(type) {
   const normalized = String(type ?? "star-touch").trim().toLowerCase();
   return REACTION_TYPES.has(normalized) ? normalized : "star-touch";
+}
+
+function isVoiceActive(song, voiceId) {
+  const activeVoiceIds = song?.discovery?.activeVoiceIds;
+  if (Array.isArray(activeVoiceIds)) {
+    return activeVoiceIds.includes(voiceId);
+  }
+  return createSpaceLofiDiscoveryState(DEFAULT_DISCOVERY_COUNT).activeVoiceIds.includes(voiceId);
 }
 
 function createEmptyReactionState(song = null) {

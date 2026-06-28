@@ -32,8 +32,9 @@ import { createSpaceScene } from "./scene.js?v=lume-subtle-pulse-20260628";
 import {
   collectNewSoundCues,
   createPulseSoundPlayer,
+  createRoomDiscoverySongState,
   createSoundCueSnapshot
-} from "./sound.js?v=obvious-lofi-reactions-20260628";
+} from "./sound.js?v=adaptive-discovery-audio-20260628";
 
 const runtimeConfig = createRuntimeConfig(window.location);
 const savedIdentity = runtimeConfig.persistIdentity ? loadSavedIdentity() : null;
@@ -490,6 +491,7 @@ function playNewSoundCues() {
     localClientId: game.clientId
   });
   soundCueSnapshot = result.snapshot;
+  pulseAudio.setDiscoveryCount(result.discovery.discoveryCount);
   if (soundEnabled) {
     pulseAudio.playCues(result.cues);
   }
@@ -513,10 +515,13 @@ function setSoundEnabled(nextEnabled, { render = false, unlock = false } = {}) {
 }
 
 function snapshotCurrentSoundCues() {
+  const discovery = createRoomDiscoverySongState(game);
   soundCueSnapshot = createSoundCueSnapshot({
     pulseIds: game.pulses.map((pulse) => pulse.id),
-    resonanceIds: game.resonances.map((resonance) => resonance.id)
+    resonanceIds: game.resonances.map((resonance) => resonance.id),
+    discoveryCount: discovery.discoveryCount
   });
+  pulseAudio.setDiscoveryCount(discovery.discoveryCount);
 }
 
 function handleRuntimeMessage(event) {

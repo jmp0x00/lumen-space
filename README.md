@@ -15,13 +15,13 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Pushed idle lights keep the displaced resting spot until fresh pointer or presence input moves them again.
 - Drift through small colorful touch stars that appear on sky-map constellation paths to release compact star-colored activation waves from the touched star center; opening a star is the only pulse source.
 - Thin colorful edge lines flash toward off-screen star activations so the vast room still feels alive without heavy HUD noise.
-- Each constellation has one deterministic room color, tracks touched star nodes for the whole room, and reveals its glowing line pattern and name when all nodes have been gathered.
+- Each constellation has one deterministic room color, tracks touched star nodes for the whole room, and reveals its glowing line pattern and name with a brief all-border color flash when all nodes have been gathered.
 - All constellation-node stars are visible at once; unopened stars pulse gently as guidance, and opened stars stay in place with a brighter shine.
 - Revealed constellations stay visible for everyone while their opened stars remain lit.
 - Rooms maintain a capped shared population of human players plus automatic star-seeking bots.
 - The room starts with the full 767-star all-sky node catalogue distributed across all 88 constellations in a vast equirectangular sky-map projection.
 - When different players' pulse fronts meet, they create a brief local resonance flash.
-- Hear the procedural space lo-fi song after the browser unlocks audio through interaction; star-touch pulses create a clear lead/dust bloom, and resonance flashes create a wider pad/space swell while still reshaping the song instead of playing as separate effects.
+- Hear the procedural space lo-fi song after the browser unlocks audio through interaction; rooms begin with a very sparse pad/bed, every five revealed constellations deterministically add a capped persistent song layer, star-touch pulses create a clear lead/dust bloom, and resonance flashes create a wider pad/space swell while still reshaping the song instead of playing as separate effects.
 - Use compact room controls to copy the invite link, mute or unmute the reactive song, and leave the room.
 - On mobile, the Lights roster stays shallow and scrolls sideways so the room remains playable with larger populations.
 - Shared AI-driven bots spawn from deterministic spread-out map anchors, seek less-contested touch stars automatically, and are simulated by the connected players through deterministic ownership.
@@ -91,7 +91,7 @@ For physics tuning, use `simulator.html`.
 - `docs/app/src/core/`: canonical game state, event reducer, simulation step, and scene/UI selectors.
 - `docs/app/src/physics/`: focused pure physics modules for vectors, local motion, peer collision/repulsion, AI-driven bot motion, touch stars, pulses, and resonance.
 - `docs/app/src/sound.js`: room audio glue, shared space lo-fi song preset, pulse/resonance reaction planning, and the Web Audio performer.
-- `docs/app/src/space-lofi-song.js`: shared procedural space lo-fi infinite song plan, deterministic reaction model, reusable controller, and simulator Web Audio performer.
+- `docs/app/src/space-lofi-song.js`: shared procedural space lo-fi infinite song plan, deterministic discovery-layer arrangement, deterministic reaction model, reusable controller, and simulator Web Audio performer.
 - `docs/app/src/network.js`: Trystero/WebRTC room connection.
 - `docs/app/src/scene.js`: Three.js WebGL scene.
 - `docs/app/src/app.js`: browser adapter for UI, scene, realtime transport, timers, storage, and core effects.

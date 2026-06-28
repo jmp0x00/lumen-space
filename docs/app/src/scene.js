@@ -29,6 +29,7 @@ export async function createSpaceScene({
   const participantMeshes = new Map();
   const pulseMeshes = new Map();
   const pulseEdgeFlashes = new Map();
+  const constellationRevealFlashes = new Set();
   const resonanceMeshes = new Map();
   const touchStarMeshes = new Map();
   const constellationMeshes = new Map();
@@ -152,6 +153,7 @@ export async function createSpaceScene({
   function syncConstellations(THREERef, now) {
     const constellations = getConstellations();
     const activeIds = new Set(constellations.map((constellation) => constellation.id));
+    let revealedConstellation = null;
 
     for (const constellation of constellations) {
       let mesh = constellationMeshes.get(constellation.id);
@@ -163,6 +165,7 @@ export async function createSpaceScene({
           createConstellationLabel(container, constellation.name)
         );
         scene.add(mesh.group);
+        revealedConstellation = constellation;
       }
 
       const color = new THREERef.Color(constellation.color);
@@ -194,6 +197,10 @@ export async function createSpaceScene({
         constellationLabels.get(id)?.remove();
         constellationLabels.delete(id);
       }
+    }
+
+    if (revealedConstellation) {
+      triggerConstellationRevealFlash(revealedConstellation);
     }
   }
 
@@ -321,6 +328,19 @@ export async function createSpaceScene({
     }
     flash.remove();
     pulseEdgeFlashes.delete(id);
+  }
+
+  function triggerConstellationRevealFlash(constellation) {
+    const flash = createConstellationRevealFlash(constellation.color);
+    constellationRevealFlashes.add(flash);
+    container.appendChild(flash);
+
+    const removeFlash = () => {
+      flash.remove();
+      constellationRevealFlashes.delete(flash);
+    };
+    flash.addEventListener("animationend", removeFlash, { once: true });
+    window.setTimeout(removeFlash, SCENE_CONFIG.constellationRevealFlashMs + 160);
   }
 
   function getCameraEdgeFlashPosition(x, y) {
@@ -453,6 +473,10 @@ export async function createSpaceScene({
     for (const flash of pulseEdgeFlashes.values()) {
       flash.remove();
     }
+    for (const flash of constellationRevealFlashes) {
+      flash.remove();
+    }
+    constellationRevealFlashes.clear();
     for (const mesh of resonanceMeshes.values()) {
       disposeGroup(mesh.group);
     }
@@ -518,6 +542,13 @@ function createPulseMesh(THREE, pulse) {
 function createEdgeFlash() {
   const flash = document.createElement("div");
   flash.className = "edge-flash";
+  return flash;
+}
+
+function createConstellationRevealFlash(color) {
+  const flash = document.createElement("div");
+  flash.className = "constellation-reveal-flash";
+  flash.style.setProperty("--constellation-reveal-color", color);
   return flash;
 }
 

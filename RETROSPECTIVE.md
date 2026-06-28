@@ -92,6 +92,9 @@
 - Retuned boundary-scale pulse duration after play feedback showed the first 4.2-second map-wide sweep felt too fast; pulses now travel more slowly while still clearing the world before expiring.
 - Reworked pulses again after the boundary-scale version still felt strange in the enlarged map: star touches now create compact star-colored activation rings and off-screen star activations show colored camera-edge flashes to keep distant activity legible.
 - Retuned the compact pulse presentation through a few visual passes: tried larger initial rings, briefly tested half of the original visual pulse size, then restored the original 1.8-second computed radius curve, thin additive wavefront, and local resonance detection while keeping the off-screen indicator as a simpler thin edge line.
+- Added deterministic adaptive room-song layering after discussing whether discovery-based instruments would become too much. The final approach starts rooms with only a sparse pad/bed, derives persistent bass, kit, lead, and dust/shimmer layers from shared revealed-constellation progress, caps the added layers at four, and keeps star-touch reactions audible even before any constellation is complete.
+- Adjusted adaptive room-song progression after noticing the 88-constellation catalogue would make one layer per reveal feel too reactive; persistent music layers now unlock only on five-constellation milestones while star-touch and resonance highlights still react immediately.
+- Added a constellation reveal border flash after reviewing how completions should feel: every newly visible constellation now creates a brief visual-only flash around all scene edges in that constellation's deterministic color, derived locally from completed progress instead of a network event.
 
 ## AI Tools Used
 
@@ -113,6 +116,7 @@
 - Building a small inspection harness around the pure physics modules made movement tuning faster than repeatedly staging multiplayer scenarios by hand.
 - Using temporary room instrumentation made multiplayer movement easier to reason about early, and moving that diagnostic role into the simulator kept the final room UI simpler.
 - Keeping audio planning separate from Web Audio playback made it possible to evolve sound design from effects into music without losing unit-test coverage.
+- Deriving adaptive audio from existing shared game state avoided a new multiplayer protocol branch while still making room progress audible.
 - The existing star event model was flexible enough to support collaborative constellation discovery with a small pure module and a compact progress snapshot.
 - Moving from hand-authored constellation sketches to sourced sky coordinates was mostly a data-model change because the previous feature already separated star placement, progress, and rendering.
 - Turning the constellation data into a separate observer mode reinforced the value of pure selectors: the same source map can now support gameplay, tests, and visual inspection without a parallel debug-only data path.

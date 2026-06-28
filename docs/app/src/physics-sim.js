@@ -29,7 +29,7 @@ import {
   createSpaceLofiSongPlayer,
   getSpaceLofiSongStep,
   getSpaceLofiStepDuration
-} from "./space-lofi-song.js?v=obvious-lofi-reactions-20260628";
+} from "./space-lofi-song.js?v=adaptive-discovery-audio-20260628";
 import {
   getPeerCollisionDistance,
   getPeerCollisionRadius

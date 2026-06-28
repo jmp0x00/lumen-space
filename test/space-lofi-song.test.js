@@ -1,12 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  SPACE_LOFI_CONSTELLATIONS_PER_DISCOVERY_LAYER,
   SPACE_LOFI_DENSITY,
+  SPACE_LOFI_DISCOVERY_LAYER_CAP,
   SPACE_LOFI_REACTION_MIX,
   SPACE_LOFI_SONG_BPM,
   SPACE_LOFI_SPACE,
   SPACE_LOFI_STEPS_PER_BAR,
   SPACE_LOFI_SWING,
+  createSpaceLofiDiscoveryState,
   createSpaceLofiReaction,
   createSpaceLofiSongPlan,
   getNoiseEdgeFadeGain,
@@ -24,6 +27,11 @@ test("createSpaceLofiSongPlan describes a deterministic infinite space lo-fi son
   assert.equal(plan.density, SPACE_LOFI_DENSITY);
   assert.equal(plan.space, SPACE_LOFI_SPACE);
   assert.equal(plan.reactionMix, SPACE_LOFI_REACTION_MIX);
+  assert.equal(plan.discoveryLevel, SPACE_LOFI_DISCOVERY_LAYER_CAP);
+  assert.equal(
+    plan.discoveryCount,
+    SPACE_LOFI_DISCOVERY_LAYER_CAP * SPACE_LOFI_CONSTELLATIONS_PER_DISCOVERY_LAYER
+  );
   assert.equal(plan.stepsPerBar, SPACE_LOFI_STEPS_PER_BAR);
   assert.equal(plan.swing, SPACE_LOFI_SWING);
   assert.equal(plan.stepSeconds, 0.2083);
@@ -35,6 +43,53 @@ test("createSpaceLofiSongPlan describes a deterministic infinite space lo-fi son
     plan.motif.map((event) => `${event.step}:${event.noteIndex}:${event.octave}`),
     ["2:7:false", "5:5:false", "7:2:false", "10:0:true", "13:7:false", "15:4:false"]
   );
+  assert.deepEqual(
+    plan.voices.filter((voice) => voice.active).map((voice) => voice.id),
+    ["pad", "bass", "drums", "signal", "dust"]
+  );
+});
+
+test("discovery state starts sparse and caps persistent song layers", () => {
+  const idle = createSpaceLofiDiscoveryState(0);
+  const stillIdle = createSpaceLofiDiscoveryState(SPACE_LOFI_CONSTELLATIONS_PER_DISCOVERY_LAYER - 1);
+  const firstLayer = createSpaceLofiDiscoveryState(SPACE_LOFI_CONSTELLATIONS_PER_DISCOVERY_LAYER);
+  const capped = createSpaceLofiDiscoveryState(99);
+
+  assert.deepEqual(idle.activeVoiceIds, ["pad"]);
+  assert.equal(idle.nextLayerId, "bass");
+  assert.equal(idle.nextLayerAt, SPACE_LOFI_CONSTELLATIONS_PER_DISCOVERY_LAYER);
+  assert.equal(idle.constellationsPerLayer, SPACE_LOFI_CONSTELLATIONS_PER_DISCOVERY_LAYER);
+  assert.equal(stillIdle.level, 0);
+  assert.deepEqual(stillIdle.activeVoiceIds, ["pad"]);
+  assert.equal(firstLayer.level, 1);
+  assert.deepEqual(firstLayer.activeVoiceIds, ["pad", "bass"]);
+  assert.equal(capped.level, SPACE_LOFI_DISCOVERY_LAYER_CAP);
+  assert.deepEqual(capped.activeVoiceIds, ["pad", "bass", "drums", "signal", "dust"]);
+  assert.equal(capped.nextLayerId, null);
+});
+
+test("room discovery arrangement adds voices on five-constellation milestones", () => {
+  const idle = createSpaceLofiSongPlan({ seed: "aurora-drift", discoveryCount: 4 });
+  const withSignal = createSpaceLofiSongPlan({ seed: "aurora-drift", discoveryCount: 15 });
+  const withDust = createSpaceLofiSongPlan({ seed: "aurora-drift", discoveryCount: 20 });
+
+  assert.deepEqual(idle.discovery.activeVoiceIds, ["pad"]);
+  assert.equal(getSpaceLofiSongStep(idle, 0).bass, null);
+  assert.deepEqual(getSpaceLofiSongStep(idle, 2).drums, []);
+  assert.equal(getSpaceLofiSongStep(idle, 2).melody, null);
+  assert.equal(getSpaceLofiSongStep(idle, 2).dust, false);
+  assert.deepEqual(withSignal.discovery.activeVoiceIds, ["pad", "bass", "drums", "signal"]);
+  assert.deepEqual(getSpaceLofiSongStep(withSignal, 0).bass, {
+    frequency: 55,
+    slideToFrequency: 55
+  });
+  assert.deepEqual(getSpaceLofiSongStep(withSignal, 2).drums, ["hat"]);
+  assert.deepEqual(getSpaceLofiSongStep(withSignal, 2).melody, {
+    frequency: 440,
+    gain: 0.024
+  });
+  assert.equal(getSpaceLofiSongStep(withSignal, 2).dust, false);
+  assert.equal(getSpaceLofiSongStep(withDust, 2).dust, true);
 });
 
 test("createSpaceLofiReaction maps interactions to deterministic song modulation", () => {
@@ -113,6 +168,19 @@ test("song steps fold active reactions into existing voices", () => {
   assert.equal(reactiveStep.reaction.density, 0.67);
   assert.deepEqual(reactiveStep.melody, { frequency: 220, gain: 0.04 });
   assert.deepEqual(reactiveStep.drums, ["hat"]);
+  assert.equal(reactiveStep.dust, true);
+});
+
+test("star-touch reactions can temporarily wake sparse idle voices", () => {
+  const idle = createSpaceLofiSongPlan({ seed: "aurora-drift", discoveryCount: 0 });
+  const reaction = createSpaceLofiReaction(
+    { interactionType: "star-touch", color: "#fcd34d", intensity: 0.74, pan: 0.28 },
+    { plan: idle, startStep: 2 }
+  );
+  const reactiveStep = getSpaceLofiSongStep(idle, 2, { reactions: [reaction] });
+
+  assert.deepEqual(reactiveStep.melody, { frequency: 220, gain: 0.04 });
+  assert.deepEqual(reactiveStep.drums, []);
   assert.equal(reactiveStep.dust, true);
 });
 

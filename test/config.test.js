@@ -49,6 +49,7 @@ test("space bounds spread constellation stars across a wide map", () => {
   assert.equal(SCENE_CONFIG.backgroundStarOverscanY, 360);
   assert.equal(SCENE_CONFIG.cameraFollowLerp, 0.075);
   assert.equal(SCENE_CONFIG.edgeFlashInsetRatio, 0.92);
+  assert.equal(SCENE_CONFIG.constellationRevealFlashMs, 1_280);
 });
 
 function assertClose(actual, expected) {

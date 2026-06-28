@@ -5,6 +5,7 @@ import {
   createRoomLofiSongPlan,
   collectNewSoundCues,
   createPulseSongReaction,
+  createRoomDiscoverySongState,
   createResonanceSongReaction,
   createSoundCueSnapshot,
   LOFI_LOOP_BPM,
@@ -14,6 +15,7 @@ import {
   ROOM_LOFI_SONG_SPACE,
   SOUND_CUE_MEMORY_LIMIT
 } from "../docs/app/src/sound.js";
+import { createConstellationMap } from "../docs/app/src/constellations.js";
 import { SPACE_BOUNDS } from "../docs/app/src/physics/vector.js";
 
 test("createLofiLoopPattern keeps the legacy four-bar lo-fi loop deterministic", () => {
@@ -45,11 +47,35 @@ test("createRoomLofiSongPlan uses the shared infinite space lo-fi song", () => {
   assert.equal(plan.density, ROOM_LOFI_SONG_DENSITY);
   assert.equal(plan.space, ROOM_LOFI_SONG_SPACE);
   assert.equal(plan.reactionMix, 0.94);
+  assert.equal(plan.discoveryLevel, 0);
+  assert.deepEqual(plan.discovery.activeVoiceIds, ["pad"]);
   assert.equal(plan.progression.length, 8);
   assert.deepEqual(
     plan.voices.map((voice) => voice.id),
     ["pad", "bass", "drums", "signal", "dust"]
   );
+});
+
+test("createRoomDiscoverySongState derives deterministic layers from completed constellations", () => {
+  const roomId = "lumen-sound-discovery";
+  const earlyDiscovery = createRoomDiscoverySongState({
+    roomId,
+    constellationProgress: completeFirstConstellations(roomId, 3)
+  });
+  const milestoneDiscovery = createRoomDiscoverySongState({
+    roomId,
+    constellationProgress: completeFirstConstellations(roomId, 15)
+  });
+  const capped = createRoomDiscoverySongState({ discoveryCount: 88 });
+
+  assert.equal(earlyDiscovery.discoveryCount, 3);
+  assert.equal(earlyDiscovery.level, 0);
+  assert.deepEqual(earlyDiscovery.activeVoiceIds, ["pad"]);
+  assert.equal(milestoneDiscovery.discoveryCount, 15);
+  assert.equal(milestoneDiscovery.level, 3);
+  assert.deepEqual(milestoneDiscovery.activeVoiceIds, ["pad", "bass", "drums", "signal"]);
+  assert.equal(capped.level, milestoneDiscovery.layerCap);
+  assert.deepEqual(capped.activeVoiceIds, ["pad", "bass", "drums", "signal", "dust"]);
 });
 
 test("createPulseSongReaction ignores non-star-touch pulses", () => {
@@ -172,3 +198,14 @@ test("collectNewSoundCues caps remembered ids", () => {
   assert.equal(result.snapshot.pulseIds.at(-1), "pulse-new");
   assert.equal(result.snapshot.pulseIds.includes("pulse-0"), false);
 });
+
+function completeFirstConstellations(roomId, count) {
+  return Object.fromEntries(
+    createConstellationMap(roomId)
+      .slice(0, count)
+      .map((constellation) => [
+        constellation.id,
+        (1 << constellation.nodes.length) - 1
+      ])
+  );
+}

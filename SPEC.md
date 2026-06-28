@@ -12,12 +12,12 @@ Lumen Space is a social visual game without scoring or winners. The goal is to c
 6. Opening a small environmental star emits a compact pulse at the star, using the star's own color.
 7. Touch stars are generated on real constellation line paths projected into the playable space as a simplified all-sky map.
 8. Each constellation has one deterministic room color and tracks which of its nodes have been touched by any player or bot.
-9. When all nodes in a constellation have been touched, the constellation reveals its glowing line pattern and name for everyone in the room.
+9. When all nodes in a constellation have been touched, the constellation reveals its glowing line pattern and name for everyone in the room, with a brief all-border flash in that constellation's color.
 10. Revealed constellations stay visible, and opened touch stars stay in place with a brighter shine.
 11. Pulses are not an explicit player or bot action; opening an unopened touch star is the only way to emit a colored pulse.
 12. Off-screen star-touch pulses show a brief thin colored edge line in the direction of the activation.
 13. When pulse fronts from different sources meet, they create a brief local resonance flash.
-14. After browser audio is unlocked by user interaction, the room plays the procedural space lo-fi song; star-touch pulses and resonance flashes immediately and noticeably reshape the song's density, space, tone, and voices.
+14. After browser audio is unlocked by user interaction, the room plays the procedural space lo-fi song; the idle room starts as a sparse pad/bed, five-constellation reveal milestones deterministically unlock up to four additional persistent song layers, and star-touch pulses plus resonance flashes immediately and noticeably reshape the song's density, space, tone, and voices.
 15. The player can mute or unmute the local lo-fi room audio.
 16. Other players in the same room see the player's latest position, shared bots, star-touch pulses, off-screen edge lines, revealed constellations, and local resonance flashes.
 17. Rooms are ephemeral. When all players leave, no room state remains.
@@ -84,6 +84,7 @@ Out of scope:
 - Star-touch progress must be monotonic: touching a node marks it discovered for the room and repeated touches must not remove progress.
 - Constellation progress must synchronize peer-to-peer through compact presence snapshots so late joiners can see already revealed constellations without a backend.
 - A constellation must reveal its line segments and name after all of its nodes have been touched.
+- A newly visible constellation must create a brief visual-only flash on all scene borders using that constellation's deterministic color.
 - Revealed constellations must remain visible while their opened node stars stay lit.
 - Star-touch pulse colors must match the touched star color rather than blending with the triggering lumen color.
 - Star-touch pulses must spread as compact star-colored activation waves from the touched star center, then fade away while staying small enough to read as local star activation rather than a map-scale wave.
@@ -93,7 +94,11 @@ Out of scope:
 - Stale peers must be removed after the heartbeat timeout.
 - Duplicate pulse messages must not create duplicate visuals.
 - Pulse fronts from different sources must create a short-lived local resonance visual when they meet, without sending a separate network message.
-- Local room audio must use the Web Audio API to synthesize the shared space lo-fi song and convert newly observed star-touch pulse and resonance events into song reactions after a user gesture unlocks audio.
+- Local room audio must use the Web Audio API to synthesize the shared space lo-fi song, derive its persistent arrangement from the shared revealed-constellation count, and convert newly observed star-touch pulse and resonance events into song reactions after a user gesture unlocks audio.
+- The room song must begin with only the base pad/bed arrangement before any constellation has been revealed.
+- Each client must calculate the persistent room song layer level deterministically from merged constellation progress, so clients in the same room unlock the same bass, kit, lead, and dust/shimmer layers without sending audio-specific network messages.
+- Persistent room song layers must unlock only on five-constellation reveal milestones: 0-4 revealed constellations keep the base pad/bed, 5-9 add bass, 10-14 add kit, 15-19 add lead, and 20 or more add dust/shimmer.
+- Persistent room song layers must be capped at four added layers beyond the base pad/bed so discovering many constellations does not make the track overcrowded.
 - Star-touch pulses and resonance flashes must noticeably tune existing song voices, density, space, and tone in distinct ways, including an immediate tone/space bloom, while avoiding separate sound-effect stabs during repeated play.
 - The default room UI must expose a mute/unmute Lo-Fi control.
 - The default room UI must expose copy invite, mute/unmute Lo-Fi, and leave controls as compact touch-friendly actions.
@@ -123,9 +128,10 @@ Out of scope:
 - In `simulator.html`, selecting song mode shows a procedural music visualization; pressing the Song mode audio control starts and stops the shared space lo-fi infinite song, changing the song sliders updates tempo, density, space, and volume, and reaction audition controls let star-touch and resonance reactions be heard.
 - In `simulator.html`, selecting map mode shows the complete projected constellation catalogue, advances a focus tour automatically, lets the user pause on a constellation, and does not require entering the game.
 - Touching an unopened environmental star emits a compact star-colored pulse, leaves that star shining brighter in place, and shows a thin colored edge line when the activation is off-screen.
-- Touching all nodes of a constellation reveals its glowing sky-map line pattern and name for all connected players.
+- Touching all nodes of a constellation reveals its glowing sky-map line pattern and name for all connected players, with a short all-border flash in that constellation's color.
 - A new player joining after a reveal receives constellation progress through presence and sees already revealed constellations.
 - Entering or interacting with a room starts the soft procedural space lo-fi song after browser audio is unlocked.
+- Before five constellations are revealed, room audio remains sparse; each five-constellation reveal milestone deterministically adds capped bass, soft kit, lead, and dust/shimmer layers for all clients that have the same room progress.
 - Star-touch pulses clearly brighten the song's lead/dust texture and open the tone quickly, while pulse resonances create a broader pad/space swell and soften the kit.
 - The room Lo-Fi control can mute and unmute local room audio without replaying old reactions.
 - On mobile-width viewports, the Lights list stays compact with horizontal scrolling and the room actions remain touch-sized icon controls.

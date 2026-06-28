@@ -140,6 +140,8 @@ export const SPACE_LOFI_CONFIG = Object.freeze({
   bpm: 72,
   density: 0.5,
   space: 0.5,
+  discoveryLayerCap: 4,
+  constellationsPerDiscoveryLayer: 5,
   stepsPerBar: 16,
   swing: 0.12,
   reactionMix: 0.94,
@@ -222,6 +224,7 @@ export const SCENE_CONFIG = Object.freeze({
   cameraDistance: 18,
   cameraFollowLerp: 0.075,
   edgeFlashInsetRatio: 0.92,
+  constellationRevealFlashMs: 1_280,
   maxPixelRatio: 2
 });
 
@@ -421,6 +424,8 @@ export const ROOM_LOFI_SONG_SPACE = SOUND_CONFIG.roomLofiSongSpace;
 export const SPACE_LOFI_SONG_BPM = SPACE_LOFI_CONFIG.bpm;
 export const SPACE_LOFI_DENSITY = SPACE_LOFI_CONFIG.density;
 export const SPACE_LOFI_SPACE = SPACE_LOFI_CONFIG.space;
+export const SPACE_LOFI_DISCOVERY_LAYER_CAP = SPACE_LOFI_CONFIG.discoveryLayerCap;
+export const SPACE_LOFI_CONSTELLATIONS_PER_DISCOVERY_LAYER = SPACE_LOFI_CONFIG.constellationsPerDiscoveryLayer;
 export const SPACE_LOFI_STEPS_PER_BAR = SPACE_LOFI_CONFIG.stepsPerBar;
 export const SPACE_LOFI_SWING = SPACE_LOFI_CONFIG.swing;
 export const SPACE_LOFI_REACTION_MIX = SPACE_LOFI_CONFIG.reactionMix;
