@@ -70,7 +70,7 @@ test("stepGame interpolates remote peers toward presence targets", () => {
   assert.ok(result.state.peers["client-peer"].position.x < 4);
 });
 
-test("stepGame ignores remote input target when interpolating peer snapshots", () => {
+test("stepGame uses remote input intent without snapping ahead of the network snapshot", () => {
   const presence = normalizePresenceMessage(
     createPresenceMessage({
       clientId: "client-peer",
@@ -101,10 +101,36 @@ test("stepGame ignores remote input target when interpolating peer snapshots", (
 
   const result = stepGame(state, { now: 1_100, deltaSeconds: 0.1 });
 
-  assert.equal(result.state.peers["client-peer"].targetPosition.x, 1);
+  assert.equal(result.state.peers["client-peer"].networkPosition.x, 1);
+  assert.equal(result.state.peers["client-peer"].targetPosition.x, 8);
   assert.equal(result.state.peers["client-peer"].inputTargetPosition.x, 8);
   assert.ok(result.state.peers["client-peer"].position.x > 0);
   assert.ok(result.state.peers["client-peer"].position.x < 1);
+});
+
+test("stepGame projects remote snapshots briefly using reported velocity", () => {
+  const presence = normalizePresenceMessage(
+    createPresenceMessage({
+      clientId: "client-peer",
+      sequence: 1,
+      identity: { name: "Lin", color: "#86efac" },
+      position: { x: 1, y: 0, z: 0 },
+      velocity: { x: 4, y: 0, z: 0 },
+      targetPosition: { x: 1, y: 0, z: 0 },
+      timestamp: 1_000
+    }),
+    1_000
+  );
+  const state = reduceGameEvent(createRoomState(), {
+    type: "peer/presence",
+    peerId: "peer-1",
+    message: presence
+  }).state;
+
+  const result = stepGame(state, { now: 1_200, deltaSeconds: 0.1 });
+
+  assert.ok(result.state.peers["client-peer"].position.x > 1);
+  assert.ok(result.state.peers["client-peer"].position.x < 1.8);
 });
 
 test("stepGame emits v2 pulse events when a local participant touches a star", () => {

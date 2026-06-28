@@ -50,7 +50,7 @@ Out of scope:
 - The app must sanitize nickname, color, room ID, presence, and pulse inputs.
 - The local light must remain within defined world bounds.
 - The world bounds must be larger than a single camera view, with pointer movement and camera follow allowing the local light to travel into off-screen regions.
-- Remote peer motion must interpolate smoothly instead of snapping.
+- Remote peer motion must use target-driven motion between presence snapshots, with short bounded network projection and correction so peers do not snap or drift unrealistically.
 - Live-room lumes must derive collision radius from participant visual size, with local lumes slightly larger than remote lumes and bots smaller.
 - Peer collision radius must be used for peer-to-peer repulsion and peer-to-star touch detection.
 - Peer-to-peer repulsion must carry the participant's current movement target with the collision displacement so idle lumes settle where they were pushed instead of returning to a stale target.

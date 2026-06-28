@@ -1,7 +1,7 @@
 import { MOTION_CONFIG } from "../config.js";
 import { applyPeerRepulsionToParticipants } from "../physics/repulsion.js?v=peer-collision-radius-20260627";
 import { updateMotion } from "../physics/motion.js";
-import { lerpVector, clampVector } from "../physics/vector.js";
+import { clamp, lerpVector, clampVector, sanitizeVector } from "../physics/vector.js";
 import { updateBotParticipants } from "../physics/bots.js?v=peer-collision-radius-20260627";
 import { updatePulseResonances, updatePulses } from "../physics/pulses.js";
 import {
@@ -40,14 +40,7 @@ export function stepGame(state, { now = Date.now(), deltaSeconds = 1 / 60, runti
     peers: Object.fromEntries(
       Object.entries(nextState.peers).map(([peerId, peer]) => [
         peerId,
-        {
-          ...peer,
-          position: lerpVector(
-            peer.position,
-            peer.targetPosition,
-            Math.min(1, deltaSeconds * MOTION_CONFIG.remoteInterpolationPerSecond)
-          )
-        }
+        updateRemoteParticipant(peer, now, deltaSeconds)
       ])
     )
   };
@@ -133,6 +126,37 @@ function findSourceParticipant(participants, sourceId) {
   return (participants ?? []).find(
     (participant) => String(participant?.clientId ?? participant?.id ?? "") === String(sourceId)
   );
+}
+
+function updateRemoteParticipant(peer, now, deltaSeconds) {
+  const dt = clamp(deltaSeconds, 0, MOTION_CONFIG.maxDeltaSeconds);
+  const networkPosition = clampVector(peer.networkPosition ?? peer.position);
+  const networkVelocity = sanitizeVector(peer.networkVelocity ?? peer.velocity);
+  const targetPosition = clampVector(
+    peer.targetPosition ?? peer.inputTargetPosition ?? networkPosition
+  );
+  const snapshotAgeSeconds = clamp(
+    (Number(now) - Number(peer.lastSeen ?? now)) / 1000,
+    0,
+    MOTION_CONFIG.remoteProjectionMaxSeconds
+  );
+  const projectedNetworkPosition = clampVector({
+    x: networkPosition.x + networkVelocity.x * snapshotAgeSeconds,
+    y: networkPosition.y + networkVelocity.y * snapshotAgeSeconds,
+    z: networkPosition.z + networkVelocity.z * snapshotAgeSeconds
+  });
+  const motion = updateMotion(peer, targetPosition, dt, MOTION_CONFIG.remoteMotion);
+  const correctionAlpha = Math.min(1, dt * MOTION_CONFIG.remoteCorrectionPerSecond);
+  const velocityCorrectionAlpha = Math.min(
+    1,
+    dt * MOTION_CONFIG.remoteVelocityCorrectionPerSecond
+  );
+
+  return {
+    ...peer,
+    position: lerpVector(motion.position, projectedNetworkPosition, correctionAlpha),
+    velocity: lerpVector(motion.velocity, networkVelocity, velocityCorrectionAlpha)
+  };
 }
 
 function applyParticipantRepulsion(state, deltaSeconds) {

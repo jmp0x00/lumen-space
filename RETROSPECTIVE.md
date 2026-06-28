@@ -72,6 +72,7 @@
 - Reworked the room chrome for mobile after the Lights list became too tall with shared bots: the roster now stays shallow and scrolls horizontally, while copy, Lo-Fi, and leave are compact touch-sized icon actions.
 - Removed the temporary playable-room instrumentation and its domain/view-state plumbing once the separate simulator had become the better place for movement inspection.
 - Rolled back the brighter layered lume treatment after feedback clarified that the desired change was not a new look, but the original lumes with light pulsation; the final renderer keeps the original sphere/halo/light setup and adds only a subtle deterministic breathing pulse.
+- Debugged clunky remote-player movement after comparing it with smoother locally simulated bots. The fix preserved authoritative presence snapshots separately from participant intent, then reused the target-driven motion integrator for remote humans and bots with short velocity projection plus bounded correction.
 
 ## AI Tools Used
 

@@ -47,7 +47,9 @@ test("peer presence snapshots update peers and reject stale sequences", () => {
   assert.equal(first.peers["client-peer"].name, "Lin");
   assert.equal(first.peers["client-peer"].sequence, 2);
   assert.equal(first.peers["client-peer"].transportPeerId, "transport-1");
-  assert.deepEqual(first.peers["client-peer"].targetPosition, { x: 3, y: 0, z: 0 });
+  assert.deepEqual(first.peers["client-peer"].networkPosition, { x: 3, y: 0, z: 0 });
+  assert.deepEqual(first.peers["client-peer"].networkVelocity, { x: 1, y: 0, z: 0 });
+  assert.deepEqual(first.peers["client-peer"].targetPosition, { x: 4, y: 0, z: 0 });
   assert.deepEqual(first.peers["client-peer"].inputTargetPosition, { x: 4, y: 0, z: 0 });
 
   const stalePresence = normalizePresenceMessage(
@@ -69,7 +71,8 @@ test("peer presence snapshots update peers and reject stale sequences", () => {
   }).state;
 
   assert.equal(stale.peers["client-peer"].name, "Lin");
-  assert.equal(stale.peers["client-peer"].targetPosition.x, 3);
+  assert.equal(stale.peers["client-peer"].targetPosition.x, 4);
+  assert.equal(stale.peers["client-peer"].networkPosition.x, 3);
 });
 
 test("local pulse requests are ignored because pulses only come from star touches", () => {

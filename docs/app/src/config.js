@@ -84,7 +84,14 @@ export const MOTION_CONFIG = Object.freeze({
   responsiveness: 11,
   damping: 0.86,
   maxSpeed: 8,
-  remoteInterpolationPerSecond: 7
+  remoteProjectionMaxSeconds: 0.35,
+  remoteCorrectionPerSecond: 5,
+  remoteVelocityCorrectionPerSecond: 2.5,
+  remoteMotion: Object.freeze({
+    responsiveness: 9,
+    damping: 0.9,
+    maxSpeed: 8
+  })
 });
 
 export const COLLISION_CONFIG = Object.freeze({

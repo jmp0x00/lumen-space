@@ -1,6 +1,6 @@
 import { DEFAULT_COLOR } from "../colors.js";
 import { STALE_PEER_MS } from "../config.js";
-import { clampVector } from "../physics/vector.js";
+import { clampVector, sanitizeVector } from "../physics/vector.js";
 import { createPulse } from "../physics/pulses.js";
 import {
   createHelloMessage,
@@ -113,6 +113,9 @@ function addPeerPlaceholder(state, peerId, now = Date.now()) {
         color: DEFAULT_COLOR,
         position: { x: 0, y: 0, z: 0 },
         targetPosition: { x: 0, y: 0, z: 0 },
+        inputTargetPosition: { x: 0, y: 0, z: 0 },
+        networkPosition: { x: 0, y: 0, z: 0 },
+        networkVelocity: { x: 0, y: 0, z: 0 },
         velocity: { x: 0, y: 0, z: 0 },
         sequence: -1,
         timestamp: now,
@@ -197,7 +200,10 @@ function applyPeerPresence(state, peerId, message) {
   }
 
   const hasExistingPeer = Boolean(existing);
-  const base = existing ?? placeholder ?? addPeerPlaceholder(state, peerId, message.receivedAt).peers[peerId];
+  const base =
+    existing ?? placeholder ?? addPeerPlaceholder(state, peerId, message.receivedAt).peers[peerId];
+  const visualPosition = hasExistingPeer ? clampVector(base.position) : message.position;
+  const visualVelocity = hasExistingPeer ? sanitizeVector(base.velocity) : message.velocity;
   const nextState = {
     ...state,
     peers: {
@@ -209,10 +215,12 @@ function applyPeerPresence(state, peerId, message) {
         clientId: message.clientId,
         name: message.name,
         color: message.color,
-        position: hasExistingPeer ? clampVector(base.position) : message.position,
-        targetPosition: message.position,
+        position: visualPosition,
+        targetPosition: message.targetPosition,
         inputTargetPosition: message.targetPosition,
-        velocity: message.velocity,
+        networkPosition: message.position,
+        networkVelocity: message.velocity,
+        velocity: visualVelocity,
         sequence: message.sequence,
         timestamp: message.timestamp,
         lastSeen: message.receivedAt,
