@@ -34,7 +34,7 @@ Use this as the return point for final challenge readiness work.
 - [ ] If `createSpaceScene` fails, `startSimulationLoop()` has already started; clean this up or document it as acceptable.
 - [ ] Manually test leaving and re-entering rooms to confirm no duplicate simulation loop or stale state.
 - [ ] Decide whether CDN-only runtime dependencies are acceptable for final submission.
-- [ ] Consider adding a small favicon to avoid the expected `/favicon.ico` 404 in browser logs.
+- [x] Add a small favicon to avoid the expected `/favicon.ico` 404 in browser logs.
 - [ ] Decide whether to commit an automated browser smoke script or keep browser validation manual.
 
 ## Validation Checklist
