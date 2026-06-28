@@ -1,15 +1,23 @@
+import {
+  REPULSION_CONFIG,
+  REPULSION_MAX_SPEED,
+  REPULSION_MAX_VELOCITY_DELTA,
+  REPULSION_POSITION_RESPONSE_SECONDS,
+  REPULSION_STRENGTH
+} from "../config.js";
 import { clamp, clampVector, sanitizeVector } from "./vector.js";
 import {
   PEER_COLLISION_RADIUS,
   getPeerCollisionDistance
 } from "./collision.js?v=peer-collision-radius-20260627";
 
-export const REPULSION_STRENGTH = 24;
-export const REPULSION_MAX_VELOCITY_DELTA = 2.4;
-export const REPULSION_MAX_SPEED = 8;
-export const REPULSION_POSITION_RESPONSE_SECONDS = 0.2;
+export {
+  REPULSION_MAX_SPEED,
+  REPULSION_MAX_VELOCITY_DELTA,
+  REPULSION_POSITION_RESPONSE_SECONDS,
+  REPULSION_STRENGTH
+};
 
-const MIN_REPULSION_DISTANCE = 0.001;
 const VECTOR_ZERO = Object.freeze({ x: 0, y: 0, z: 0 });
 
 export function applyPeerRepulsion(peer, peers, deltaSeconds, options = {}) {
@@ -115,14 +123,14 @@ export function calculatePeerRepulsionVelocityDelta(peer, peers, deltaSeconds, o
     }
 
     const direction =
-      distance > MIN_REPULSION_DISTANCE
+      distance > REPULSION_CONFIG.minDistance
         ? {
             x: offset.x / distance,
             y: offset.y / distance,
             z: offset.z / distance
           }
         : fallbackRepulsionDirection(peerId, otherId ?? `peer-${index}`);
-    const effectiveDistance = Math.max(distance, MIN_REPULSION_DISTANCE);
+    const effectiveDistance = Math.max(distance, REPULSION_CONFIG.minDistance);
     const closeness = 1 - clamp(effectiveDistance / collisionDistance, 0, 1);
     const force = strength * closeness;
 
@@ -149,7 +157,10 @@ export function carryTargetWithPositionDelta(target, previousPosition, nextPosit
 }
 
 function normalizeDeltaSeconds(deltaSeconds, options) {
-  const maxDeltaSeconds = readNonNegative(options.maxDeltaSeconds, 0.08);
+  const maxDeltaSeconds = readNonNegative(
+    options.maxDeltaSeconds,
+    REPULSION_CONFIG.maxDeltaSeconds
+  );
   return clamp(deltaSeconds, 0, maxDeltaSeconds);
 }
 

@@ -1,12 +1,16 @@
 import { DEFAULT_COLOR, hslToHex, mixHexColors } from "../colors.js";
+import {
+  TOUCH_STAR_CONFIG,
+  TOUCH_STAR_COOLDOWN_MS,
+  TOUCH_STAR_COUNT,
+  TOUCH_STAR_RADIUS
+} from "../config.js";
 import { normalizeRoomId } from "../room.js";
 import { createPulse } from "./pulses.js";
 import { getPeerStarCollisionDistance } from "./collision.js?v=peer-collision-radius-20260627";
 import { SPACE_BOUNDS, clamp, planeDistance } from "./vector.js";
 
-export const TOUCH_STAR_COUNT = 24;
-export const TOUCH_STAR_RADIUS = 0.48;
-export const TOUCH_STAR_COOLDOWN_MS = 7_500;
+export { TOUCH_STAR_COOLDOWN_MS, TOUCH_STAR_COUNT, TOUCH_STAR_RADIUS };
 
 export function createTouchStars(roomId, count = TOUCH_STAR_COUNT) {
   const roomSeed = normalizeRoomId(roomId) ?? "lumen-room";
@@ -53,7 +57,9 @@ export function collectTouchStarPulses(
           sourceId: participantId,
           origin: participant.position,
           color: mixHexColors(star.color, participant.color ?? DEFAULT_COLOR),
-          strength: participant.isBot ? 0.84 : 1.16,
+          strength: participant.isBot
+            ? TOUCH_STAR_CONFIG.botPulseStrength
+            : TOUCH_STAR_CONFIG.humanPulseStrength,
           timestamp: now,
           trigger: "star-touch",
           starId: star.id,
@@ -125,17 +131,37 @@ function createTouchStar(roomSeed, index, generation = 0, availableAt = 0, touch
   const safeGeneration = normalizeStarGeneration(generation);
   const seed = `${safeRoomSeed}:${safeIndex}:${safeGeneration}`;
   const hue = Math.floor(seededText(seed, "hue") * 360);
-  const saturation = scaleBetween(seededText(seed, "saturation"), 68, 92);
-  const lightness = scaleBetween(seededText(seed, "lightness"), 58, 74);
+  const saturation = scaleBetween(
+    seededText(seed, "saturation"),
+    TOUCH_STAR_CONFIG.saturationMin,
+    TOUCH_STAR_CONFIG.saturationMax
+  );
+  const lightness = scaleBetween(
+    seededText(seed, "lightness"),
+    TOUCH_STAR_CONFIG.lightnessMin,
+    TOUCH_STAR_CONFIG.lightnessMax
+  );
   const star = {
     id: `touch-star-${safeIndex}`,
     roomSeed: safeRoomSeed,
     index: safeIndex,
     generation: safeGeneration,
     position: {
-      x: scaleBetween(seededText(seed, "x"), SPACE_BOUNDS.x[0] + 1, SPACE_BOUNDS.x[1] - 1),
-      y: scaleBetween(seededText(seed, "y"), SPACE_BOUNDS.y[0] + 0.9, SPACE_BOUNDS.y[1] - 0.9),
-      z: scaleBetween(seededText(seed, "z"), -0.9, 0.4)
+      x: scaleBetween(
+        seededText(seed, "x"),
+        SPACE_BOUNDS.x[0] + TOUCH_STAR_CONFIG.spawnPaddingX,
+        SPACE_BOUNDS.x[1] - TOUCH_STAR_CONFIG.spawnPaddingX
+      ),
+      y: scaleBetween(
+        seededText(seed, "y"),
+        SPACE_BOUNDS.y[0] + TOUCH_STAR_CONFIG.spawnPaddingY,
+        SPACE_BOUNDS.y[1] - TOUCH_STAR_CONFIG.spawnPaddingY
+      ),
+      z: scaleBetween(
+        seededText(seed, "z"),
+        TOUCH_STAR_CONFIG.spawnZMin,
+        TOUCH_STAR_CONFIG.spawnZMax
+      )
     },
     color: hslToHex(hue, saturation, lightness),
     collisionRadius: TOUCH_STAR_RADIUS,

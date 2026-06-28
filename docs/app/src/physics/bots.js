@@ -1,19 +1,9 @@
+import { BOT_CONFIG } from "../config.js";
 import { updateMotion } from "./motion.js";
 import { clamp, clampVector, planeDistance, sanitizeVector, vectorDistance } from "./vector.js";
 
-export const BOT_MOTION_OPTIONS = Object.freeze({
-  responsiveness: 4.8,
-  damping: 0.92,
-  maxSpeed: 2.45
-});
-
-export const BOT_TARGETING_OPTIONS = Object.freeze({
-  comfortableChasersPerStar: 1,
-  targetPressurePenalty: 2.4,
-  currentTargetDistanceLeeway: 1.45,
-  currentTargetDistanceBonus: 0.8,
-  targetMatchEpsilon: 0.6
-});
+export const BOT_MOTION_OPTIONS = BOT_CONFIG.motion;
+export const BOT_TARGETING_OPTIONS = BOT_CONFIG.targeting;
 
 export function updateBotParticipants(
   participants,
@@ -330,12 +320,15 @@ function getDriftTarget(participant, now, botIndex) {
     : botIndex + 1;
   const basePosition = clampVector(participant?.basePosition ?? participant?.position);
   const time = now / 1000;
-  const xAmplitude = 0.65 + (seed % 5) * 0.14;
-  const yAmplitude = 0.48 + (seed % 7) * 0.09;
-  const zAmplitude = 0.2 + (seed % 3) * 0.08;
-  const xSpeed = 0.16 + (seed % 4) * 0.025;
-  const ySpeed = 0.12 + (seed % 6) * 0.021;
-  const zSpeed = 0.1 + (seed % 5) * 0.018;
+  const xAmplitude =
+    BOT_CONFIG.drift.xAmplitudeBase + (seed % 5) * BOT_CONFIG.drift.xAmplitudeStep;
+  const yAmplitude =
+    BOT_CONFIG.drift.yAmplitudeBase + (seed % 7) * BOT_CONFIG.drift.yAmplitudeStep;
+  const zAmplitude =
+    BOT_CONFIG.drift.zAmplitudeBase + (seed % 3) * BOT_CONFIG.drift.zAmplitudeStep;
+  const xSpeed = BOT_CONFIG.drift.xSpeedBase + (seed % 4) * BOT_CONFIG.drift.xSpeedStep;
+  const ySpeed = BOT_CONFIG.drift.ySpeedBase + (seed % 6) * BOT_CONFIG.drift.ySpeedStep;
+  const zSpeed = BOT_CONFIG.drift.zSpeedBase + (seed % 5) * BOT_CONFIG.drift.zSpeedStep;
   return clampVector({
     x: basePosition.x + Math.sin(time * xSpeed + seed * 1.7) * xAmplitude,
     y: basePosition.y + Math.cos(time * ySpeed + seed * 0.9) * yAmplitude,

@@ -62,7 +62,7 @@ Out of scope:
 - The default app runtime must use the full lobby and room UI generator.
 - The physics simulator must include a realtime room mode where each simulated user is visible in its own embedded app screen, joins the same room through the normal WebRTC connection, starts without bots, uses a scene-only UI generator, follows a chosen preset such as star chasing, scripted paths, orbiting, or chasing another user, and can be launched with a selected 1-8 client count.
 - Scripted realtime star-chasing clients must target only the currently active population-scaled touch-star subset, so they cannot idle on inactive generated stars.
-- Rooms must render deterministic random-looking touch stars from a capped 24-star pool, activating a population-scaled subset for collision and rendering.
+- Rooms must render deterministic random-looking touch stars from a capped 36-star pool, activating a population-scaled subset for collision and rendering.
 - After a touch, the star must temporarily disappear and respawn in a new deterministic random-looking position and color.
 - Star-touch pulse colors must blend the touched star color with the triggering lumen color.
 - Star-touch pulses must temporarily suppress and respawn the matching star for other clients through existing pulse metadata.

@@ -1,23 +1,34 @@
 import { normalizeHexColor } from "./colors.js";
+import {
+  LOFI_LOOP_BPM,
+  ROOM_LOFI_SONG_BPM,
+  ROOM_LOFI_SONG_DENSITY,
+  ROOM_LOFI_SONG_SEED,
+  ROOM_LOFI_SONG_SPACE,
+  SOUND_CONFIG,
+  SOUND_CUE_MEMORY_LIMIT
+} from "./config.js";
 import { clamp, SPACE_BOUNDS } from "./physics/vector.js";
 import {
   createSpaceLofiSongController,
   createSpaceLofiSongPlan
 } from "./space-lofi-song.js?v=audible-reactions-20260628";
 
-export const SOUND_CUE_MEMORY_LIMIT = 240;
-export const LOFI_LOOP_BPM = 78;
-export const ROOM_LOFI_SONG_SEED = "lumen-space-room";
-export const ROOM_LOFI_SONG_BPM = 72;
-export const ROOM_LOFI_SONG_DENSITY = 0.58;
-export const ROOM_LOFI_SONG_SPACE = 0.62;
+export {
+  LOFI_LOOP_BPM,
+  ROOM_LOFI_SONG_BPM,
+  ROOM_LOFI_SONG_DENSITY,
+  ROOM_LOFI_SONG_SEED,
+  ROOM_LOFI_SONG_SPACE,
+  SOUND_CUE_MEMORY_LIMIT
+};
 
-const LOFI_LOOP_BARS = 4;
-const LOFI_STEPS_PER_BAR = 16;
+const LOFI_LOOP_BARS = SOUND_CONFIG.lofiLoopBars;
+const LOFI_STEPS_PER_BAR = SOUND_CONFIG.lofiStepsPerBar;
 const LOFI_LOOP_STEPS = LOFI_LOOP_BARS * LOFI_STEPS_PER_BAR;
-const LOFI_SWING = 0.1;
-const LOFI_SCHEDULE_AHEAD_SECONDS = 0.9;
-const LOFI_SCHEDULER_INTERVAL_MS = 110;
+const LOFI_SWING = SOUND_CONFIG.lofiSwing;
+const LOFI_SCHEDULE_AHEAD_SECONDS = SOUND_CONFIG.lofiScheduleAheadSeconds;
+const LOFI_SCHEDULER_INTERVAL_MS = SOUND_CONFIG.lofiSchedulerIntervalMs;
 const LOFI_CHORDS = [
   { name: "Am9", rootFrequency: 55, frequencies: [220, 261.63, 329.63, 392, 493.88] },
   { name: "Fmaj7", rootFrequency: 43.65, frequencies: [174.61, 220, 261.63, 329.63] },

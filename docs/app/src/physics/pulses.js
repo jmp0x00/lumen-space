@@ -1,12 +1,24 @@
 import { DEFAULT_COLOR, mixHexColors, normalizeHexColor } from "../colors.js";
+import {
+  MAX_ACTIVE_RESONANCES,
+  PROTOCOL_CONFIG,
+  PULSE_BASE_RADIUS,
+  PULSE_CONFIG,
+  PULSE_DURATION_MS,
+  PULSE_RADIUS_SCALE,
+  RESONANCE_DURATION_MS,
+  RESONANCE_EDGE_TOLERANCE
+} from "../config.js";
 import { clamp, clampVector, lerpVector, vectorDistance } from "./vector.js";
 
-export const PULSE_DURATION_MS = 1_800;
-export const PULSE_BASE_RADIUS = 0.6;
-export const PULSE_RADIUS_SCALE = 7.5;
-export const RESONANCE_DURATION_MS = 700;
-export const RESONANCE_EDGE_TOLERANCE = 0.72;
-export const MAX_ACTIVE_RESONANCES = 16;
+export {
+  MAX_ACTIVE_RESONANCES,
+  PULSE_BASE_RADIUS,
+  PULSE_DURATION_MS,
+  PULSE_RADIUS_SCALE,
+  RESONANCE_DURATION_MS,
+  RESONANCE_EDGE_TOLERANCE
+};
 
 export function createPulse({
   id,
@@ -27,7 +39,7 @@ export function createPulse({
     sourceId,
     origin: clampVector(origin),
     color: normalizeHexColor(color),
-    strength: clamp(strength, 0.2, 2.5),
+    strength: clamp(strength, PROTOCOL_CONFIG.pulseStrengthMin, PROTOCOL_CONFIG.pulseStrengthMax),
     timestamp: safeTimestamp
   };
   if (safeTrigger) {
@@ -86,7 +98,9 @@ export function updatePulses(pulses, now = Date.now(), durationMs = PULSE_DURATI
 export function getPulseRadius(pulse) {
   return (
     PULSE_BASE_RADIUS +
-    clamp(pulse?.progress ?? 0, 0, 1) * PULSE_RADIUS_SCALE * clamp(pulse?.strength ?? 1, 0.2, 2.5)
+    clamp(pulse?.progress ?? 0, 0, 1) *
+      PULSE_RADIUS_SCALE *
+      clamp(pulse?.strength ?? 1, PROTOCOL_CONFIG.pulseStrengthMin, PROTOCOL_CONFIG.pulseStrengthMax)
   );
 }
 
@@ -157,7 +171,9 @@ export function normalizePulseMessage(data, sourceId = "remote", receivedAt = Da
 }
 
 function detectPulseResonances(pulses, now, { tolerance }) {
-  const activePulses = pulses.filter((pulse) => Number(pulse?.opacity ?? 0) > 0.04);
+  const activePulses = pulses.filter(
+    (pulse) => Number(pulse?.opacity ?? 0) > PULSE_CONFIG.activeOpacityThreshold
+  );
   const resonances = [];
 
   for (let firstIndex = 0; firstIndex < activePulses.length; firstIndex += 1) {
@@ -169,7 +185,7 @@ function detectPulseResonances(pulses, now, { tolerance }) {
       }
 
       const distance = vectorDistance(first.origin, second.origin);
-      if (distance <= 0.01) {
+      if (distance <= PULSE_CONFIG.minSourceDistance) {
         continue;
       }
 

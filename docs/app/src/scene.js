@@ -1,6 +1,5 @@
+import { SCENE_CONFIG } from "./config.js";
 import { getPeerVisualScale, getPulseRadius } from "./domain.js?v=peer-collision-radius-20260627";
-
-const THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js";
 
 export async function createSpaceScene({
   container,
@@ -9,7 +8,7 @@ export async function createSpaceScene({
   getResonances = () => [],
   getTouchStars = () => []
 }) {
-  const THREE = await import(THREE_URL);
+  const THREE = await import(SCENE_CONFIG.threeUrl);
 
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x05070d, 0.035);
@@ -19,7 +18,7 @@ export async function createSpaceScene({
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setClearColor(0x05070d, 1);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, SCENE_CONFIG.maxPixelRatio));
   container.appendChild(renderer.domElement);
 
   const raycaster = new THREE.Raycaster();
@@ -371,7 +370,7 @@ function createResonanceMesh(THREE, resonance, glowTexture) {
 
 function createStars(THREE) {
   const geometry = new THREE.BufferGeometry();
-  const count = 640;
+  const count = SCENE_CONFIG.backgroundStarCount;
   const positions = new Float32Array(count * 3);
 
   for (let index = 0; index < count; index += 1) {

@@ -1,4 +1,4 @@
-const TRYSTERO_URL = "https://esm.run/trystero@0.25.2";
+import { NETWORK_CONFIG } from "./config.js";
 
 export async function connectToRoom({
   appId,
@@ -10,7 +10,7 @@ export async function connectToRoom({
   onEvent,
   onError
 }) {
-  const { joinRoom, selfId } = await import(TRYSTERO_URL);
+  const { joinRoom, selfId } = await import(NETWORK_CONFIG.trysteroUrl);
 
   const room = joinRoom({ appId }, roomId, {
     onJoinError(details) {

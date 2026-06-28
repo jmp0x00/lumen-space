@@ -3,6 +3,7 @@ import {
   getSimulationClientStartPosition,
   getSimulationTarget
 } from "./simulation-clients.js?v=lofi-audio-20260627";
+import { ROOM_URL_BASE } from "./config.js";
 import {
   createDefaultAppUi,
   createSceneOnlyAppUi
@@ -116,11 +117,11 @@ function getSearchParams(locationLike) {
   }
 
   if (typeof locationLike === "string") {
-    return new URL(locationLike, "https://lumen.local/docs/app/index.html").searchParams;
+    return new URL(locationLike, ROOM_URL_BASE).searchParams;
   }
 
   const href = locationLike?.href ?? String(locationLike ?? "");
-  return new URL(href, "https://lumen.local/docs/app/index.html").searchParams;
+  return new URL(href, ROOM_URL_BASE).searchParams;
 }
 
 function roundStateVector(vector) {

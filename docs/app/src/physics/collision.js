@@ -1,7 +1,16 @@
-export const PEER_COLLISION_RADIUS = 0.19;
-export const LOCAL_PEER_VISUAL_SCALE = 1.18;
-export const BOT_PEER_VISUAL_SCALE = 0.74;
-export const REMOTE_PEER_VISUAL_SCALE = 1;
+import {
+  BOT_PEER_VISUAL_SCALE,
+  LOCAL_PEER_VISUAL_SCALE,
+  PEER_COLLISION_RADIUS,
+  REMOTE_PEER_VISUAL_SCALE
+} from "../config.js";
+
+export {
+  BOT_PEER_VISUAL_SCALE,
+  LOCAL_PEER_VISUAL_SCALE,
+  PEER_COLLISION_RADIUS,
+  REMOTE_PEER_VISUAL_SCALE
+};
 
 export function getPeerVisualScale(peer, options = {}) {
   const explicitScale = readPositive(peer?.visualScale, null);

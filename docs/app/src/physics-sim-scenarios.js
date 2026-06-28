@@ -1,64 +1,9 @@
 import { COLORS } from "./colors.js";
+import { PHYSICS_SIM_CONFIG } from "./config.js";
 
-export const SIMULATION_PEER_NAMES = [
-  "Ada",
-  "Lin",
-  "Grace",
-  "Katherine",
-  "Hedy",
-  "Radia",
-  "Mae",
-  "Evelyn"
-];
-
-const CROSSING_ROUTES = Object.freeze([
-  Object.freeze({
-    id: "horizontal",
-    start: Object.freeze({ x: -3.2, y: 0, z: 0 }),
-    end: Object.freeze({ x: 3.2, y: 0, z: 0 })
-  }),
-  Object.freeze({
-    id: "vertical",
-    start: Object.freeze({ x: 0, y: -2.8, z: 0 }),
-    end: Object.freeze({ x: 0, y: 2.8, z: 0 })
-  })
-]);
-
-export const PHYSICS_SIM_SCENARIOS = Object.freeze({
-  cluster: Object.freeze({
-    id: "cluster",
-    label: "Cluster",
-    description: "Dense group",
-    peerCount: 8,
-    controls: Object.freeze({
-      collisionRadius: 0.42,
-      strength: 24,
-      response: 0.18
-    })
-  }),
-  orbit: Object.freeze({
-    id: "orbit",
-    label: "Orbit",
-    description: "Moving group",
-    peerCount: 8,
-    controls: Object.freeze({
-      collisionRadius: 0.36,
-      strength: 20,
-      response: 0.16
-    })
-  }),
-  crossing: Object.freeze({
-    id: "crossing",
-    label: "Crossing",
-    description: "Intersecting routes",
-    peerCount: 2,
-    controls: Object.freeze({
-      collisionRadius: 0.58,
-      strength: 36,
-      response: 0.26
-    })
-  })
-});
+export const SIMULATION_PEER_NAMES = PHYSICS_SIM_CONFIG.peerNames;
+const CROSSING_ROUTES = PHYSICS_SIM_CONFIG.crossingRoutes;
+export const PHYSICS_SIM_SCENARIOS = PHYSICS_SIM_CONFIG.scenarios;
 
 export function getPhysicsSimScenario(scenarioId) {
   return PHYSICS_SIM_SCENARIOS[scenarioId] ?? PHYSICS_SIM_SCENARIOS.cluster;

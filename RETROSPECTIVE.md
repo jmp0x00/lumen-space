@@ -64,6 +64,7 @@
 - Removed player-facing bot add/remove controls after the shared-bot model made bot count a room rule rather than a user command.
 - Fixed a realtime simulator regression where scripted star racers could chase inactive generated stars and appear idle; the simulator now uses the active star selector for target selection while keeping embedded clients bot-free so the scripted peers remain the controlled population.
 - Tuned shared bot targeting again with a narrower deterministic rule: bots count how many owned or remote bots are already aiming at each available star, continue toward a nearby uncrowded target, and redirect toward less-contested alternatives when a star gets crowded.
+- Centralized app, gameplay, physics, audio, scene, and simulator tunables in `docs/app/src/config.js`, then raised the generated touch-star pool and active cap from 24 to 36 so busier rooms have more environmental pulse opportunities.
 
 ## AI Tools Used
 

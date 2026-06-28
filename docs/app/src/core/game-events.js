@@ -1,4 +1,5 @@
 import { DEFAULT_COLOR } from "../colors.js";
+import { STALE_PEER_MS } from "../config.js";
 import { clampVector } from "../physics/vector.js";
 import { createPulse } from "../physics/pulses.js";
 import {
@@ -229,7 +230,7 @@ function applyPeerPresence(state, peerId, message) {
   return syncOwnedSharedBotParticipants(nextState);
 }
 
-function pruneStalePeers(state, now = Date.now(), timeoutMs = 10_000) {
+function pruneStalePeers(state, now = Date.now(), timeoutMs = STALE_PEER_MS) {
   return syncOwnedSharedBotParticipants({
     ...state,
     peers: Object.fromEntries(

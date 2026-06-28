@@ -1,33 +1,16 @@
-const NAME_GENERATOR_URL = "https://esm.run/unique-names-generator@4.7.1";
-
-const fallbackAdjectives = [
-  "Bouncy",
-  "Cosmic",
-  "Dizzy",
-  "Glowing",
-  "Jolly",
-  "Sneaky",
-  "Sparkly",
-  "Zesty"
-];
-const fallbackNouns = [
-  "Comet",
-  "Lantern",
-  "Meteor",
-  "Moonbeam",
-  "Nebula",
-  "Photon",
-  "Quasar",
-  "Stardust"
-];
+import { NAME_CONFIG } from "./config.js";
 
 let externalGenerator = null;
 let externalGeneratorPromise = null;
 
 export function generateFallbackName(seed = Date.now()) {
   const hash = hashSeed(seed);
-  const adjective = fallbackAdjectives[hash % fallbackAdjectives.length];
-  const noun = fallbackNouns[Math.floor(hash / fallbackAdjectives.length) % fallbackNouns.length];
+  const adjective = NAME_CONFIG.fallbackAdjectives[hash % NAME_CONFIG.fallbackAdjectives.length];
+  const noun =
+    NAME_CONFIG.fallbackNouns[
+      Math.floor(hash / NAME_CONFIG.fallbackAdjectives.length) %
+        NAME_CONFIG.fallbackNouns.length
+    ];
   return `${adjective} ${noun}`;
 }
 
@@ -36,7 +19,7 @@ export async function loadNameGenerator() {
     return externalGenerator;
   }
 
-  externalGeneratorPromise ??= import(NAME_GENERATOR_URL)
+  externalGeneratorPromise ??= import(NAME_CONFIG.generatorUrl)
     .then((module) => {
       externalGenerator = (seed = Date.now()) =>
         module.uniqueNamesGenerator({

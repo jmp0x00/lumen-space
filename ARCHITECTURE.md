@@ -40,7 +40,8 @@ The preferred long-term game-core model is documented in
 - `app.js` is now a browser adapter. It owns DOM/UI callbacks, local storage, URL updates, realtime connection, timers, animation frames, scene startup, and effect execution while delegating game-state changes to the pure core modules.
 - `app-ui.js` owns default DOM rendering for the lobby, room chrome, participants, actions, toast, and debug overlay, plus a scene-only generator for embedded clients.
 - `runtime-config.js` owns app runtime hooks and UI generator selection, defaulting to the full lobby and room UI while allowing embedded clients to render scene-only.
-- `simulation-clients.js` owns realtime simulator presets, no-bot client URL generation, single sound-source assignment, scripted movement target selection, and deterministic target helpers for tests.
+- `config.js` owns shared app, gameplay, physics, audio, scene, and simulator constants so limits and tunables have one source of truth.
+- `simulation-clients.js` owns no-bot realtime simulator client URL generation, single sound-source assignment, scripted movement target selection, and deterministic target helpers for tests, using presets from `config.js`.
 - `sound.js` owns room audio glue, the room preset for the shared space lo-fi song, mapping from pulse/resonance state to song reaction events, and the browser-only Web Audio performer.
 - `space-lofi-song.js` owns the shared procedural space lo-fi infinite song plan, deterministic reaction model, reusable loop controller, and browser-only Web Audio performer used by both the room audio and simulator song mode.
 - `simulator.html`, `physics-sim.css`, and `physics-sim.js` form a separate static inspection app that runs scripted peers against the same pure physics modules, embeds realtime app clients, and exposes the separate song mode.

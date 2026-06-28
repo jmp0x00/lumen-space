@@ -1,9 +1,8 @@
-const ROOM_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
-const ROOM_MAX_LENGTH = 40;
+import { ROOM_ALPHABET, ROOM_MAX_LENGTH, ROOM_TOKEN_LENGTH, ROOM_URL_BASE } from "./config.js";
 
 export function createRoomId(random = Math.random) {
   let token = "";
-  for (let index = 0; index < 6; index += 1) {
+  for (let index = 0; index < ROOM_TOKEN_LENGTH; index += 1) {
     const raw = Number(random());
     const safe = Number.isFinite(raw) ? Math.abs(raw) : 0;
     token += ROOM_ALPHABET[Math.floor(safe * ROOM_ALPHABET.length) % ROOM_ALPHABET.length];
@@ -32,7 +31,7 @@ export function getRoomIdFromLocation(locationLike) {
     typeof locationLike === "string"
       ? locationLike
       : locationLike.href || String(locationLike);
-  const url = new URL(href, "https://lumen.local/docs/app/index.html");
+  const url = new URL(href, ROOM_URL_BASE);
   return normalizeRoomId(url.searchParams.get("room"));
 }
 
@@ -42,7 +41,7 @@ export function createInviteUrl(currentHref, roomId) {
     throw new Error("Cannot create invite URL without a valid room ID.");
   }
 
-  const url = new URL(currentHref, "https://lumen.local/docs/app/index.html");
+  const url = new URL(currentHref, ROOM_URL_BASE);
   url.searchParams.set("room", normalized);
   return url.href;
 }

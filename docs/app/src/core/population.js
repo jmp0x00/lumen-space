@@ -1,13 +1,24 @@
+import {
+  BASE_TOUCH_STARS,
+  DESIRED_ROOM_LUMES,
+  HARD_LUME_LIMIT,
+  MAX_SHARED_BOTS,
+  MAX_TOUCH_STARS,
+  MIN_TOUCH_STARS,
+  TOUCH_STARS_PER_LUME
+} from "../config.js";
 import { normalizeRoomId } from "../room.js";
 import { clamp } from "../physics/vector.js";
 
-export const HARD_LUME_LIMIT = 12;
-export const DESIRED_ROOM_LUMES = 8;
-export const MAX_SHARED_BOTS = 6;
-export const MIN_TOUCH_STARS = 8;
-export const MAX_TOUCH_STARS = 24;
-export const BASE_TOUCH_STARS = 6;
-export const TOUCH_STARS_PER_LUME = 2;
+export {
+  BASE_TOUCH_STARS,
+  DESIRED_ROOM_LUMES,
+  HARD_LUME_LIMIT,
+  MAX_SHARED_BOTS,
+  MAX_TOUCH_STARS,
+  MIN_TOUCH_STARS,
+  TOUCH_STARS_PER_LUME
+};
 
 export function getTargetSharedBotCount(activeHumanPlayers, options = {}) {
   const humanCount = readNonNegativeInteger(activeHumanPlayers);

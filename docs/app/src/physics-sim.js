@@ -4,6 +4,7 @@ import {
   getScenarioRouteSegments,
   getScenarioTargetPosition
 } from "./physics-sim-scenarios.js";
+import { SIMULATOR_CONFIG } from "./config.js";
 import { normalizeRoomId } from "./room.js";
 import {
   REALTIME_ROOM_CLIENT_COUNT_MAX,
@@ -35,9 +36,9 @@ import {
 } from "./physics/repulsion.js?v=peer-collision-radius-20260627";
 import { SPACE_BOUNDS, clamp, vectorDistance } from "./physics/vector.js";
 
-const REALTIME_RELAUNCH_DELAY_MS = 350;
-const REALTIME_SOUND_SOURCE_INDEX = 0;
-const SONG_VISUAL_STAR_COUNT = 96;
+const REALTIME_RELAUNCH_DELAY_MS = SIMULATOR_CONFIG.realtimeRelaunchDelayMs;
+const REALTIME_SOUND_SOURCE_INDEX = SIMULATOR_CONFIG.realtimeSoundSourceIndex;
+const SONG_VISUAL_STAR_COUNT = SIMULATOR_CONFIG.songVisualStarCount;
 
 const canvas = document.querySelector("#sim-canvas");
 const context = canvas.getContext("2d");
@@ -107,7 +108,7 @@ let songPlayer = createSpaceLofiSongPlayer({
   bpm: songPlan.bpm,
   density: songPlan.density,
   space: songPlan.space,
-  volume: 0.84
+  volume: SIMULATOR_CONFIG.defaultSongVolume
 });
 let songEnabled = false;
 let songElapsedSeconds = 0;

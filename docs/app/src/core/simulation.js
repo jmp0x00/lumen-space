@@ -1,3 +1,4 @@
+import { MOTION_CONFIG } from "../config.js";
 import { applyPeerRepulsionToParticipants } from "../physics/repulsion.js?v=peer-collision-radius-20260627";
 import { updateMotion } from "../physics/motion.js";
 import { lerpVector, clampVector } from "../physics/vector.js";
@@ -41,7 +42,11 @@ export function stepGame(state, { now = Date.now(), deltaSeconds = 1 / 60, runti
         peerId,
         {
           ...peer,
-          position: lerpVector(peer.position, peer.targetPosition, Math.min(1, deltaSeconds * 7))
+          position: lerpVector(
+            peer.position,
+            peer.targetPosition,
+            Math.min(1, deltaSeconds * MOTION_CONFIG.remoteInterpolationPerSecond)
+          )
         }
       ])
     )

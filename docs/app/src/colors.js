@@ -1,12 +1,6 @@
-export const DEFAULT_COLOR = "#7dd3fc";
-export const COLORS = [
-  "#7dd3fc",
-  "#f0abfc",
-  "#fcd34d",
-  "#86efac",
-  "#fb7185",
-  "#c4b5fd"
-];
+import { COLORS, DEFAULT_COLOR } from "./config.js";
+
+export { COLORS, DEFAULT_COLOR };
 
 export function isValidHexColor(value) {
   return /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(value ?? ""));

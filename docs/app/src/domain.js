@@ -1,4 +1,5 @@
 import { COLORS, DEFAULT_COLOR, isValidHexColor, normalizeHexColor } from "./colors.js";
+import { APP_ID, NAME_MAX_LENGTH, STALE_PEER_MS } from "./config.js";
 import {
   updateBotParticipants
 } from "./physics/bots.js?v=peer-collision-radius-20260627";
@@ -54,8 +55,7 @@ import {
   sanitizeVector
 } from "./physics/vector.js";
 
-export const APP_ID = "vadim-kiryukhin-lumen-space";
-export const STALE_PEER_MS = 10_000;
+export { APP_ID, STALE_PEER_MS };
 
 export { COLORS, DEFAULT_COLOR, isValidHexColor, normalizeHexColor };
 export {
@@ -111,8 +111,6 @@ export {
   updatePulseResonances,
   updatePulses
 };
-
-const NAME_MAX_LENGTH = 18;
 
 export function sanitizeIdentity(raw = {}) {
   const source = isObject(raw) ? raw : {};

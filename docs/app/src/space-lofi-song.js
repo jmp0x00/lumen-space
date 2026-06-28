@@ -1,16 +1,27 @@
 import { normalizeHexColor } from "./colors.js";
+import {
+  SPACE_LOFI_CONFIG,
+  SPACE_LOFI_DENSITY,
+  SPACE_LOFI_REACTION_MIX,
+  SPACE_LOFI_SONG_BPM,
+  SPACE_LOFI_SPACE,
+  SPACE_LOFI_STEPS_PER_BAR,
+  SPACE_LOFI_SWING
+} from "./config.js";
 
-export const SPACE_LOFI_SONG_BPM = 72;
-export const SPACE_LOFI_DENSITY = 0.5;
-export const SPACE_LOFI_SPACE = 0.5;
-export const SPACE_LOFI_STEPS_PER_BAR = 16;
-export const SPACE_LOFI_SWING = 0.12;
-export const SPACE_LOFI_REACTION_MIX = 0.86;
+export {
+  SPACE_LOFI_DENSITY,
+  SPACE_LOFI_REACTION_MIX,
+  SPACE_LOFI_SONG_BPM,
+  SPACE_LOFI_SPACE,
+  SPACE_LOFI_STEPS_PER_BAR,
+  SPACE_LOFI_SWING
+};
 
-const SCHEDULE_AHEAD_SECONDS = 0.42;
-const SCHEDULER_INTERVAL_MS = 55;
-const NOISE_LOOP_FADE_SECONDS = 0.08;
-const DEFAULT_SEED = "lumen-space-song";
+const SCHEDULE_AHEAD_SECONDS = SPACE_LOFI_CONFIG.scheduleAheadSeconds;
+const SCHEDULER_INTERVAL_MS = SPACE_LOFI_CONFIG.schedulerIntervalMs;
+const NOISE_LOOP_FADE_SECONDS = SPACE_LOFI_CONFIG.noiseLoopFadeSeconds;
+const DEFAULT_SEED = SPACE_LOFI_CONFIG.defaultSeed;
 const REACTION_TYPES = new Set(["star-touch", "resonance"]);
 const PROGRESSION = [
   {

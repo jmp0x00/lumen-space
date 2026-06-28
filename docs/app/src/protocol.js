@@ -1,19 +1,25 @@
 import { isValidHexColor, normalizeHexColor } from "./colors.js";
+import {
+  DEFAULT_CAPABILITIES,
+  DEFAULT_COLOR,
+  NAME_MAX_LENGTH,
+  PROTOCOL_CONFIG,
+  PROTOCOL_NAME,
+  PROTOCOL_VERSION,
+  TEXT_MAX_LENGTH
+} from "./config.js";
 import { clamp, clampVector } from "./physics/vector.js";
 
-export const PROTOCOL_NAME = "lumen-space";
-export const PROTOCOL_VERSION = 2;
-export const DEFAULT_CAPABILITIES = Object.freeze(["presence@2", "event:pulse@2"]);
-
-const NAME_MAX_LENGTH = 18;
-const TEXT_MAX_LENGTH = 80;
+export { DEFAULT_CAPABILITIES, PROTOCOL_NAME, PROTOCOL_VERSION };
 
 export function createClientId(prefix = "client", now = Date.now(), random = Math.random) {
-  const safePrefix = normalizeToken(prefix, "client", 24);
+  const safePrefix = normalizeToken(prefix, "client", PROTOCOL_CONFIG.tokenMaxLength);
   const timePart = Math.max(0, Math.floor(Number(now) || 0)).toString(36);
-  const randomPart = Math.floor(clamp(Number(random()), 0, 0.999999) * 1_000_000)
+  const randomPart = Math.floor(
+    clamp(Number(random()), 0, 0.999999) * PROTOCOL_CONFIG.clientIdRandomScale
+  )
     .toString(36)
-    .padStart(4, "0");
+    .padStart(PROTOCOL_CONFIG.clientIdRandomPartLength, "0");
   return `${safePrefix}-${timePart}-${randomPart}`;
 }
 
@@ -31,7 +37,7 @@ export function createHelloMessage({
     version: PROTOCOL_VERSION,
     clientId: normalizedClientId || "client",
     name: normalizedIdentity?.name ?? "Guest",
-    color: normalizedIdentity?.color ?? "#7dd3fc",
+    color: normalizedIdentity?.color ?? DEFAULT_COLOR,
     capabilities: normalizeCapabilities(capabilities),
     timestamp: normalizeTimestamp(timestamp)
   };
@@ -83,7 +89,7 @@ export function createPresenceMessage({
     clientId: normalizeRequiredText(clientId) || "client",
     sequence: normalizeSequence(sequence),
     name: normalizedIdentity?.name ?? "Guest",
-    color: normalizedIdentity?.color ?? "#7dd3fc",
+    color: normalizedIdentity?.color ?? DEFAULT_COLOR,
     position: clampVector(position),
     velocity: normalizeFiniteVector(velocity) ?? { x: 0, y: 0, z: 0 },
     targetPosition: clampVector(targetPosition ?? position),
@@ -173,7 +179,7 @@ export function createPulseEventMessage({
     sequence: normalizeSequence(sequence),
     origin: clampVector(origin),
     color: normalizeHexColor(color),
-    strength: clamp(strength, 0.2, 2.5),
+    strength: clamp(strength, PROTOCOL_CONFIG.pulseStrengthMin, PROTOCOL_CONFIG.pulseStrengthMax),
     timestamp: normalizeTimestamp(timestamp),
     trigger: safeTrigger,
     sourceKind: safeSourceKind
@@ -301,7 +307,7 @@ function normalizeCapabilities(capabilities) {
   const normalized = source
     .map((capability) => normalizeRequiredText(capability))
     .filter(Boolean)
-    .slice(0, 12);
+    .slice(0, PROTOCOL_CONFIG.capabilityLimit);
   return normalized.length > 0 ? normalized : [...DEFAULT_CAPABILITIES];
 }
 
@@ -374,7 +380,9 @@ function readPositiveTimestamp(value, fallback) {
 
 function readStrength(value) {
   const strength = Number(value);
-  return Number.isFinite(strength) ? clamp(strength, 0.2, 2.5) : null;
+  return Number.isFinite(strength)
+    ? clamp(strength, PROTOCOL_CONFIG.pulseStrengthMin, PROTOCOL_CONFIG.pulseStrengthMax)
+    : null;
 }
 
 function normalizeStarGeneration(value) {

@@ -1,8 +1,6 @@
-export const SPACE_BOUNDS = Object.freeze({
-  x: [-8.8, 8.8],
-  y: [-4.8, 4.8],
-  z: [-2.2, 2.2]
-});
+import { SPACE_BOUNDS } from "../config.js";
+
+export { SPACE_BOUNDS };
 
 const VECTOR_ZERO = Object.freeze({ x: 0, y: 0, z: 0 });
 

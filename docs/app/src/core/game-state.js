@@ -1,11 +1,11 @@
 import { DEFAULT_COLOR } from "../colors.js";
+import { BOT_CONFIG, TOUCH_STAR_COUNT } from "../config.js";
 import { generateFallbackName } from "../names.js";
 import { createRoomId } from "../room.js";
 import { createTouchStars } from "../physics/touch-stars.js?v=peer-collision-radius-20260627";
-import { SPACE_BOUNDS, clampVector } from "../physics/vector.js";
+import { clampVector } from "../physics/vector.js";
 import { normalizeProtocolIdentity } from "../protocol.js";
 import {
-  MAX_TOUCH_STARS,
   createSharedBotId,
   getActiveTouchStarCount,
   getOwnedSharedBotSlots,
@@ -89,7 +89,7 @@ export function enterRoomState(
     peers: {},
     pulses: [],
     resonances: [],
-    touchStars: createTouchStars(roomId, MAX_TOUCH_STARS),
+    touchStars: createTouchStars(roomId, TOUCH_STAR_COUNT),
     sharedBotsEnabled: Boolean(sharedBotsEnabled),
     botParticipants: []
   };
@@ -125,15 +125,9 @@ export function createBotParticipant({
   createBotName
 } = {}) {
   const safeIndex = Math.max(0, Math.floor(Number(index) || 0));
-  const botPositions = [
-    { color: "#f0abfc", basePosition: { x: SPACE_BOUNDS.x[0] * 0.42, y: 1.6, z: -0.6 } },
-    { color: "#fcd34d", basePosition: { x: SPACE_BOUNDS.x[1] * 0.36, y: -1.4, z: -0.8 } },
-    { color: "#86efac", basePosition: { x: 0.8, y: 2.25, z: -1.2 } },
-    { color: "#c4b5fd", basePosition: { x: -1.4, y: -2.2, z: -0.4 } },
-    { color: "#fb7185", basePosition: { x: 2.2, y: 1.1, z: -1.3 } }
-  ];
-  const template = botPositions[safeIndex % botPositions.length];
-  const driftSeed = 2.4 + safeIndex * 1.7;
+  const template = BOT_CONFIG.templates[safeIndex % BOT_CONFIG.templates.length];
+  const basePosition = clampVector(template.basePosition);
+  const driftSeed = BOT_CONFIG.driftSeedBase + safeIndex * BOT_CONFIG.driftSeedStep;
   const seed = `bot-${roomId}-${safeIndex}`;
   const name =
     typeof createBotName === "function"
@@ -148,9 +142,9 @@ export function createBotParticipant({
     botSlot: safeIndex,
     name,
     color: template.color,
-    basePosition: template.basePosition,
-    position: template.basePosition,
-    targetPosition: template.basePosition,
+    basePosition,
+    position: { ...basePosition },
+    targetPosition: { ...basePosition },
     velocity: { x: 0, y: 0, z: 0 },
     driftSeed,
     createdAt,

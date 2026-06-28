@@ -9,6 +9,7 @@ import {
   normalizeRoomId,
   sanitizeIdentity
 } from "./domain.js?v=peer-collision-radius-20260627";
+import { APP_CONFIG } from "./config.js";
 import { createInitialGameState, chooseStartPosition } from "./core/game-state.js";
 import { reduceGameEvent } from "./core/game-events.js";
 import {
@@ -34,7 +35,6 @@ import {
   createSoundCueSnapshot
 } from "./sound.js?v=audible-reactions-20260628";
 
-const storageKey = "lumen-space.identity";
 const runtimeConfig = createRuntimeConfig(window.location);
 const savedIdentity = runtimeConfig.persistIdentity ? loadSavedIdentity() : null;
 const initialRoomId = getRoomIdFromLocation(window.location);
@@ -69,7 +69,7 @@ let soundEnabled =
 const pulseAudio = createPulseSoundPlayer({
   window,
   enabled: soundEnabled,
-  volume: 0.82
+  volume: APP_CONFIG.roomSoundVolume
 });
 
 const ui = runtimeConfig.createUi({
@@ -249,14 +249,14 @@ function bindPointerControls() {
 function startPresenceLoop() {
   stopPresenceLoop();
   sendPresence();
-  presenceTimer = window.setInterval(sendPresence, 250);
+  presenceTimer = window.setInterval(sendPresence, APP_CONFIG.presenceIntervalMs);
   pruneTimer = window.setInterval(() => {
     dispatch({
       type: "peers/prune-stale",
       now: Date.now(),
       timeoutMs: STALE_PEER_MS
     });
-  }, 1_000);
+  }, APP_CONFIG.stalePeerPruneIntervalMs);
 }
 
 function stopPresenceLoop() {
@@ -339,7 +339,7 @@ async function connectRealtime() {
       text: `Retrying connection ${attempt + 1}`,
       state: "pending"
     });
-    reconnectTimer = window.setTimeout(connectRealtime, 3_500);
+    reconnectTimer = window.setTimeout(connectRealtime, APP_CONFIG.reconnectDelayMs);
   }
 }
 
@@ -416,7 +416,7 @@ function publishRuntimeState(nowMs) {
   });
   window.__lumenSpaceClientState = state;
 
-  if (window.parent !== window && nowMs - runtimeStatePostedAt >= 500) {
+  if (window.parent !== window && nowMs - runtimeStatePostedAt >= APP_CONFIG.runtimeStatePostIntervalMs) {
     runtimeStatePostedAt = nowMs;
     window.parent.postMessage(state, window.location.origin);
   }
@@ -541,7 +541,7 @@ function showToast(message) {
 
 function loadSavedIdentity() {
   try {
-    const stored = window.localStorage.getItem(storageKey);
+    const stored = window.localStorage.getItem(APP_CONFIG.identityStorageKey);
     return stored ? sanitizeIdentity(JSON.parse(stored)) : null;
   } catch {
     return null;
@@ -549,5 +549,8 @@ function loadSavedIdentity() {
 }
 
 function saveIdentity(nextIdentity) {
-  window.localStorage.setItem(storageKey, JSON.stringify(sanitizeIdentity(nextIdentity)));
+  window.localStorage.setItem(
+    APP_CONFIG.identityStorageKey,
+    JSON.stringify(sanitizeIdentity(nextIdentity))
+  );
 }

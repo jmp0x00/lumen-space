@@ -1,63 +1,15 @@
 import { COLORS, normalizeHexColor } from "./colors.js";
+import { NAME_MAX_LENGTH, ROOM_URL_BASE, SIMULATOR_CONFIG } from "./config.js";
 import { normalizeRoomId } from "./room.js";
 import { SPACE_BOUNDS, clamp, clampVector, planeDistance } from "./physics/vector.js";
 
-export const REALTIME_ROOM_DEFAULT_ID = "lumen-webrtc-sim";
-export const REALTIME_ROOM_CLIENT_COUNT_MIN = 1;
-export const REALTIME_ROOM_CLIENT_COUNT_MAX = 8;
+export const REALTIME_ROOM_DEFAULT_ID = SIMULATOR_CONFIG.realtimeRoomDefaultId;
+export const REALTIME_ROOM_CLIENT_COUNT_MIN = SIMULATOR_CONFIG.realtimeRoomClientCountMin;
+export const REALTIME_ROOM_CLIENT_COUNT_MAX = SIMULATOR_CONFIG.realtimeRoomClientCountMax;
+export const REALTIME_ROOM_PRESETS = SIMULATOR_CONFIG.realtimeRoomPresets;
 
-export const REALTIME_ROOM_PRESETS = Object.freeze({
-  mixed: Object.freeze({
-    id: "mixed",
-    label: "Mixed",
-    description: "Stars, paths, chase, orbit",
-    clients: Object.freeze([
-      createPresetClient("Ada Star", COLORS[0], "star"),
-      createPresetClient("Lin Lane", COLORS[1], "path", { path: "horizontal" }),
-      createPresetClient("Grace Gate", COLORS[2], "path", { path: "vertical", phase: 0.18 }),
-      createPresetClient("Hedy Hunt", COLORS[4], "chase", { targetName: "Ada Star" }),
-      createPresetClient("Radia Ring", COLORS[5], "orbit", { phase: 1.8 }),
-      createPresetClient("Mae Anchor", COLORS[3], "idle")
-    ])
-  }),
-  stars: Object.freeze({
-    id: "stars",
-    label: "Star Race",
-    description: "Everyone chases touch stars",
-    clients: Object.freeze([
-      createPresetClient("Ada Star", COLORS[0], "star"),
-      createPresetClient("Lin Star", COLORS[1], "star", { phase: 0.7 }),
-      createPresetClient("Grace Star", COLORS[2], "star", { phase: 1.4 }),
-      createPresetClient("Hedy Star", COLORS[4], "star", { phase: 2.1 })
-    ])
-  }),
-  routes: Object.freeze({
-    id: "routes",
-    label: "Cross Routes",
-    description: "Scripted traffic lanes",
-    clients: Object.freeze([
-      createPresetClient("Ada Lane", COLORS[0], "path", { path: "horizontal" }),
-      createPresetClient("Lin Lane", COLORS[1], "path", { path: "vertical" }),
-      createPresetClient("Grace Lane", COLORS[2], "path", { path: "diagonal", phase: 0.28 }),
-      createPresetClient("Hedy Loop", COLORS[4], "path", { path: "figure-eight", phase: 0.52 })
-    ])
-  }),
-  follow: Object.freeze({
-    id: "follow",
-    label: "Follow Chain",
-    description: "Each user chases another",
-    clients: Object.freeze([
-      createPresetClient("Ada Lead", COLORS[0], "path", { path: "figure-eight" }),
-      createPresetClient("Lin Follow", COLORS[1], "chase", { targetName: "Ada Lead" }),
-      createPresetClient("Grace Follow", COLORS[2], "chase", { targetName: "Lin Follow" }),
-      createPresetClient("Hedy Follow", COLORS[4], "chase", { targetName: "Grace Follow" }),
-      createPresetClient("Radia Follow", COLORS[5], "chase", { targetName: "Hedy Follow" })
-    ])
-  })
-});
-
-const SIMULATION_BEHAVIORS = new Set(["star", "path", "chase", "orbit", "idle"]);
-const SIMULATION_PATHS = new Set(["horizontal", "vertical", "diagonal", "figure-eight", "loop"]);
+const SIMULATION_BEHAVIORS = new Set(SIMULATOR_CONFIG.realtimeBehaviors);
+const SIMULATION_PATHS = new Set(SIMULATOR_CONFIG.realtimePaths);
 
 export function getRealtimeRoomPreset(presetId) {
   return REALTIME_ROOM_PRESETS[presetId] ?? REALTIME_ROOM_PRESETS.mixed;
@@ -204,17 +156,6 @@ export function getSimulationTarget({
   return getSimulationClientStartPosition(config);
 }
 
-function createPresetClient(name, color, behavior, options = {}) {
-  return Object.freeze({
-    name,
-    color,
-    behavior,
-    path: options.path ?? "loop",
-    targetName: options.targetName ?? "",
-    phase: options.phase ?? 0
-  });
-}
-
 function createRepeatedPresetClient(clients, index) {
   const sourceIndex = index % clients.length;
   const cycle = Math.floor(index / clients.length);
@@ -252,11 +193,11 @@ function normalizePresetClient(client, index, count) {
 function createRepeatedClientName(name, index) {
   const suffix = ` ${index + 1}`;
   const base = normalizeClientName(name, `Sim ${index + 1}`);
-  return `${base.slice(0, Math.max(1, 18 - suffix.length))}${suffix}`;
+  return `${base.slice(0, Math.max(1, NAME_MAX_LENGTH - suffix.length))}${suffix}`;
 }
 
 function createSimulationClientUrl(baseUrl, roomId, roomPreset, config) {
-  const url = new URL(String(baseUrl), "https://lumen.local/docs/app/index.html");
+  const url = new URL(String(baseUrl), ROOM_URL_BASE);
   url.searchParams.set("room", roomId);
   url.searchParams.set("simClient", "1");
   url.searchParams.set("simRoomPreset", roomPreset);
@@ -377,11 +318,11 @@ function getSearchParams(locationLike) {
   }
 
   if (typeof locationLike === "string") {
-    return new URL(locationLike, "https://lumen.local/docs/app/index.html").searchParams;
+    return new URL(locationLike, ROOM_URL_BASE).searchParams;
   }
 
   const href = locationLike?.href ?? String(locationLike ?? "");
-  return new URL(href, "https://lumen.local/docs/app/index.html").searchParams;
+  return new URL(href, ROOM_URL_BASE).searchParams;
 }
 
 function isSimulationClient(value) {
@@ -412,12 +353,12 @@ function normalizeClientName(value, fallback, options = {}) {
   const name = String(value ?? fallback ?? "")
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, 18);
+    .slice(0, NAME_MAX_LENGTH);
   if (name) {
     return name;
   }
 
-  const fallbackName = String(fallback ?? "").trim().slice(0, 18);
+  const fallbackName = String(fallback ?? "").trim().slice(0, NAME_MAX_LENGTH);
   if (fallbackName) {
     return fallbackName;
   }

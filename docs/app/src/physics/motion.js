@@ -1,13 +1,14 @@
+import { MOTION_CONFIG } from "../config.js";
 import { clamp, clampVector, sanitizeVector } from "./vector.js";
 
 export function updateMotion(state, target, deltaSeconds, options = {}) {
-  const dt = clamp(deltaSeconds, 0, options.maxDeltaSeconds ?? 0.08);
+  const dt = clamp(deltaSeconds, 0, options.maxDeltaSeconds ?? MOTION_CONFIG.maxDeltaSeconds);
   const position = clampVector(state?.position);
   const velocity = sanitizeVector(state?.velocity);
   const desired = clampVector(target);
-  const responsiveness = options.responsiveness ?? 11;
-  const damping = options.damping ?? 0.86;
-  const maxSpeed = options.maxSpeed ?? 8;
+  const responsiveness = options.responsiveness ?? MOTION_CONFIG.responsiveness;
+  const damping = options.damping ?? MOTION_CONFIG.damping;
+  const maxSpeed = options.maxSpeed ?? MOTION_CONFIG.maxSpeed;
 
   const nextVelocity = {
     x: (velocity.x + (desired.x - position.x) * responsiveness * dt) * damping,

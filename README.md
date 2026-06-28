@@ -14,7 +14,7 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Pushed idle lights keep the displaced resting spot until fresh pointer or presence input moves them again.
 - Drift through small colorful touch stars to release pulses that blend star and lumen colors; star consumption is the only pulse source.
 - Rooms maintain a capped shared population of human players plus automatic star-seeking bots.
-- Touch-star availability scales from the active human and bot population, with a hard cap on the generated star pool.
+- Touch-star availability scales from the active human and bot population, with a 36-star generated pool and active cap.
 - When different players' pulse fronts meet, they create a brief resonance flash.
 - Hear the procedural space lo-fi song after the browser unlocks audio through interaction; star-touch pulses and resonance flashes briefly and noticeably reshape the song's density, space, tone, and voices instead of playing as separate effects.
 - Use the room Lo-Fi control to mute or unmute the reactive song.
@@ -74,6 +74,7 @@ For physics tuning, double-click the room label in the room to toggle a hidden d
 - `docs/app/simulator.html`: automated simulator app with physics, realtime, and procedural song modes.
 - `docs/app/src/simulation-clients.js`: realtime room simulator presets and scripted client target selection.
 - `docs/app/src/runtime-config.js`: app runtime configuration, including the selected UI generator and scene-only embedded clients.
+- `docs/app/src/config.js`: shared app, gameplay, physics, audio, scene, and simulator configuration values.
 - `docs/app/src/app-ui.js`: default and scene-only UI generators that render app state into DOM.
 - `docs/app/src/domain.js`: pure domain facade for identity, presence, debug rows, and compatibility exports.
 - `docs/app/src/protocol.js`: v2 peer protocol creators and validators for hello, presence, and pulse events.
