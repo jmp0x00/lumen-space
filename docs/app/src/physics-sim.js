@@ -16,6 +16,12 @@ import {
   normalizeRealtimeRoomClientCount
 } from "./simulation-clients.js?v=lofi-audio-20260627";
 import {
+  createSpaceLofiSongPlan,
+  createSpaceLofiSongPlayer,
+  getSpaceLofiSongStep,
+  getSpaceLofiStepDuration
+} from "./space-lofi-song.js";
+import {
   getPeerCollisionDistance,
   getPeerCollisionRadius
 } from "./physics/collision.js?v=peer-collision-radius-20260627";
@@ -30,6 +36,7 @@ import { SPACE_BOUNDS, clamp, vectorDistance } from "./physics/vector.js";
 
 const REALTIME_RELAUNCH_DELAY_MS = 350;
 const REALTIME_SOUND_SOURCE_INDEX = 0;
+const SONG_VISUAL_STAR_COUNT = 96;
 
 const canvas = document.querySelector("#sim-canvas");
 const context = canvas.getContext("2d");
@@ -46,6 +53,18 @@ const elements = {
   realtimeClientCountOutput: document.querySelector("#realtime-client-count-output"),
   realtimeSound: document.querySelector("#realtime-sound-button"),
   launchRealtime: document.querySelector("#launch-realtime-button"),
+  songControls: document.querySelector("#song-controls"),
+  songToggle: document.querySelector("#song-toggle-button"),
+  songSeed: document.querySelector("#song-seed-button"),
+  songSeedOutput: document.querySelector("#song-seed-output"),
+  songBpm: document.querySelector("#song-bpm-input"),
+  songBpmOutput: document.querySelector("#song-bpm-output"),
+  songDensity: document.querySelector("#song-density-input"),
+  songDensityOutput: document.querySelector("#song-density-output"),
+  songSpace: document.querySelector("#song-space-input"),
+  songSpaceOutput: document.querySelector("#song-space-output"),
+  songVolume: document.querySelector("#song-volume-input"),
+  songVolumeOutput: document.querySelector("#song-volume-output"),
   debugTitle: document.querySelector("#debug-title"),
   distanceLabel: document.querySelector("#metric-distance-label"),
   repulsionLabel: document.querySelector("#metric-repulsion-label"),
@@ -78,6 +97,20 @@ let realtimeLaunchTimer = 0;
 let realtimeFrames = [];
 let realtimeClientStates = new Map();
 let realtimeSoundEnabled = false;
+let songSeedCounter = 0;
+let songPlan = createSpaceLofiSongPlan();
+let songPlayer = createSpaceLofiSongPlayer({
+  window,
+  seed: songPlan.seed,
+  bpm: songPlan.bpm,
+  density: songPlan.density,
+  space: songPlan.space,
+  volume: 0.84
+});
+let songEnabled = false;
+let songElapsedSeconds = 0;
+let songStartedAt = performance.now() / 1000;
+let songVisualStars = createSongVisualStars(songPlan.seed);
 
 bindControls();
 setScenario("cluster");
@@ -102,6 +135,10 @@ function bindControls() {
   elements.reset.addEventListener("click", () => {
     if (mode === "realtime") {
       launchRealtimeRoom();
+      return;
+    }
+    if (mode === "song") {
+      resetSongTimeline();
       return;
     }
     resetScenario();
@@ -136,10 +173,25 @@ function bindControls() {
   elements.realtimeSound.addEventListener("click", () => {
     setRealtimeSoundEnabled(!realtimeSoundEnabled, { broadcast: true });
   });
+  elements.songToggle.addEventListener("click", () => {
+    void setSongEnabled(!songEnabled);
+  });
+  elements.songSeed.addEventListener("click", () => {
+    void regenerateSong();
+  });
+  for (const input of [
+    elements.songBpm,
+    elements.songDensity,
+    elements.songSpace,
+    elements.songVolume
+  ]) {
+    input.addEventListener("input", handleSongParameterInput);
+  }
   window.addEventListener("message", handleRealtimeClientMessage);
   window.addEventListener("resize", resizeCanvas);
   renderRealtimePresetButtons();
   syncRealtimeSoundButton();
+  syncSongControls();
   syncControlLabels();
 }
 
@@ -154,9 +206,12 @@ function tick(now) {
   if (mode === "physics") {
     draw(now / 1000);
     renderMetrics();
-  } else {
+  } else if (mode === "realtime") {
     pollRealtimeFrames();
     renderRealtimeMetrics();
+  } else {
+    drawSong(now / 1000);
+    renderSongMetrics(now / 1000);
   }
   requestAnimationFrame(tick);
 }
@@ -195,6 +250,142 @@ function draw(timeSeconds) {
   drawPressureLinks();
   drawRepulsionVectors();
   drawParticipants();
+}
+
+function drawSong(timeSeconds) {
+  const { width, height } = canvas;
+  const elapsedSeconds = getSongElapsedSeconds(timeSeconds);
+  const state = getSongVisualState(elapsedSeconds);
+  context.clearRect(0, 0, width, height);
+  drawSongBackdrop(elapsedSeconds);
+  drawSongOrbit(state, elapsedSeconds);
+  drawSongWaveform(state, elapsedSeconds);
+  drawSongTimeline(state);
+}
+
+function drawSongBackdrop(elapsedSeconds) {
+  const { width, height } = canvas;
+  const gradient = context.createLinearGradient(0, 0, width, height);
+  gradient.addColorStop(0, "#050711");
+  gradient.addColorStop(0.52, "#0d1422");
+  gradient.addColorStop(1, "#071410");
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, width, height);
+
+  context.save();
+  for (const star of songVisualStars) {
+    const drift = (elapsedSeconds * star.speed) % 1;
+    const x = ((star.x + drift * 0.055) % 1) * width;
+    const y = (star.y + Math.sin(elapsedSeconds * star.wobble + star.phase) * 0.018) * height;
+    const pulse = 0.54 + Math.sin(elapsedSeconds * star.twinkle + star.phase) * 0.28;
+    context.globalAlpha = clamp(star.alpha * pulse, 0.08, 0.9);
+    context.fillStyle = star.color;
+    context.beginPath();
+    context.arc(x, y, star.radius, 0, Math.PI * 2);
+    context.fill();
+  }
+  context.restore();
+}
+
+function drawSongOrbit(state, elapsedSeconds) {
+  const { width, height } = canvas;
+  const center = {
+    x: width * 0.5,
+    y: height * 0.46
+  };
+  const radius = Math.min(width, height) * 0.21;
+  const chord = state.step.chord;
+  const activeBoost = state.step.melody ? 1.18 : 1;
+  const drumBoost = state.step.drums.length > 0 ? 1.08 : 1;
+
+  context.save();
+  context.lineWidth = Math.max(1, Math.min(width, height) * 0.002);
+  for (let index = 0; index < chord.frequencies.length; index += 1) {
+    const orbitRadius = radius * (0.58 + index * 0.12);
+    const alpha = 0.12 + index * 0.045;
+    context.strokeStyle = `hsla(${(chord.hue + index * 18) % 360}, 82%, 72%, ${alpha})`;
+    context.beginPath();
+    context.arc(center.x, center.y, orbitRadius, 0, Math.PI * 2);
+    context.stroke();
+  }
+
+  for (let index = 0; index < chord.frequencies.length; index += 1) {
+    const orbitRadius = radius * (0.58 + index * 0.12);
+    const angle = elapsedSeconds * (0.16 + index * 0.018) + index * 1.37 + chord.hue * 0.01;
+    const x = center.x + Math.cos(angle) * orbitRadius;
+    const y = center.y + Math.sin(angle) * orbitRadius;
+    const noteRadius = Math.max(4, Math.min(width, height) * 0.009) * activeBoost;
+    const glow = context.createRadialGradient(x, y, 0, x, y, noteRadius * 5.2);
+    glow.addColorStop(0, `hsla(${(chord.hue + index * 20) % 360}, 92%, 76%, 0.95)`);
+    glow.addColorStop(0.36, `hsla(${(chord.hue + index * 20) % 360}, 88%, 64%, 0.34)`);
+    glow.addColorStop(1, `hsla(${(chord.hue + index * 20) % 360}, 88%, 64%, 0)`);
+    context.fillStyle = glow;
+    context.beginPath();
+    context.arc(x, y, noteRadius * 5.2 * drumBoost, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = `hsl(${(chord.hue + index * 20) % 360}, 92%, 78%)`;
+    context.beginPath();
+    context.arc(x, y, noteRadius, 0, Math.PI * 2);
+    context.fill();
+  }
+
+  const coreRadius = Math.min(width, height) * (0.03 + state.substepProgress * 0.006);
+  context.fillStyle = state.step.bass ? "rgba(252, 211, 77, 0.7)" : "rgba(125, 211, 252, 0.5)";
+  context.beginPath();
+  context.arc(center.x, center.y, coreRadius, 0, Math.PI * 2);
+  context.fill();
+  context.restore();
+}
+
+function drawSongWaveform(state, elapsedSeconds) {
+  const { width, height } = canvas;
+  const y = height * 0.72;
+  const amplitude = Math.min(width, height) * (state.step.comet ? 0.055 : 0.038);
+  const frequency = state.step.melody?.frequency ?? state.step.chord.frequencies[0];
+
+  context.save();
+  context.lineWidth = Math.max(2, Math.min(width, height) * 0.004);
+  context.strokeStyle = state.step.comet
+    ? "rgba(240, 171, 252, 0.82)"
+    : "rgba(125, 211, 252, 0.68)";
+  context.beginPath();
+  for (let index = 0; index <= 160; index += 1) {
+    const t = index / 160;
+    const x = width * (0.12 + t * 0.76);
+    const wave =
+      Math.sin(t * Math.PI * 6 + elapsedSeconds * 1.8) * 0.62 +
+      Math.sin(t * Math.PI * 13 + frequency * 0.006) * 0.28;
+    const pointY = y + wave * amplitude;
+    if (index === 0) {
+      context.moveTo(x, pointY);
+    } else {
+      context.lineTo(x, pointY);
+    }
+  }
+  context.stroke();
+  context.restore();
+}
+
+function drawSongTimeline(state) {
+  const { width, height } = canvas;
+  const x = width * 0.12;
+  const y = height * 0.86;
+  const trackWidth = width * 0.76;
+  const gap = Math.max(3, trackWidth * 0.006);
+  const stepWidth = (trackWidth - gap * (songPlan.stepsPerBar - 1)) / songPlan.stepsPerBar;
+
+  context.save();
+  for (let index = 0; index < songPlan.stepsPerBar; index += 1) {
+    const isCurrent = index === state.step.step;
+    context.fillStyle = isCurrent ? "rgba(134, 239, 172, 0.88)" : "rgba(235, 244, 255, 0.15)";
+    context.fillRect(
+      x + index * (stepWidth + gap),
+      y,
+      Math.max(2, stepWidth),
+      isCurrent ? 12 : 7
+    );
+  }
+  context.restore();
 }
 
 function drawGrid() {
@@ -441,10 +632,16 @@ function renderRealtimePresetButtons() {
 }
 
 function setMode(nextMode) {
-  mode = nextMode === "realtime" ? "realtime" : "physics";
-  canvas.hidden = mode !== "physics";
+  const previousMode = mode;
+  mode = nextMode === "realtime" ? "realtime" : nextMode === "song" ? "song" : "physics";
+  if (previousMode === "song" && mode !== "song") {
+    void setSongEnabled(false);
+  }
+
+  canvas.hidden = mode === "realtime";
   elements.realtimeStage.hidden = mode !== "realtime";
   elements.realtimeControls.hidden = mode !== "realtime";
+  elements.songControls.hidden = mode !== "song";
   for (const control of elements.physicsControls) {
     control.hidden = mode !== "physics";
   }
@@ -461,6 +658,19 @@ function setMode(nextMode) {
     elements.speedLabel.textContent = "Speed";
     resizeCanvas();
     renderMetrics();
+    return;
+  }
+
+  if (mode === "song") {
+    elements.pause.disabled = true;
+    elements.pause.textContent = "Ⅱ";
+    elements.debugTitle.textContent = "Voices";
+    elements.distanceLabel.textContent = "Bar";
+    elements.repulsionLabel.textContent = "Chord";
+    elements.speedLabel.textContent = "BPM";
+    resizeCanvas();
+    drawSong(performance.now() / 1000);
+    renderSongMetrics(performance.now() / 1000);
     return;
   }
 
@@ -623,6 +833,120 @@ function syncRealtimeSoundFrame(frame) {
   }
 }
 
+async function setSongEnabled(nextEnabled) {
+  if (!nextEnabled) {
+    songElapsedSeconds = getSongElapsedSeconds(performance.now() / 1000);
+    songPlayer.stop();
+    songEnabled = false;
+    syncSongControls();
+    return;
+  }
+
+  songStartedAt = performance.now() / 1000;
+  const didStart = await songPlayer.start();
+  songEnabled = didStart;
+  syncSongControls();
+}
+
+async function regenerateSong() {
+  const wasEnabled = songEnabled;
+  if (wasEnabled) {
+    await setSongEnabled(false);
+  }
+
+  songSeedCounter += 1;
+  const parameters = getSongParameterValues();
+  songPlan = songPlayer.regenerate({
+    seed: `lumen-space-song-${songSeedCounter}`,
+    bpm: parameters.bpm,
+    density: parameters.density,
+    space: parameters.space
+  });
+  songPlayer.setVolume(parameters.volume);
+  songVisualStars = createSongVisualStars(songPlan.seed);
+  songElapsedSeconds = 0;
+  songStartedAt = performance.now() / 1000;
+  syncSongControls();
+  drawSong(performance.now() / 1000);
+  renderSongMetrics(performance.now() / 1000);
+
+  if (wasEnabled) {
+    await setSongEnabled(true);
+  }
+}
+
+function handleSongParameterInput() {
+  const parameters = getSongParameterValues();
+  syncSongParameterLabels(parameters);
+  songPlayer.setVolume(parameters.volume);
+
+  if (
+    parameters.bpm === songPlan.bpm &&
+    parameters.density === songPlan.density &&
+    parameters.space === songPlan.space
+  ) {
+    return;
+  }
+
+  const elapsedSeconds = getSongElapsedSeconds(performance.now() / 1000);
+  const wasEnabled = songEnabled;
+  songPlan = songPlayer.regenerate({
+    seed: songPlan.seed,
+    bpm: parameters.bpm,
+    density: parameters.density,
+    space: parameters.space
+  });
+  songElapsedSeconds = elapsedSeconds;
+  songStartedAt = performance.now() / 1000;
+  if (wasEnabled) {
+    void songPlayer.start();
+  }
+  drawSong(performance.now() / 1000);
+  renderSongMetrics(performance.now() / 1000);
+}
+
+function resetSongTimeline() {
+  songElapsedSeconds = 0;
+  songStartedAt = performance.now() / 1000;
+  if (songEnabled) {
+    songPlayer.stop();
+    void songPlayer.start({ reset: true });
+  }
+  drawSong(performance.now() / 1000);
+  renderSongMetrics(performance.now() / 1000);
+}
+
+function syncSongControls() {
+  const isSupported = songPlayer.isSupported;
+  elements.songToggle.disabled = !isSupported;
+  elements.songToggle.textContent = !isSupported
+    ? "Audio Unavailable"
+    : songEnabled
+      ? "Space Lo-Fi On"
+      : "Space Lo-Fi Off";
+  elements.songToggle.title = songEnabled ? "Stop space lo-fi song" : "Start space lo-fi song";
+  elements.songToggle.setAttribute("aria-label", elements.songToggle.title);
+  elements.songToggle.setAttribute("aria-pressed", String(songEnabled));
+  elements.songSeedOutput.textContent = songPlan.seed;
+  syncSongParameterLabels();
+}
+
+function getSongParameterValues() {
+  return {
+    bpm: Math.round(clamp(Number(elements.songBpm.value), 58, 92)),
+    density: roundNumber(clamp(Number(elements.songDensity.value), 0, 1), 2),
+    space: roundNumber(clamp(Number(elements.songSpace.value), 0, 1), 2),
+    volume: roundNumber(clamp(Number(elements.songVolume.value), 0, 1), 2)
+  };
+}
+
+function syncSongParameterLabels(parameters = getSongParameterValues()) {
+  elements.songBpmOutput.textContent = String(parameters.bpm);
+  elements.songDensityOutput.textContent = parameters.density.toFixed(2);
+  elements.songSpaceOutput.textContent = parameters.space.toFixed(2);
+  elements.songVolumeOutput.textContent = parameters.volume.toFixed(2);
+}
+
 function handleRealtimeClientMessage(event) {
   if (event.origin !== window.location.origin || event.data?.type !== "lumen-sim-client-state") {
     return;
@@ -688,6 +1012,58 @@ function renderRealtimeMetrics() {
       row.querySelector(".peer-value").textContent = state
         ? `${state.behavior} ${formatVector(state.position)}`
         : "starting";
+      return row;
+    })
+  );
+}
+
+function renderSongMetrics(timeSeconds) {
+  const elapsedSeconds = getSongElapsedSeconds(timeSeconds);
+  const state = getSongVisualState(elapsedSeconds);
+  const voiceRows = [
+    {
+      color: `hsl(${state.step.chord.hue}, 88%, 72%)`,
+      name: "Pad",
+      value: state.step.pad ? state.step.chord.name : "sustaining"
+    },
+    {
+      color: "#fcd34d",
+      name: "Bass",
+      value: state.step.bass ? formatFrequency(state.step.bass.frequency) : "rest"
+    },
+    {
+      color: "#7dd3fc",
+      name: "Signal",
+      value: state.step.melody ? formatFrequency(state.step.melody.frequency) : "drift"
+    },
+    {
+      color: "#86efac",
+      name: "Kit",
+      value: state.step.drums.length > 0 ? state.step.drums.join(", ") : "space"
+    },
+    {
+      color: "#f0abfc",
+      name: "Dust",
+      value: [state.step.dust ? "dust" : "", state.step.comet ? "comet" : ""]
+        .filter(Boolean)
+        .join(", ") || "quiet"
+    }
+  ];
+
+  elements.distance.textContent = `${state.step.bar + 1}.${state.step.step + 1}`;
+  elements.repulsion.textContent = state.step.chord.name;
+  elements.speed.textContent = String(songPlan.bpm);
+  elements.debug.replaceChildren(
+    ...voiceRows.map((voice) => {
+      const row = document.createElement("div");
+      row.className = "peer-row";
+      row.innerHTML = `
+        <span class="peer-swatch" style="--peer-color: ${voice.color}"></span>
+        <span class="peer-name"></span>
+        <span class="peer-value"></span>
+      `;
+      row.querySelector(".peer-name").textContent = voice.name;
+      row.querySelector(".peer-value").textContent = voice.value;
       return row;
     })
   );
@@ -850,6 +1226,76 @@ function getWorldScale() {
     canvas.width / (SPACE_BOUNDS.x[1] - SPACE_BOUNDS.x[0] + padding * 2),
     canvas.height / (SPACE_BOUNDS.y[1] - SPACE_BOUNDS.y[0] + padding * 2)
   );
+}
+
+function getSongElapsedSeconds(timeSeconds) {
+  if (!songEnabled) {
+    return songElapsedSeconds;
+  }
+
+  return songElapsedSeconds + Math.max(0, timeSeconds - songStartedAt);
+}
+
+function getSongVisualState(elapsedSeconds) {
+  const evenDuration = getSpaceLofiStepDuration(songPlan, 0);
+  const oddDuration = getSpaceLofiStepDuration(songPlan, 1);
+  const pairDuration = evenDuration + oddDuration;
+  const pairIndex = Math.floor(elapsedSeconds / pairDuration);
+  let stepIndex = pairIndex * 2;
+  let remaining = elapsedSeconds - pairIndex * pairDuration;
+  let stepDuration = evenDuration;
+
+  if (remaining >= evenDuration) {
+    stepIndex += 1;
+    remaining -= evenDuration;
+    stepDuration = oddDuration;
+  }
+
+  return {
+    step: getSpaceLofiSongStep(songPlan, stepIndex),
+    substepProgress: clamp(remaining / stepDuration, 0, 1)
+  };
+}
+
+function createSongVisualStars(seed) {
+  return Array.from({ length: SONG_VISUAL_STAR_COUNT }, (_, index) => {
+    const base = `${seed}:star:${index}`;
+    const hue = 174 + songSeededUnit(`${base}:hue`) * 164;
+    return {
+      x: songSeededUnit(`${base}:x`),
+      y: songSeededUnit(`${base}:y`),
+      radius: 1 + songSeededUnit(`${base}:radius`) * 2.8,
+      alpha: 0.22 + songSeededUnit(`${base}:alpha`) * 0.62,
+      speed: 0.002 + songSeededUnit(`${base}:speed`) * 0.01,
+      wobble: 0.18 + songSeededUnit(`${base}:wobble`) * 0.36,
+      twinkle: 0.7 + songSeededUnit(`${base}:twinkle`) * 1.6,
+      phase: songSeededUnit(`${base}:phase`) * Math.PI * 2,
+      color: `hsl(${hue}, 86%, ${68 + songSeededUnit(`${base}:light`) * 20}%)`
+    };
+  });
+}
+
+function songSeededUnit(seed) {
+  return (hashString(seed) % 10_000) / 10_000;
+}
+
+function hashString(value) {
+  let hash = 2_166_136_261;
+  const text = String(value);
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return hash >>> 0;
+}
+
+function formatFrequency(frequency) {
+  return `${Math.round(frequency)} Hz`;
+}
+
+function roundNumber(value, digits = 2) {
+  const scale = 10 ** digits;
+  return Math.round((Number(value) + Number.EPSILON) * scale) / scale;
 }
 
 function formatVector(vector) {

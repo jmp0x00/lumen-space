@@ -51,11 +51,12 @@ The local server sends no-store cache headers so browser refreshes pick up chang
 HTML, CSS, and JavaScript modules during development.
 
 To inspect peer collision scenarios without joining a room manually, open
-`http://localhost:4173/physics-sim.html`. The simulator includes a pure physics
-canvas mode and a realtime mode that embeds multiple scene-only no-bot app
-clients in the same WebRTC room with scripted user presets and a live 1-8
-client count control. Realtime simulator lo-fi audio is controlled by one simulator
-button and is routed through a single designated embedded client.
+`http://localhost:4173/simulator.html`. The simulator includes a pure physics
+canvas mode, a realtime mode that embeds multiple scene-only no-bot app clients
+in the same WebRTC room, and a song mode for a separate procedural space lo-fi
+infinite track with tempo, density, space, and volume controls. Realtime
+simulator lo-fi audio is controlled by one simulator button and is routed
+through a single designated embedded client.
 
 ## Test
 
@@ -69,7 +70,7 @@ For physics tuning, double-click the room label in the room to toggle a hidden d
 ## Project Structure
 
 - `docs/app/`: static playable app intended for GitDocs hosting.
-- `docs/app/physics-sim.html`: automated physics inspection app with cluster, orbit, and crossing-route scenarios.
+- `docs/app/simulator.html`: automated simulator app with physics, realtime, and procedural song modes.
 - `docs/app/src/simulation-clients.js`: realtime room simulator presets and scripted client target selection.
 - `docs/app/src/runtime-config.js`: app runtime configuration, including the selected UI generator and scene-only embedded clients.
 - `docs/app/src/app-ui.js`: default and scene-only UI generators that render app state into DOM.
@@ -78,6 +79,7 @@ For physics tuning, double-click the room label in the room to toggle a hidden d
 - `docs/app/src/core/`: canonical game state, event reducer, simulation step, and scene/UI selectors.
 - `docs/app/src/physics/`: focused pure physics modules for vectors, local motion, peer collision/repulsion, AI-driven bot motion, touch stars, pulses, and resonance.
 - `docs/app/src/sound.js`: deterministic lo-fi loop and pulse/resonance cue planning plus the Web Audio performer.
+- `docs/app/src/space-lofi-song.js`: standalone procedural space lo-fi infinite song plan and Web Audio performer.
 - `docs/app/src/network.js`: Trystero/WebRTC room connection.
 - `docs/app/src/scene.js`: Three.js WebGL scene.
 - `docs/app/src/app.js`: browser adapter for UI, scene, realtime transport, timers, storage, and core effects.

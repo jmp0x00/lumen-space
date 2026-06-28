@@ -48,6 +48,14 @@
 - Iterated on audio after the first pass felt like isolated sound effects: kept the asset-free Web Audio approach but added a deterministic four-bar lo-fi loop with chords, bass, sparse drums, melody, vinyl-style noise, and pulse accents that sit inside the music.
 - Updated tests around the pure lo-fi pattern and cue-planning data, preserving deterministic validation even though the final playback is browser-only and subjective.
 
+### 2026-06-28
+
+- Renamed the developer-facing `physics-sim.html` entrypoint to `simulator.html` as the page grew beyond pure physics inspection.
+- Added a separate procedural space lo-fi infinite song module with deterministic song-plan helpers and a Web Audio performer, keeping it independent from the room-reactive pulse soundtrack.
+- Added a simulator Song mode with a canvas visualization, start/stop audio control, seed regeneration, and live voice-state metrics so the generated music can be inspected and tested as part of the AI-native workflow.
+- Added simulator Song mode controls for tempo, density, space, and volume, which turned the generated music into a tunable artifact instead of a one-shot hidden behavior.
+- Refined the generated song after listening feedback revealed an unsettling periodic click; the likely cause was a looped raw noise bed, so the noise buffers now use softened edges and gentler noise-hit attacks.
+
 ## AI Tools Used
 
 - Codex for requirements refinement, planning, implementation, tests, and documentation.

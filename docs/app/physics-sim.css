@@ -181,10 +181,6 @@ label,
   grid-template-columns: repeat(3, 1fr);
 }
 
-.mode-grid {
-  grid-template-columns: repeat(2, 1fr);
-}
-
 .control-row button,
 .scenario-button,
 .mode-button,
@@ -213,6 +209,36 @@ label,
 .realtime-controls {
   display: grid;
   gap: 14px;
+}
+
+.song-controls {
+  display: grid;
+  gap: 12px;
+}
+
+.song-signal {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-strong);
+}
+
+.song-signal span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.song-signal strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .realtime-preset-grid {

@@ -25,8 +25,9 @@ In scope:
 - Nickname and color identity stored locally.
 - Three.js visual scene with participant lights and pulse rings.
 - Local star-seeking bots that appear when a room starts, receive deterministic AI movement targets, move through the shared motion physics, and pulse.
-- Automated browser physics simulator for inspecting peer repulsion without manual multiplayer setup.
+- Automated browser simulator for inspecting peer repulsion without manual multiplayer setup.
 - Realtime multi-user simulator mode that embeds several scene-only no-bot app clients in one WebRTC room and drives them with scripted user presets plus a configurable 1-8 client count.
+- Simulator song mode that plays a separate procedural space lo-fi infinite song and visualizes the current musical state.
 - Unit tests for pure domain logic.
 - Required challenge documentation.
 
@@ -55,6 +56,8 @@ Out of scope:
 - The physics simulator must run scripted peers automatically and expose collision radius, strength, and separation controls.
 - The physics simulator must include multiple scenarios, including a two-peer crossing-route scenario where route targets intersect at the center.
 - The physics simulator must show visible peer positions, repulsion vectors, closest-distance metrics, average repulsion, average speed, and per-peer coordinates.
+- The simulator must include a song mode backed by a separate JavaScript module that generates a soft space-themed lo-fi song indefinitely after user audio activation.
+- The simulator song mode must expose start/stop, seed-regeneration, tempo, density, space, and volume controls and show current bar, chord, tempo, and active voice state.
 - The app runtime must support a configurable UI generator that receives app view state and action callbacks, then decides what UI to render.
 - The default app runtime must use the full lobby and room UI generator.
 - The physics simulator must include a realtime room mode where each simulated user is visible in its own embedded app screen, joins the same room through the normal WebRTC connection, starts without bots, uses a scene-only UI generator, follows a chosen preset such as star chasing, scripted paths, orbiting, or chasing another user, and can be launched with a selected 1-8 client count.
@@ -86,9 +89,10 @@ Out of scope:
 - Pointer movement updates the local light and propagates to peers.
 - Nearby lumes and bots use size-based collision contact while remaining inside the playable bounds, and bots continuously pursue the closest available star instead of keeping sticky or skipped targets.
 - When a moving participant pushes an idle peer, the idle peer remains at the pushed resting position until new input or presence data moves it again.
-- Opening `physics-sim.html` starts an automated peer simulation that visibly shows repulsion without requiring network setup.
-- In `physics-sim.html`, selecting the crossing scenario shows two peers following intersecting routes through the center.
-- In `physics-sim.html`, selecting realtime mode launches the selected number of scene-only embedded app clients in the same no-bot WebRTC room; changing the client count in realtime mode relaunches the embedded room with that count, and each client screen shows scripted movement through the normal app/WebRTC runtime.
+- Opening `simulator.html` starts an automated peer simulation that visibly shows repulsion without requiring network setup.
+- In `simulator.html`, selecting the crossing scenario shows two peers following intersecting routes through the center.
+- In `simulator.html`, selecting realtime mode launches the selected number of scene-only embedded app clients in the same no-bot WebRTC room; changing the client count in realtime mode relaunches the embedded room with that count, and each client screen shows scripted movement through the normal app/WebRTC runtime.
+- In `simulator.html`, selecting song mode shows a procedural music visualization; pressing the Song mode audio control starts and stops a standalone space lo-fi infinite song, and changing the song sliders updates tempo, density, space, and volume.
 - Touching an environmental star emits a blended-color pulse and temporarily hides that star.
 - Entering or interacting with a room starts a soft procedural lo-fi loop after browser audio is unlocked.
 - Manual pulse actions create mellow local musical accents after browser audio is unlocked.

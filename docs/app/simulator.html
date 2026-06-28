@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       name="description"
-      content="Automated Lumen Space physics simulator for inspecting peer repulsion."
+      content="Automated Lumen Space simulator for physics, realtime rooms, and procedural audio."
     >
-    <title>Lumen Space Physics Simulator</title>
+    <title>Lumen Space Simulator</title>
     <link rel="stylesheet" href="./physics-sim.css">
   </head>
   <body>
     <main class="sim-shell">
-      <section class="sim-stage" aria-label="Automated physics simulation">
+      <section class="sim-stage" aria-label="Lumen Space simulation">
         <canvas id="sim-canvas" width="1280" height="720"></canvas>
         <section
           class="realtime-stage"
@@ -24,12 +24,12 @@
         </section>
       </section>
 
-      <aside class="sim-panel" aria-label="Physics simulation controls and metrics">
+      <aside class="sim-panel" aria-label="Simulator controls and metrics">
         <header class="sim-header">
           <a class="back-link" href="./index.html" aria-label="Back to Lumen Space">←</a>
           <div>
-            <h1>Physics Simulator</h1>
-            <p>Automated peer repulsion inspection</p>
+            <h1>Simulator</h1>
+            <p>Physics, realtime, and procedural audio</p>
           </div>
         </header>
 
@@ -39,6 +39,9 @@
           </button>
           <button class="mode-button" type="button" data-mode="realtime">
             Realtime
+          </button>
+          <button class="mode-button" type="button" data-mode="song">
+            Song
           </button>
         </div>
 
@@ -156,6 +159,82 @@
           </button>
         </section>
 
+        <section class="song-controls" id="song-controls" hidden>
+          <button
+            class="sound-toggle-button"
+            id="song-toggle-button"
+            type="button"
+            aria-pressed="false"
+          >
+            Space Lo-Fi Off
+          </button>
+
+          <button class="launch-button" id="song-seed-button" type="button">
+            New Seed
+          </button>
+
+          <div class="song-signal" aria-label="Song seed">
+            <span>Seed</span>
+            <strong id="song-seed-output">lumen-space-song</strong>
+          </div>
+
+          <label for="song-bpm-input">
+            Tempo
+            <output id="song-bpm-output" for="song-bpm-input">72</output>
+          </label>
+          <input
+            class="song-parameter"
+            id="song-bpm-input"
+            type="range"
+            min="58"
+            max="92"
+            step="1"
+            value="72"
+          >
+
+          <label for="song-density-input">
+            Density
+            <output id="song-density-output" for="song-density-input">0.50</output>
+          </label>
+          <input
+            class="song-parameter"
+            id="song-density-input"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value="0.5"
+          >
+
+          <label for="song-space-input">
+            Space
+            <output id="song-space-output" for="song-space-input">0.50</output>
+          </label>
+          <input
+            class="song-parameter"
+            id="song-space-input"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value="0.5"
+          >
+
+          <label for="song-volume-input">
+            Volume
+            <output id="song-volume-output" for="song-volume-input">0.84</output>
+          </label>
+          <input
+            class="song-parameter"
+            id="song-volume-input"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value="0.84"
+          >
+        </section>
+
         <section class="debug-list" aria-label="Peer state">
           <div class="debug-title" id="debug-title">Peers</div>
           <div id="peer-debug"></div>
@@ -163,6 +242,6 @@
       </aside>
     </main>
 
-    <script type="module" src="./src/physics-sim.js?v=lofi-audio-20260627"></script>
+    <script type="module" src="./src/physics-sim.js?v=space-song-20260628"></script>
   </body>
 </html>
