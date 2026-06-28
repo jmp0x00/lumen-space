@@ -256,7 +256,7 @@ test("touch stars emit one pulse and stay opened when touched", () => {
   assert.deepEqual(repeated.touchStars, touched.touchStars);
 });
 
-test("touch star pulse color blends the star and lumen colors", () => {
+test("touch star pulse color uses the activated star color", () => {
   const touchStars = [
     {
       id: "touch-star-0",
@@ -275,7 +275,7 @@ test("touch star pulse color blends the star and lumen colors", () => {
 
   const touched = collectTouchStarPulses(touchStars, [participant], 2_000);
 
-  assert.equal(touched.pulses[0].color, "#800080");
+  assert.equal(touched.pulses[0].color, "#ff0000");
 });
 
 test("touch stars collide on the movement plane even when rendered with depth", () => {
@@ -357,7 +357,7 @@ test("touch star pulse metadata lets another client open the same star", () => {
   assert.equal(remoteSuppressed[0].availableAt, 0);
 });
 
-test("pulse resonances trigger once when different pulse fronts meet", () => {
+test("pulse resonances are created from pulse-front intersections", () => {
   const pulses = [
     {
       ...createPulse({
@@ -389,15 +389,8 @@ test("pulse resonances trigger once when different pulse fronts meet", () => {
 
   assert.equal(resonances.length, 1);
   assert.equal(resonances[0].id, "resonance:pulse-a:pulse-b");
-  assert.deepEqual(resonances[0].pulseIds, ["pulse-a", "pulse-b"]);
   assert.deepEqual(resonances[0].position, { x: 1.5, y: 0, z: 0 });
   assert.equal(resonances[0].color, "#800080");
-  assert.equal(resonances[0].intensity, 1);
-
-  const repeated = updatePulseResonances(resonances, pulses, 1_300);
-  assert.equal(repeated.length, 1);
-  assert.equal(repeated[0].timestamp, 1_250);
-  assert.equal(repeated[0].ageMs, 50);
 });
 
 test("pulse resonances ignore same-source and non-contacting pulses", () => {

@@ -12,7 +12,7 @@
 - Replaced automatic offline mode with manually controlled bots while realtime connection keeps retrying.
 - Added an external name generator for funny editable player names and bot names, with a local fallback for resilience.
 - Added a manual name regeneration control after trying the default-name flow in the lobby.
-- Added touch stars so pulses can emerge from environmental interaction instead of only explicit controls, starting with deterministic random-looking positions and colors for multiplayer consistency and blend star/lumen pulse colors.
+- Added touch stars so pulses can emerge from environmental interaction instead of only explicit controls, starting with deterministic random-looking positions and colors for multiplayer consistency and star-colored pulse cues.
 - Added temporary room instrumentation for current lume positions and velocities, because multiplayer movement feel needed live data rather than relying only on visual judgment.
 
 ### 2026-06-27
@@ -87,6 +87,11 @@
 - Added a passive constellation-map simulator mode after the all-sky data landed, because inspecting the projected map without playing is a faster way to validate placement, labels, colors, and line readability.
 - Changed star behavior to in-place opening: all constellation stars render at once, unopened nodes pulse as navigation beacons, opened nodes stay brighter, bots and scripted clients skip opened stars, and the enlarged map gives more travel distance between nodes.
 - Expanded the sky map again after play review showed the full 767-node catalogue still felt too tight; the projection now uses a 540 by 303.75 world-unit plane so constellation nodes require much more travel between touches.
+- Changed star-touch pulse progression from a short fixed-radius ring to a boundary-scale wave that expands to the farthest playable edge before expiring, then made resonance detection compare previous and current radii so faster long-distance fronts still create flashes when they cross.
+- Spread shared bot spawn anchors across the enlarged map instead of clustering every generated bot near the local starting area, while keeping deterministic bot slots, ownership, and star-seeking AI unchanged.
+- Retuned boundary-scale pulse duration after play feedback showed the first 4.2-second map-wide sweep felt too fast; pulses now travel more slowly while still clearing the world before expiring.
+- Reworked pulses again after the boundary-scale version still felt strange in the enlarged map: star touches now create compact star-colored activation rings and off-screen star activations show colored camera-edge flashes to keep distant activity legible.
+- Retuned the compact pulse presentation through a few visual passes: tried larger initial rings, briefly tested half of the original visual pulse size, then restored the original 1.8-second computed radius curve, thin additive wavefront, and local resonance detection while keeping the off-screen indicator as a simpler thin edge line.
 
 ## AI Tools Used
 
@@ -146,3 +151,4 @@ Initial implementation session: TBD after final validation.
 - AI-native work benefits from locking product intent before touching code.
 - A creative nontraditional game can still be made evaluable with clear rules and acceptance criteria.
 - For browser realtime prototypes, pure reducers and message normalization are the safest places to invest automated tests.
+- User-guided visual iteration was most useful when we separated behavior from presentation: pulses stayed deterministic star-touch events while the renderer restored the original slower thin wavefront, now centered on the opened star and colored by that star, without storing derived pulse radii in state.

@@ -259,6 +259,54 @@ button:focus-visible {
   z-index: 0;
 }
 
+.edge-flash {
+  position: absolute;
+  z-index: 1;
+  width: 116px;
+  height: 2px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--edge-flash-color) 24%, transparent) 18%, var(--edge-flash-color) 50%, color-mix(in srgb, var(--edge-flash-color) 24%, transparent) 82%, transparent 100%);
+  filter: saturate(1.35) brightness(1.08);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  transition:
+    opacity 70ms linear,
+    transform 70ms linear;
+  animation: edge-flash-line 520ms ease-out infinite;
+}
+
+.edge-flash--left,
+.edge-flash--right {
+  width: 2px;
+  height: 116px;
+  background:
+    linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--edge-flash-color) 24%, transparent) 18%, var(--edge-flash-color) 50%, color-mix(in srgb, var(--edge-flash-color) 24%, transparent) 82%, transparent 100%);
+}
+
+@keyframes edge-flash-line {
+  0% {
+    filter:
+      drop-shadow(0 0 2px var(--edge-flash-color))
+      saturate(1.05)
+      brightness(0.82);
+  }
+
+  28% {
+    filter:
+      drop-shadow(0 0 7px var(--edge-flash-color))
+      saturate(1.7)
+      brightness(1.42);
+  }
+
+  100% {
+    filter:
+      drop-shadow(0 0 4px var(--edge-flash-color))
+      saturate(1.16)
+      brightness(0.94);
+  }
+}
+
 .top-bar,
 .people-panel,
 .action-bar,

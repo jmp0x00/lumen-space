@@ -12,7 +12,7 @@ Use this checklist after any UI or networking change.
 8. Move each pointer and confirm the corresponding light drifts in the other tab.
 9. Confirm the room action controls are copy invite, Lo-Fi, and leave icon buttons, with no `Send Pulse`, `Add Bot`, or `Remove Bot` room control.
 10. Resize to a mobile-width viewport and confirm the Lights list stays shallow, scrolls horizontally, and does not overlap the icon action controls.
-11. Move through a small touch star and confirm a pulse appears and the star temporarily disappears.
+11. Move through a small touch star and confirm a compact star-colored wave spreads from the touched star center and fades, the star stays opened and brighter, and off-screen star activations show a thin colored edge line.
 12. Press Space and double-click the scene, then confirm no pulse appears unless a touch star is consumed.
 13. Confirm shared bots appear automatically, chase stars, and create pulses only when they consume stars.
 14. Close one tab and confirm the peer disappears within the stale-peer window while remaining clients continue showing shared bots.

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   MAX_TOUCH_STARS,
   MIN_TOUCH_STARS,
+  PULSE_CONFIG,
   SCENE_CONFIG,
   SIMULATOR_CONFIG,
   SPACE_BOUNDS,
@@ -32,6 +33,12 @@ test("simulator includes a passive constellation map observer configuration", ()
   assert.equal(SIMULATOR_CONFIG.mapTourSpeedMaxSeconds, 10);
 });
 
+test("pulse visuals are tuned for compact star activation cues", () => {
+  assert.equal(PULSE_CONFIG.durationMs, 1_800);
+  assertClose(PULSE_CONFIG.baseRadius, 0.6);
+  assertClose(PULSE_CONFIG.radiusScale, 7.5);
+});
+
 test("space bounds spread constellation stars across a wide map", () => {
   assert.deepEqual(SPACE_BOUNDS.x, [-270, 270]);
   assert.deepEqual(SPACE_BOUNDS.y, [-151.875, 151.875]);
@@ -41,4 +48,9 @@ test("space bounds spread constellation stars across a wide map", () => {
   assert.equal(SCENE_CONFIG.backgroundStarOverscanX, 550);
   assert.equal(SCENE_CONFIG.backgroundStarOverscanY, 360);
   assert.equal(SCENE_CONFIG.cameraFollowLerp, 0.075);
+  assert.equal(SCENE_CONFIG.edgeFlashInsetRatio, 0.92);
 });
+
+function assertClose(actual, expected) {
+  assert.ok(Math.abs(actual - expected) < 1e-12, `${actual} should be close to ${expected}`);
+}

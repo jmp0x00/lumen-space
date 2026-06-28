@@ -46,6 +46,10 @@ test("enterRoomState creates deterministic room state with local bots and touch 
   assert.equal(state.botParticipants[0].id, "bot:room-1:0");
   assert.equal(state.botParticipants[0].ownerClientId, "client-1");
   assert.match(state.botParticipants[0].name, /^Bot 0:bot-room-1-0$/);
+  const botPositions = state.botParticipants.map((bot) => bot.position);
+  assert.equal(new Set(botPositions.map((position) => `${position.x}:${position.y}`)).size, 6);
+  assert.ok(getAxisSpan(botPositions, "x") > getBoundsSpan(SPACE_BOUNDS.x) * 0.6);
+  assert.ok(getAxisSpan(botPositions, "y") > getBoundsSpan(SPACE_BOUNDS.y) * 0.6);
   assert.deepEqual(getRoomPopulationPolicy(state), {
     humanClientIds: ["client-1"],
     humanCount: 1,
@@ -84,3 +88,12 @@ test("chooseStartPosition is deterministic and bounded", () => {
   assert.ok(position.x >= SPACE_BOUNDS.x[0] && position.x <= SPACE_BOUNDS.x[1]);
   assert.ok(position.y >= SPACE_BOUNDS.y[0] && position.y <= SPACE_BOUNDS.y[1]);
 });
+
+function getAxisSpan(positions, axis) {
+  const values = positions.map((position) => position[axis]);
+  return Math.max(...values) - Math.min(...values);
+}
+
+function getBoundsSpan(bounds) {
+  return bounds[1] - bounds[0];
+}

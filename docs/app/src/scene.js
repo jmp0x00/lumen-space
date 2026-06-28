@@ -28,6 +28,7 @@ export async function createSpaceScene({
   const intersection = new THREE.Vector3();
   const participantMeshes = new Map();
   const pulseMeshes = new Map();
+  const pulseEdgeFlashes = new Map();
   const resonanceMeshes = new Map();
   const touchStarMeshes = new Map();
   const constellationMeshes = new Map();
@@ -262,6 +263,93 @@ export async function createSpaceScene({
         pulseMeshes.delete(id);
       }
     }
+
+    syncPulseEdgeFlashes(THREERef, pulses, activeIds);
+  }
+
+  function syncPulseEdgeFlashes(THREERef, pulses, activeIds) {
+    const vector = new THREERef.Vector3();
+
+    for (const pulse of pulses) {
+      const opacity = Number.isFinite(Number(pulse.opacity)) ? Number(pulse.opacity) : 1;
+      vector.set(pulse.origin.x, pulse.origin.y, pulse.origin.z).project(camera);
+      const visible =
+        vector.z < 1 && Math.abs(vector.x) <= 0.98 && Math.abs(vector.y) <= 0.98;
+
+      if (visible || opacity <= 0) {
+        removeEdgeFlash(pulse.id);
+        continue;
+      }
+
+      let flash = pulseEdgeFlashes.get(pulse.id);
+      if (!flash) {
+        flash = createEdgeFlash();
+        pulseEdgeFlashes.set(pulse.id, flash);
+        container.appendChild(flash);
+      }
+
+      const x = Number.isFinite(vector.x) ? vector.x : 0;
+      const y = Number.isFinite(vector.y) ? vector.y : -1;
+      const edge = getCameraEdgeFlashPosition(x, y);
+      const flashScale = 0.92 + opacity * 0.18;
+      const edgeInset = 14;
+
+      flash.style.setProperty("--edge-flash-color", pulse.color);
+      flash.style.opacity = String(Math.max(0, opacity * 0.95));
+      flash.style.transform = `translate(-50%, -50%) scale(${flashScale})`;
+      flash.className = `edge-flash edge-flash--${edge.side}`;
+      if (edge.axis === "x") {
+        flash.style.left = `${((edge.value + 1) / 2) * width}px`;
+        flash.style.top = edge.side === "top" ? `${edgeInset}px` : `${height - edgeInset}px`;
+      } else {
+        flash.style.left = edge.side === "left" ? `${edgeInset}px` : `${width - edgeInset}px`;
+        flash.style.top = `${((-edge.value + 1) / 2) * height}px`;
+      }
+    }
+
+    for (const id of pulseEdgeFlashes.keys()) {
+      if (!activeIds.has(id)) {
+        removeEdgeFlash(id);
+      }
+    }
+  }
+
+  function removeEdgeFlash(id) {
+    const flash = pulseEdgeFlashes.get(id);
+    if (!flash) {
+      return;
+    }
+    flash.remove();
+    pulseEdgeFlashes.delete(id);
+  }
+
+  function getCameraEdgeFlashPosition(x, y) {
+    const scale =
+      SCENE_CONFIG.edgeFlashInsetRatio / Math.max(1, Math.abs(x), Math.abs(y));
+    const edgeX = clamp(
+      x * scale,
+      -SCENE_CONFIG.edgeFlashInsetRatio,
+      SCENE_CONFIG.edgeFlashInsetRatio
+    );
+    const edgeY = clamp(
+      y * scale,
+      -SCENE_CONFIG.edgeFlashInsetRatio,
+      SCENE_CONFIG.edgeFlashInsetRatio
+    );
+
+    if (Math.abs(edgeX) >= Math.abs(edgeY)) {
+      return {
+        side: edgeX < 0 ? "left" : "right",
+        axis: "y",
+        value: edgeY
+      };
+    }
+
+    return {
+      side: edgeY < 0 ? "bottom" : "top",
+      axis: "x",
+      value: edgeX
+    };
   }
 
   function syncResonances(THREERef) {
@@ -362,6 +450,9 @@ export async function createSpaceScene({
       mesh.geometry.dispose();
       mesh.material.dispose();
     }
+    for (const flash of pulseEdgeFlashes.values()) {
+      flash.remove();
+    }
     for (const mesh of resonanceMeshes.values()) {
       disposeGroup(mesh.group);
     }
@@ -422,6 +513,12 @@ function createPulseMesh(THREE, pulse) {
     side: THREE.DoubleSide
   });
   return new THREE.Mesh(geometry, material);
+}
+
+function createEdgeFlash() {
+  const flash = document.createElement("div");
+  flash.className = "edge-flash";
+  return flash;
 }
 
 function createTouchStarMesh(THREE, star, glowTexture) {

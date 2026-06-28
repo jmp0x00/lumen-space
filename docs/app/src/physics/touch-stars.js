@@ -1,4 +1,3 @@
-import { DEFAULT_COLOR, mixHexColors } from "../colors.js";
 import { getConstellationStarPlacement } from "../constellations.js";
 import {
   TOUCH_STAR_CONFIG,
@@ -57,8 +56,8 @@ export function collectTouchStarPulses(
         createPulse({
           id: `pulse-${participantId}-${star.id}-${Math.floor(now)}`,
           sourceId: participantId,
-          origin: participant.position,
-          color: mixHexColors(star.color, participant.color ?? DEFAULT_COLOR),
+          origin: star.position,
+          color: star.color,
           strength: participant.isBot
             ? TOUCH_STAR_CONFIG.botPulseStrength
             : TOUCH_STAR_CONFIG.humanPulseStrength,

@@ -202,11 +202,12 @@ export const BOT_CONFIG = Object.freeze({
     zSpeedStep: 0.018
   }),
   templates: Object.freeze([
-    createBotTemplate("#f0abfc", { x: -3.696, y: 1.6, z: -0.6 }),
-    createBotTemplate("#fcd34d", { x: 3.168, y: -1.4, z: -0.8 }),
-    createBotTemplate("#86efac", { x: 0.8, y: 2.25, z: -1.2 }),
-    createBotTemplate("#c4b5fd", { x: -1.4, y: -2.2, z: -0.4 }),
-    createBotTemplate("#fb7185", { x: 2.2, y: 1.1, z: -1.3 })
+    createMapBotTemplate("#f0abfc", 0.16, 0.72, -0.6),
+    createMapBotTemplate("#fcd34d", 0.84, 0.28, -0.8),
+    createMapBotTemplate("#86efac", 0.48, 0.84, -1.2),
+    createMapBotTemplate("#c4b5fd", 0.28, 0.18, -0.4),
+    createMapBotTemplate("#fb7185", 0.72, 0.82, -1.3),
+    createMapBotTemplate("#7dd3fc", 0.58, 0.16, -0.7)
   ]),
   driftSeedBase: 2.4,
   driftSeedStep: 1.7
@@ -220,6 +221,7 @@ export const SCENE_CONFIG = Object.freeze({
   backgroundStarDepth: 120,
   cameraDistance: 18,
   cameraFollowLerp: 0.075,
+  edgeFlashInsetRatio: 0.92,
   maxPixelRatio: 2
 });
 
@@ -437,6 +439,19 @@ function createBotTemplate(color, basePosition) {
     color,
     basePosition: Object.freeze({ ...basePosition })
   });
+}
+
+function createMapBotTemplate(color, xRatio, yRatio, z) {
+  return createBotTemplate(color, {
+    x: mapRatioToBounds(xRatio, SPACE_BOUNDS.x),
+    y: mapRatioToBounds(yRatio, SPACE_BOUNDS.y),
+    z
+  });
+}
+
+function mapRatioToBounds(ratio, bounds) {
+  const safeRatio = Math.min(1, Math.max(0, Number(ratio) || 0));
+  return bounds[0] + (bounds[1] - bounds[0]) * safeRatio;
 }
 
 function createRealtimePresetClient(name, color, behavior, options = {}) {

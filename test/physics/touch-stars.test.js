@@ -49,7 +49,7 @@ test("touch-star catalogue spans the enlarged playable space", () => {
   assert.ok(constellationIds.size > 24);
 });
 
-test("touch-star collisions emit one blended pulse and keep the opened star visible", () => {
+test("touch-star collisions emit one star-colored pulse and keep the opened star visible", () => {
   const touchStars = createTouchStars("lumen-touch", 1);
   const originalStar = touchStars[0];
   const participant = {
@@ -65,8 +65,8 @@ test("touch-star collisions emit one blended pulse and keep the opened star visi
   assert.equal(touched.pulses[0].trigger, "star-touch");
   assert.equal(touched.pulses[0].starId, "touch-star-0");
   assert.equal(touched.pulses[0].starGeneration, 1);
-  assert.notEqual(touched.pulses[0].color, originalStar.color);
-  assert.deepEqual(touched.pulses[0].origin, participant.position);
+  assert.equal(touched.pulses[0].color, originalStar.color);
+  assert.deepEqual(touched.pulses[0].origin, originalStar.position);
   assert.equal(touched.touchStars[0].generation, 1);
   assert.deepEqual(touched.touchStars[0].position, originalStar.position);
   assert.equal(touched.touchStars[0].openedAt, 2_000);

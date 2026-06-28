@@ -156,6 +156,8 @@ test("stepGame emits v2 pulse events when a local participant touches a star", (
 
   assert.equal(result.state.pulses.length, 1);
   assert.equal(result.state.pulses[0].sourceId, "client-local");
+  assert.equal(result.state.pulses[0].color, "#fcd34d");
+  assert.deepEqual(result.state.pulses[0].origin, state.touchStars[0].position);
   assert.equal(sendEvent.message.protocol, "lumen-space");
   assert.equal(sendEvent.message.clientId, "client-local");
   assert.equal(sendEvent.message.trigger, "star-touch");
@@ -190,6 +192,8 @@ test("stepGame emits v2 pulse events when an owned shared bot touches a star", (
 
   assert.equal(result.state.pulses.length, 1);
   assert.equal(result.state.pulses[0].sourceId, bot.id);
+  assert.equal(result.state.pulses[0].color, "#fcd34d");
+  assert.deepEqual(result.state.pulses[0].origin, state.touchStars[0].position);
   assert.equal(sendEvent.message.clientId, bot.id);
   assert.equal(sendEvent.message.sourceKind, "bot");
   assert.equal(sendEvent.message.ownerClientId, "client-local");

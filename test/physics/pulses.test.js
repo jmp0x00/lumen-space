@@ -1,11 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  PULSE_BASE_RADIUS,
   PULSE_DURATION_MS,
+  PULSE_RADIUS_SCALE,
   RESONANCE_DURATION_MS,
   addPulse,
   createPulse,
   createPulseMessage,
+  getPulseRadius,
   normalizePulseMessage,
   updatePulseResonances,
   updatePulses
@@ -43,6 +46,26 @@ test("pulse progression expires pulses after the configured duration", () => {
   assert.equal(active[0].opacity, 0.5);
 
   assert.deepEqual(updatePulses([pulse], 1_000 + PULSE_DURATION_MS + 1), []);
+});
+
+test("pulse progression uses the original visual timing and radius curve", () => {
+  const pulse = createPulse({
+    id: "pulse-compact",
+    origin: { x: 0, y: 0, z: 0 },
+    strength: 1.16,
+    timestamp: 1_000
+  });
+  const active = updatePulses([pulse], 1_000 + PULSE_DURATION_MS / 2);
+  const expectedRadius = PULSE_BASE_RADIUS + PULSE_RADIUS_SCALE * 1.16 * 0.5;
+
+  assert.equal(active.length, 1);
+  assert.equal(active[0].progress, 0.5);
+  assert.equal(PULSE_DURATION_MS, 1_800);
+  assertClose(PULSE_BASE_RADIUS, 0.6);
+  assertClose(PULSE_RADIUS_SCALE, 7.5);
+  assert.equal(Object.hasOwn(active[0], "previousRadius"), false);
+  assert.equal(Object.hasOwn(active[0], "radius"), false);
+  assertClose(getPulseRadius(active[0]), expectedRadius);
 });
 
 test("resonance physics creates one flash when different pulse fronts meet", () => {
@@ -127,3 +150,7 @@ test("resonance physics ignores same-source pulses and expires old flashes", () 
     []
   );
 });
+
+function assertClose(actual, expected) {
+  assert.ok(Math.abs(actual - expected) < 1e-12, `${actual} should be close to ${expected}`);
+}
