@@ -18,7 +18,7 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - When different players' pulse fronts meet, they create a brief resonance flash.
 - Hear the procedural space lo-fi song after the browser unlocks audio through interaction; star-touch pulses and resonance flashes briefly and noticeably reshape the song's density, space, tone, and voices instead of playing as separate effects.
 - Use the room Lo-Fi control to mute or unmute the reactive song.
-- Shared AI-driven bots seek touch stars automatically and are simulated by the connected players through deterministic ownership.
+- Shared AI-driven bots seek less-contested touch stars automatically and are simulated by the connected players through deterministic ownership.
 - Rooms are peer-to-peer and ephemeral; no account, backend server, or database is used.
 - If realtime networking is unavailable, the app keeps retrying while the visual room stays usable.
 
@@ -66,7 +66,7 @@ npm test
 ```
 
 Manual browser validation is documented in [docs/testing/manual-smoke-test.md](docs/testing/manual-smoke-test.md).
-For physics tuning, double-click the room label in the room to toggle a hidden debug readout with lume positions, velocities, and bot AI target state.
+For physics tuning, double-click the room label in the room to toggle a hidden debug readout with lume positions, velocities, and bot AI target, chaser count, and decision state.
 
 ## Project Structure
 

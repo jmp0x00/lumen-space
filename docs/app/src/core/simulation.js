@@ -51,6 +51,7 @@ export function stepGame(state, { now = Date.now(), deltaSeconds = 1 / 60, runti
     nextState = {
       ...nextState,
       botParticipants: updateBotParticipants(nextState.botParticipants, now, deltaSeconds, {
+        peerParticipants: Object.values(nextState.peers),
         touchStars: getActiveTouchStars(nextState)
       })
     };

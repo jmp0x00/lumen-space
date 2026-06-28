@@ -24,7 +24,7 @@ In scope:
 - Peer-to-peer realtime rooms for 2-8 participants.
 - Nickname and color identity stored locally.
 - Three.js visual scene with participant lights and pulse rings.
-- Shared star-seeking bots with deterministic ownership, capped by room population, that move through the shared motion physics and consume stars.
+- Crowd-aware star-seeking bots with deterministic ownership, capped by room population, that move through the shared motion physics and consume stars.
 - Automated browser simulator for inspecting peer repulsion without manual multiplayer setup.
 - Realtime multi-user simulator mode that embeds several scene-only no-bot app clients in one WebRTC room and drives those peers with scripted user presets plus a configurable 1-8 client count.
 - Simulator song mode that plays the shared procedural space lo-fi infinite song and visualizes the current musical state.
@@ -80,8 +80,8 @@ Out of scope:
 - If realtime connection fails, the app must keep retrying without switching into a separate offline mode.
 - Rooms must maintain automatic shared bots according to active human count, with a hard total lume limit of 12, desired room population of 8, and maximum of 6 generated bots.
 - Shared bot IDs must be stable room-level participant IDs, and sorted active human client IDs must assign bot slots round-robin.
-- Bots must chase the closest available touch star on each update, ignore cooling stars, move through the same motion integration as user-driven lumes, preserve existing velocity, remain within world bounds, consume touch stars, and emit pulses only through star consumption.
-- A hidden debug toggle must show current lume positions, velocities, speed, and bot AI target/distance state for physics tuning without adding a visible player-facing control.
+- Bots must choose available touch stars through deterministic crowd-aware scoring, continue toward a nearby current star when it is not overcrowded, redirect toward lower-pressure alternatives when multiple bots aim at the same star, ignore cooling stars, move through the same motion integration as user-driven lumes, preserve existing velocity, remain within world bounds, consume touch stars, and emit pulses only through star consumption.
+- A hidden debug toggle must show current lume positions, velocities, speed, and bot AI target/distance/chaser decision state for physics tuning without adding a visible player-facing control.
 
 ## Acceptance Criteria
 
@@ -89,7 +89,7 @@ Out of scope:
 - A user can enter the lobby, regenerate a nickname, create a room, and copy an invite link.
 - Two browser tabs using the same room show each other as separate colored lights.
 - Pointer movement updates the local light and propagates to peers.
-- Nearby lumes and bots use size-based collision contact while remaining inside the playable bounds, and bots continuously pursue the closest available star instead of keeping sticky or skipped targets.
+- Nearby lumes and bots use size-based collision contact while remaining inside the playable bounds, and bots continuously pursue available stars while avoiding overcrowded targets and stale skipped-target state.
 - When a moving participant pushes an idle peer, the idle peer remains at the pushed resting position until new input or presence data moves it again.
 - Opening `simulator.html` starts an automated peer simulation that visibly shows repulsion without requiring network setup.
 - In `simulator.html`, selecting the crossing scenario shows two peers following intersecting routes through the center.

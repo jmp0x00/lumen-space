@@ -248,6 +248,8 @@ function formatBotDebugState(participant, position, now, digits) {
     targetDistance:
       targetPosition === null ? null : roundNumber(planeDistance(position, targetPosition), digits),
     bestDistance: roundNullableNumber(participant.botTargetBestDistance, digits),
+    chaserCount: readNullableNonNegativeInteger(participant.botTargetChaserCount),
+    decision: normalizeDebugText(participant.botTargetDecision, null),
     idleMs: idleSince === null ? 0 : Math.max(0, Math.round(now - idleSince)),
     skippedStarId: normalizeDebugText(participant.botSkippedStarId, null),
     skipMs: skippedUntil === null ? 0 : Math.max(0, Math.round(skippedUntil - now))
@@ -280,6 +282,15 @@ function roundNullableNumber(value, digits) {
 
   const numeric = Number(value);
   return Number.isFinite(numeric) ? roundNumber(numeric, digits) : null;
+}
+
+function readNullableNonNegativeInteger(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const numeric = Math.floor(Number(value));
+  return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
 }
 
 function roundNumber(value, digits) {

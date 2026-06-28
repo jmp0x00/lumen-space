@@ -251,7 +251,10 @@ function formatDebugRows(rows) {
 function formatBotAiDebug(ai) {
   const target = ai.targetStarId ?? "drift";
   const distance = formatDebugNullableNumber(ai.targetDistance);
-  return `ai(target=${target} d=${distance})`;
+  const chasers =
+    ai.chaserCount === null || ai.chaserCount === undefined ? "" : ` c=${ai.chaserCount}`;
+  const decision = ai.decision ? ` ${ai.decision}` : "";
+  return `ai(target=${target} d=${distance}${chasers}${decision})`;
 }
 
 function formatDebugVector(vector) {

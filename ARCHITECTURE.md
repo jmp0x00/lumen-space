@@ -31,7 +31,7 @@ The preferred long-term game-core model is documented in
 - `physics/collision.js` owns size-derived peer collision radii and shared peer/peer plus peer/star collision-distance helpers.
 - `physics/repulsion.js` owns bounded peer-to-peer velocity nudges and visible movement-plane separation correction using pair collision distances from `physics/collision.js`.
 - Peer repulsion also carries each participant's current movement target by the same displacement, preventing idle local or remote lumes from easing back to stale targets after a push.
-- `physics/bots.js` owns deterministic bot AI target generation toward the closest available touch star and shared motion integration for bot participants.
+- `physics/bots.js` owns deterministic crowd-aware bot AI target generation toward available touch stars and shared motion integration for bot participants.
 - `physics/touch-stars.js` owns deterministic touch-star placement, peer-radius-aware plane-distance collision, cooldown, respawn, and remote suppression.
 - `physics/pulses.js` owns pulse normalization, progression, radius calculation, deduplication, expiry, and resonance detection.
 - `network.js` dynamically imports Trystero and exposes a small room adapter with `sendHello`, `sendPresence`, `sendEvent`, and `leave`.
@@ -53,7 +53,7 @@ This shape keeps network and rendering side effects away from the logic covered 
 1. The selected UI generator emits action callbacks; `app.js` dispatches reducer events and performs browser-only side effects such as `localStorage`, history updates, clipboard writes, and toasts.
 2. Entering a room creates canonical room state through `core/game-state.js`: local participant, pointer target, a capped deterministic touch-star pool, owned shared bot slots, status, and empty peer/pulse/resonance collections.
 3. `scene.js` starts the WebGL scene, maps pointer positions to world-space targets, and renders data selected from canonical game state.
-4. Each animation frame calls `core/simulation.js`, which recalculates shared bot ownership, updates local motion, remote interpolation, owned bot AI/motion, collision repulsion, pulse expiry, touch-star cooldowns, star-touch pulses, and resonances.
+4. Each animation frame calls `core/simulation.js`, which recalculates shared bot ownership, updates local motion, remote interpolation, owned crowd-aware bot AI/motion, collision repulsion, pulse expiry, touch-star cooldowns, star-touch pulses, and resonances.
 5. `core/game-events.js` returns outbound effects such as v2 pulse events, presence messages, hello messages, toasts, and runtime-simulator state publishing. `app.js` executes those effects against WebRTC, DOM, or `postMessage`.
 6. `protocol.js` creates outbound v2 messages and validates inbound network payloads before they can become reducer events.
 7. `network.js` broadcasts throttled v2 `presence` snapshots through Trystero. Human presence uses the player's client ID; bot presence uses stable `bot:<roomId>:<slot>` IDs plus owner metadata. Newer peer sequences replace older snapshots from the same publisher, and the simulation interpolates remote positions toward the sender's reported actual `position`. The sender's `targetPosition` is preserved as input intent, but it is not used as the remote visual target.
@@ -61,7 +61,7 @@ This shape keeps network and rendering side effects away from the logic covered 
 9. Touch-star pulse events are the only accepted pulse events. They include `trigger`, `starId`, and `starGeneration` so other clients suppress and respawn the matching deterministic star.
 10. `physics/pulses.js` derives resonance events locally when different pulse fronts meet; no extra network message is sent.
 11. `app.js` compares the current pulse/resonance IDs with a local sound snapshot, then asks `sound.js` to keep the shared space lo-fi song running and apply newly observed song reactions when sound is enabled and browser audio has been unlocked by a user gesture. The reaction model updates future song steps and also moves the current song bus tone, wet mix, and output gain so interactions are audible immediately. The snapshot still advances while muted so old reactions do not replay on unmute.
-12. Shared bots are owned by connected human clients through deterministic round-robin slot assignment. The owner simulates each assigned bot, publishes bot presence, and broadcasts only star-touch pulse events when that bot consumes a star.
+12. Shared bots are owned by connected human clients through deterministic round-robin slot assignment. The owner simulates each assigned bot, counts owned and remote bot target pressure from current star targets, prefers continuing toward a nearby uncrowded target, redirects toward lower-pressure available stars when needed, publishes bot presence, and broadcasts only star-touch pulse events when that bot consumes a star.
 
 ## Simulator
 

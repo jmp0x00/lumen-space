@@ -67,6 +67,138 @@ test("bot movement targets the closest available touch star", () => {
   assert.deepEqual(participant.position, { x: 0, y: 0, z: 0 });
 });
 
+test("bot movement keeps a lightly contested current star when it is still nearby", () => {
+  const now = 4_000;
+  const participant = {
+    id: "bot-1",
+    name: "Bot",
+    color: "#f0abfc",
+    basePosition: { x: 0, y: 0, z: 0 },
+    position: { x: 0, y: 0, z: 0 },
+    targetPosition: { x: 1.28, y: 0, z: 0 },
+    velocity: { x: 0.2, y: 0, z: 0 },
+    driftSeed: 3,
+    isBot: true,
+    botTargetStarId: "steady-star"
+  };
+  const touchStars = [
+    {
+      id: "closer-star",
+      position: { x: 1, y: 0, z: 0 },
+      availableAt: 0
+    },
+    {
+      id: "steady-star",
+      position: { x: 1.28, y: 0, z: 0 },
+      availableAt: 0
+    }
+  ];
+
+  const [next] = updateBotParticipants([participant], now, 1 / 60, { touchStars });
+
+  assert.equal(next.botTargetStarId, "steady-star");
+  assert.deepEqual(next.targetPosition, touchStars[1].position);
+  assert.equal(next.botTargetChaserCount, 1);
+  assert.equal(next.botTargetDecision, "continue");
+});
+
+test("bot movement redirects from a star crowded by remote bot peers", () => {
+  const now = 4_000;
+  const participant = {
+    id: "bot-1",
+    name: "Bot",
+    color: "#f0abfc",
+    basePosition: { x: 0, y: 0, z: 0 },
+    position: { x: 0, y: 0, z: 0 },
+    targetPosition: { x: 1, y: 0, z: 0 },
+    velocity: { x: 0.2, y: 0, z: 0 },
+    driftSeed: 3,
+    isBot: true,
+    botTargetStarId: "crowded-star"
+  };
+  const touchStars = [
+    {
+      id: "crowded-star",
+      position: { x: 1, y: 0, z: 0 },
+      availableAt: 0
+    },
+    {
+      id: "open-star",
+      position: { x: 1.9, y: 0, z: 0 },
+      availableAt: 0
+    }
+  ];
+  const peerParticipants = [
+    {
+      id: "remote-bot-1",
+      targetPosition: { x: 1.32, y: 0.22, z: 0 },
+      isBot: true
+    },
+    {
+      id: "remote-bot-2",
+      targetPosition: { x: 0.72, y: -0.18, z: 0 },
+      isBot: true
+    }
+  ];
+
+  const [next] = updateBotParticipants([participant], now, 1 / 60, {
+    peerParticipants,
+    touchStars
+  });
+
+  assert.equal(next.botTargetStarId, "open-star");
+  assert.deepEqual(next.targetPosition, touchStars[1].position);
+  assert.equal(next.botTargetChaserCount, 1);
+  assert.equal(next.botTargetDecision, "redirect");
+});
+
+test("fresh bots spread across similarly reachable stars instead of all chasing one", () => {
+  const now = 4_000;
+  const participants = [0, 1, 2].map((index) => ({
+    id: `bot-${index}`,
+    name: `Bot ${index}`,
+    color: "#f0abfc",
+    basePosition: { x: 0, y: 0, z: 0 },
+    position: { x: 0, y: 0, z: 0 },
+    targetPosition: { x: 0, y: 0, z: 0 },
+    velocity: { x: 0, y: 0, z: 0 },
+    driftSeed: index + 1,
+    isBot: true
+  }));
+  const touchStars = [
+    {
+      id: "first-star",
+      position: { x: 1, y: 0, z: 0 },
+      availableAt: 0
+    },
+    {
+      id: "second-star",
+      position: { x: 1.15, y: 0, z: 0 },
+      availableAt: 0
+    },
+    {
+      id: "third-star",
+      position: { x: 1.3, y: 0, z: 0 },
+      availableAt: 0
+    }
+  ];
+
+  const next = updateBotParticipants(participants, now, 1 / 60, { touchStars });
+
+  assert.deepEqual(
+    next.map((participant) => participant.botTargetStarId),
+    ["first-star", "second-star", "third-star"]
+  );
+  assert.deepEqual(
+    next.map((participant) => participant.botTargetChaserCount),
+    [1, 1, 1]
+  );
+  assert.deepEqual(
+    next.map((participant) => participant.botTargetDecision),
+    ["target", "target", "target"]
+  );
+});
+
 test("bot movement ignores cooling touch stars and keeps pushed velocity", () => {
   const now = 4_000;
   const participant = {

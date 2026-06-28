@@ -119,6 +119,8 @@ test("formatParticipantDebugRows returns rounded lume state for the debug panel"
         velocity: { x: 3, y: 4, z: 0 },
         botTargetStarId: "touch-star-2",
         botTargetBestDistance: 1.234,
+        botTargetChaserCount: 3,
+        botTargetDecision: "redirect",
         botTargetIdleSince: 3_500,
         botSkippedStarId: "touch-star-0",
         botSkippedStarUntil: 6_200,
@@ -149,6 +151,8 @@ test("formatParticipantDebugRows returns rounded lume state for the debug panel"
         targetStarId: "touch-star-2",
         targetDistance: 1.3,
         bestDistance: 1.2,
+        chaserCount: 3,
+        decision: "redirect",
         idleMs: 1_500,
         skippedStarId: "touch-star-0",
         skipMs: 1_200
@@ -175,6 +179,8 @@ test("formatParticipantDebugRows keeps empty bot AI timings neutral", () => {
     targetStarId: "drift",
     targetDistance: null,
     bestDistance: null,
+    chaserCount: null,
+    decision: null,
     idleMs: 0,
     skippedStarId: null,
     skipMs: 0
