@@ -4,7 +4,7 @@ Lumen Space is a small social visual game for the AI-native development challeng
 
 Playable links:
 
-- GitHub Pages: TODO after this repository is pushed to GitHub and the Pages workflow runs. Expected shape: `https://<github-user-or-org>.github.io/vadim-kiryukhin-lumen-space/`.
+- GitHub Pages: TODO after branch-based Pages is enabled. Expected shape: `https://jmp0x00.github.io/lumen-space/`, which redirects to the playable app under `/app/`.
 - GitLab/GitDocs: TODO after the repository is created under `rc-ai-learning/vadim-kiryukhin-lumen-space` and GitDocs is enabled.
 
 ## Game Description
@@ -81,21 +81,21 @@ For physics tuning, use `simulator.html`.
 
 ## Deploy To GitHub Pages
 
-This repository includes a GitHub Actions workflow at `.github/workflows/pages.yml`.
-It publishes the static app from `docs/app` to GitHub Pages on every push to
-`main` or `master`, and can also be run manually from the Actions tab.
+This repository is set up for branch-based GitHub Pages from the `docs` folder.
+The docs-root page at `docs/index.html` redirects visitors into the playable app
+under `docs/app`, preserving query parameters such as `?room=<room-id>`.
 
 After pushing to GitHub:
 
 1. Open the repository on GitHub.
 2. Go to `Settings` -> `Pages`.
-3. Set `Build and deployment` -> `Source` to `GitHub Actions`.
-4. Run the `Deploy Lumen Space to GitHub Pages` workflow or push to `main` or `master`.
+3. Set `Build and deployment` -> `Source` to `Deploy from a branch`.
+4. Select branch `master` or `main`, folder `/docs`, then save.
 
 ## Project Structure
 
-- `.github/workflows/pages.yml`: GitHub Actions workflow that publishes `docs/app` to GitHub Pages.
-- `docs/app/`: static playable app intended for GitDocs and GitHub Pages hosting.
+- `docs/index.html`: GitHub Pages docs-root entry page that redirects to the playable app.
+- `docs/app/`: static playable app intended for GitDocs and GitHub Pages branch hosting.
 - `docs/app/simulator.html`: automated simulator app with physics, realtime, constellation-map, and procedural song modes.
 - `docs/app/src/simulation-clients.js`: realtime room simulator presets and scripted client target selection.
 - `docs/app/src/constellation-map-simulation.js`: pure observer model for the simulator's passive all-sky constellation map mode.
