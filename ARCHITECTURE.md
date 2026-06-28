@@ -36,7 +36,7 @@ The preferred long-term game-core model is documented in
 - `physics/pulses.js` owns pulse normalization, progression, radius calculation, deduplication, expiry, and resonance detection.
 - `network.js` dynamically imports Trystero and exposes a small room adapter with `sendHello`, `sendPresence`, `sendEvent`, and `leave`.
 - `names.js` dynamically imports Unique Names Generator and falls back to a small deterministic local generator if the CDN is unavailable.
-- `scene.js` dynamically imports Three.js and renders participants, labels, a dense oversized star field, touch stars, pulse rings, and resonance flashes, with a smooth camera follow so the larger world is reachable beyond the initial viewport.
+- `scene.js` dynamically imports Three.js and renders participants, labels, a dense oversized star field, touch stars, pulse rings, and resonance flashes, with a smooth camera follow so the larger world is reachable beyond the initial viewport. Participant lumes keep the original colored sphere plus additive halo presentation and apply only a light deterministic breathing pulse to scale, halo opacity, and point-light intensity.
 - `app.js` is now a browser adapter. It owns DOM/UI callbacks, local storage, URL updates, realtime connection, timers, animation frames, scene startup, and effect execution while delegating game-state changes to the pure core modules.
 - `app-ui.js` owns default DOM rendering for the lobby, room chrome, compact participant roster, icon actions, and toast, plus a scene-only generator for embedded clients.
 - `runtime-config.js` owns app runtime hooks and UI generator selection, defaulting to the full lobby and room UI while allowing embedded clients to render scene-only.

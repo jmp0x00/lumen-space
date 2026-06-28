@@ -28,7 +28,7 @@ import {
   createClientId
 } from "./protocol.js";
 import { createRuntimeConfig } from "./runtime-config.js?v=lofi-audio-20260627";
-import { createSpaceScene } from "./scene.js?v=large-space-20260628";
+import { createSpaceScene } from "./scene.js?v=lume-subtle-pulse-20260628";
 import {
   collectNewSoundCues,
   createPulseSoundPlayer,

@@ -60,10 +60,11 @@ export async function createSpaceScene({
   }
 
   function render() {
+    const now = Date.now();
     const participants = getParticipants();
     syncCamera(participants);
-    syncParticipants(THREE, participants);
-    syncTouchStars(THREE);
+    syncParticipants(THREE, participants, now);
+    syncTouchStars(THREE, now);
     syncPulses(THREE);
     syncResonances(THREE);
     renderer.render(scene, camera);
@@ -89,7 +90,7 @@ export async function createSpaceScene({
     camera.lookAt(camera.position.x, camera.position.y, 0);
   }
 
-  function syncParticipants(THREERef, participants) {
+  function syncParticipants(THREERef, participants, now) {
     const activeIds = new Set(participants.map((participant) => participant.id));
 
     for (const participant of participants) {
@@ -102,15 +103,26 @@ export async function createSpaceScene({
       }
 
       const color = new THREERef.Color(participant.color);
+      const phase = stablePhase(participant.id);
+      const pulse = 0.5 + Math.sin(now * 0.0036 + phase) * 0.5;
+      const pulseAmount = participant.isBot ? 0.04 : 0.06;
+      const pulseScale = 1 - pulseAmount / 2 + pulse * pulseAmount;
+      const glowPulse = 0.92 + pulse * 0.16;
+      const lightPulse = 0.94 + pulse * 0.12;
+
       mesh.core.material.color.copy(color);
       mesh.glow.material.color.copy(color);
+      mesh.glow.material.opacity = (participant.isBot ? 0.38 : 0.72) * glowPulse;
+      mesh.glow.scale.setScalar(1.9 * pulseScale);
       mesh.light.color.copy(color);
+      mesh.light.intensity = (participant.isBot ? 0.48 : 0.95) * lightPulse;
+      mesh.light.distance = 5;
       mesh.group.position.set(
         participant.position.x,
         participant.position.y,
         participant.position.z
       );
-      mesh.group.scale.setScalar(getPeerVisualScale(participant));
+      mesh.group.scale.setScalar(getPeerVisualScale(participant) * pulseScale);
       mesh.group.userData.name = participant.name;
       mesh.group.userData.isBot = participant.isBot;
 
@@ -132,8 +144,7 @@ export async function createSpaceScene({
     }
   }
 
-  function syncTouchStars(THREERef) {
-    const now = Date.now();
+  function syncTouchStars(THREERef, now) {
     const touchStars = getTouchStars().filter((star) => Number(star.availableAt ?? 0) <= now);
     const activeIds = new Set(touchStars.map((star) => star.id));
 
@@ -469,4 +480,13 @@ function clamp(value, min, max) {
 
 function clamp01(value) {
   return clamp(value, 0, 1);
+}
+
+function stablePhase(value) {
+  const text = String(value ?? "");
+  let hash = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    hash = (hash * 31 + text.charCodeAt(index)) % 10_000;
+  }
+  return (hash / 10_000) * Math.PI * 2;
 }
