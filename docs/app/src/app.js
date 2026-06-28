@@ -421,7 +421,7 @@ async function copyInviteLink() {
   const inviteUrl = createInviteUrl(window.location.href, game.roomId);
   try {
     await navigator.clipboard.writeText(inviteUrl);
-    showToast("Link copied.");
+    showToast("Invite link copied.");
   } catch {
     showToast(inviteUrl);
   }
