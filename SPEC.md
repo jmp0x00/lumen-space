@@ -12,7 +12,7 @@ Lumen Space is a social visual game without scoring or winners. The goal is to c
 6. Touching a small environmental star emits a pulse from the local light, colored by blending the star and lumen colors.
 7. Pulses are not an explicit player or bot action; consuming a touch star is the only way to emit a colored pulse.
 8. When pulse fronts from different sources meet, they create a brief resonance flash.
-9. After browser audio is unlocked by user interaction, the room plays the procedural space lo-fi song; star-touch pulses and resonance flashes briefly reshape the song's density, space, tone, and voices.
+9. After browser audio is unlocked by user interaction, the room plays the procedural space lo-fi song; star-touch pulses and resonance flashes immediately and noticeably reshape the song's density, space, tone, and voices.
 10. The player can mute or unmute the local lo-fi room audio.
 11. Other players in the same room see the player's latest position, shared bots, star-touch pulses, and resonances.
 12. Rooms are ephemeral. When all players leave, no room state remains.
@@ -73,7 +73,7 @@ Out of scope:
 - Duplicate pulse messages must not create duplicate visuals.
 - Pulse fronts from different sources must create a short-lived resonance visual when they meet.
 - Local room audio must use the Web Audio API to synthesize the shared space lo-fi song and convert newly observed pulse and resonance events into song reactions after a user gesture unlocks audio.
-- Star-touch pulses and resonance flashes must noticeably tune existing song voices, density, space, and tone in distinct ways while avoiding separate sound-effect stabs during repeated play.
+- Star-touch pulses and resonance flashes must noticeably tune existing song voices, density, space, and tone in distinct ways, including an immediate tone/space bloom, while avoiding separate sound-effect stabs during repeated play.
 - The default room UI must expose a mute/unmute Lo-Fi control.
 - The default room UI must expose copy invite, mute/unmute Lo-Fi, and leave controls as compact touch-friendly actions.
 - On mobile-width viewports, the Lights roster must remain shallow and horizontally scrollable instead of becoming a tall overlay.
@@ -101,7 +101,7 @@ Out of scope:
 - In `simulator.html`, selecting song mode shows a procedural music visualization; pressing the Song mode audio control starts and stops the shared space lo-fi infinite song, changing the song sliders updates tempo, density, space, and volume, and reaction audition controls let star-touch and resonance reactions be heard.
 - Touching an environmental star emits a blended-color pulse and temporarily hides that star.
 - Entering or interacting with a room starts the soft procedural space lo-fi song after browser audio is unlocked.
-- Star-touch pulses brighten the song's lead/dust texture and open the tone quickly, while pulse resonances open the song's pad/space and soften the kit.
+- Star-touch pulses clearly brighten the song's lead/dust texture and open the tone quickly, while pulse resonances create a broader pad/space swell and soften the kit.
 - The room Lo-Fi control can mute and unmute local room audio without replaying old reactions.
 - On mobile-width viewports, the Lights list stays compact with horizontal scrolling and the room actions remain touch-sized icon controls.
 - In realtime simulator mode, only one embedded client is configured as the audio source, and the simulator shell provides the only Lo-Fi control.

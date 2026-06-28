@@ -43,7 +43,7 @@ test("createRoomLofiSongPlan uses the shared infinite space lo-fi song", () => {
   assert.equal(plan.bpm, ROOM_LOFI_SONG_BPM);
   assert.equal(plan.density, ROOM_LOFI_SONG_DENSITY);
   assert.equal(plan.space, ROOM_LOFI_SONG_SPACE);
-  assert.equal(plan.reactionMix, 0.86);
+  assert.equal(plan.reactionMix, 0.94);
   assert.equal(plan.progression.length, 8);
   assert.deepEqual(
     plan.voices.map((voice) => voice.id),
@@ -81,7 +81,7 @@ test("createPulseSongReaction gives star-touch pulses a stronger song reaction",
     type: "song-reaction",
     interactionType: "star-touch",
     color: "#fcd34d",
-    intensity: 0.888,
+    intensity: 0.971,
     pan: -0.72
   });
 });
@@ -99,7 +99,7 @@ test("createResonanceSongReaction maps resonance intensity to a broad song react
     type: "song-reaction",
     interactionType: "resonance",
     color: "#86efac",
-    intensity: 0.86,
+    intensity: 0.955,
     pan: 0
   });
 });

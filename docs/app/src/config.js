@@ -142,7 +142,7 @@ export const SPACE_LOFI_CONFIG = Object.freeze({
   space: 0.5,
   stepsPerBar: 16,
   swing: 0.12,
-  reactionMix: 0.86,
+  reactionMix: 0.94,
   scheduleAheadSeconds: 0.42,
   schedulerIntervalMs: 55,
   noiseLoopFadeSeconds: 0.08

@@ -33,7 +33,7 @@ import {
   collectNewSoundCues,
   createPulseSoundPlayer,
   createSoundCueSnapshot
-} from "./sound.js?v=audible-reactions-20260628";
+} from "./sound.js?v=obvious-lofi-reactions-20260628";
 
 const runtimeConfig = createRuntimeConfig(window.location);
 const savedIdentity = runtimeConfig.persistIdentity ? loadSavedIdentity() : null;

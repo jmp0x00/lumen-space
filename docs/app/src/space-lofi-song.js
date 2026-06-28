@@ -191,13 +191,13 @@ export function getSpaceLofiReactionState(plan, reactions = [], absoluteStep = 0
   }
 
   state.intensity = roundNumber(clamp(state.intensity, 0, 1), 3);
-  state.densityBoost = roundNumber(clamp(state.densityBoost, 0, 0.42), 3);
-  state.spaceBoost = roundNumber(clamp(state.spaceBoost, 0, 0.44), 3);
-  state.padLift = roundNumber(clamp(state.padLift, 0, 0.32), 3);
-  state.bassLift = roundNumber(clamp(state.bassLift, 0, 0.18), 3);
-  state.leadLift = roundNumber(clamp(state.leadLift, 0, 0.34), 3);
-  state.dustLift = roundNumber(clamp(state.dustLift, 0, 0.36), 3);
-  state.drumSoftening = roundNumber(clamp(state.drumSoftening, 0, 0.28), 3);
+  state.densityBoost = roundNumber(clamp(state.densityBoost, 0, 0.52), 3);
+  state.spaceBoost = roundNumber(clamp(state.spaceBoost, 0, 0.56), 3);
+  state.padLift = roundNumber(clamp(state.padLift, 0, 0.44), 3);
+  state.bassLift = roundNumber(clamp(state.bassLift, 0, 0.22), 3);
+  state.leadLift = roundNumber(clamp(state.leadLift, 0, 0.48), 3);
+  state.dustLift = roundNumber(clamp(state.dustLift, 0, 0.5), 3);
+  state.drumSoftening = roundNumber(clamp(state.drumSoftening, 0, 0.4), 3);
   state.pan = roundNumber(state.intensity > 0 ? weightedPan / Math.max(state.intensity, 0.001) : 0, 3);
   state.phase = strongest.phase;
   state.melodyShift = strongest.melodyShift;
@@ -441,15 +441,15 @@ export function createSpaceLofiSongController(
     const now = context.currentTime;
     const mix = clamp(songPlan.reactionMix ?? SPACE_LOFI_REACTION_MIX, 0, 1);
     const lift = reaction.intensity * mix;
-    const release = 0.9 + reaction.durationSteps * getSpaceLofiStepDuration(songPlan, reaction.startStep) * 0.28;
+    const release = 1.08 + reaction.durationSteps * getSpaceLofiStepDuration(songPlan, reaction.startStep) * 0.36;
     const baseWet = 0.1 + songPlan.space * 0.2;
     const baseFeedback = 0.16 + songPlan.space * 0.24;
     const baseTone = getBaseToneFrequency(songPlan);
-    const targetOutput = clamp(outputGain + lift * 0.085, 0.01, 1);
-    const targetWet = clamp(baseWet + reaction.spaceBoost * 0.72 + lift * 0.04, 0.02, 0.62);
-    const targetFeedback = clamp(baseFeedback + reaction.spaceBoost * 0.38, 0.02, 0.62);
+    const targetOutput = clamp(outputGain + lift * 0.14, 0.01, 1);
+    const targetWet = clamp(baseWet + reaction.spaceBoost * 1.05 + lift * 0.08, 0.02, 0.72);
+    const targetFeedback = clamp(baseFeedback + reaction.spaceBoost * 0.52, 0.02, 0.68);
     const targetTone = getReactionToneFrequency(reaction, songPlan);
-    const targetQ = clamp(0.52 + lift * (reaction.interactionType === "resonance" ? 0.74 : 0.42), 0.35, 1.25);
+    const targetQ = clamp(0.52 + lift * (reaction.interactionType === "resonance" ? 0.92 : 0.58), 0.35, 1.45);
 
     mixNodes.output.gain.cancelScheduledValues(now);
     mixNodes.output.gain.setTargetAtTime(targetOutput, now, 0.08);
@@ -680,14 +680,14 @@ function schedulePad(context, destination, chord, startAt, reaction = createEmpt
   });
 
   filter.type = "lowpass";
-  filter.frequency.setValueAtTime(470 + reaction.padLift * 1_100, startAt);
-  filter.frequency.exponentialRampToValueAtTime(760 + reaction.padLift * 1_800, startAt + 2.2);
-  filter.frequency.exponentialRampToValueAtTime(380 + reaction.padLift * 480, startAt + duration);
+  filter.frequency.setValueAtTime(470 + reaction.padLift * 1_380, startAt);
+  filter.frequency.exponentialRampToValueAtTime(760 + reaction.padLift * 2_300, startAt + 2.2);
+  filter.frequency.exponentialRampToValueAtTime(380 + reaction.padLift * 620, startAt + duration);
   filter.Q.value = 0.8;
   gain.gain.setValueAtTime(0.0001, startAt);
   const space = clamp((chord.space ?? SPACE_LOFI_SPACE) + reaction.spaceBoost, 0, 1);
-  gain.gain.exponentialRampToValueAtTime(0.058 + space * 0.028 + reaction.padLift * 0.064, startAt + 0.62);
-  gain.gain.setTargetAtTime(0.028 + space * 0.016 + reaction.padLift * 0.034, startAt + 1.4, 1.6);
+  gain.gain.exponentialRampToValueAtTime(0.058 + space * 0.028 + reaction.padLift * 0.082, startAt + 0.62);
+  gain.gain.setTargetAtTime(0.028 + space * 0.016 + reaction.padLift * 0.046, startAt + 1.4, 1.6);
   gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
 
   filter.connect(panner);
@@ -709,10 +709,10 @@ function scheduleBass(context, destination, bass, startAt, reaction = createEmpt
     startAt + duration
   );
   filter.type = "lowpass";
-  filter.frequency.setValueAtTime(210 + reaction.bassLift * 420, startAt);
+  filter.frequency.setValueAtTime(210 + reaction.bassLift * 560, startAt);
   filter.Q.value = 0.9;
   gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.exponentialRampToValueAtTime(0.115 + reaction.bassLift * 0.09, startAt + 0.024);
+  gain.gain.exponentialRampToValueAtTime(0.115 + reaction.bassLift * 0.12, startAt + 0.024);
   gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
 
   oscillator.connect(filter);
@@ -738,10 +738,10 @@ function scheduleSatelliteLead(context, destination, melody, startAt, hue, react
     startAt + duration
   );
   filter.type = "lowpass";
-  filter.frequency.setValueAtTime(1_200 + hue * 2.5 + reaction.leadLift * 1_200, startAt);
-  filter.Q.value = 1.1 + reaction.leadLift * 1.6;
+  filter.frequency.setValueAtTime(1_200 + hue * 2.5 + reaction.leadLift * 1_650, startAt);
+  filter.Q.value = 1.1 + reaction.leadLift * 2.1;
   gain.gain.setValueAtTime(0.0001, startAt);
-  gain.gain.exponentialRampToValueAtTime(melody.gain + reaction.leadLift * 0.055, startAt + 0.03);
+  gain.gain.exponentialRampToValueAtTime(melody.gain + reaction.leadLift * 0.078, startAt + 0.03);
   gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
 
   oscillator.connect(filter);
@@ -770,7 +770,7 @@ function scheduleDrum(context, destination, drum, startAt, reaction = createEmpt
     scheduleNoiseHit(context, destination, {
       startAt,
       duration: 0.055,
-      gain: 0.014 * (1 + reaction.densityBoost * 1.8),
+      gain: 0.014 * (1 + reaction.densityBoost * 2.4),
       type: "highpass",
       frequency: 5_400,
       q: 0.54,
@@ -802,7 +802,7 @@ function scheduleDust(context, destination, startAt, stepIndex, reaction = creat
   scheduleNoiseHit(context, destination, {
     startAt,
     duration: 0.32 + reaction.spaceBoost * 0.5,
-    gain: 0.018 + reaction.dustLift * 0.052,
+    gain: 0.018 + reaction.dustLift * 0.076,
     type: "bandpass",
     frequency: 2_400 + (stepIndex % 12) * 92,
     q: 2.4,
@@ -974,15 +974,15 @@ function getBaseToneFrequency(song) {
 
 function getReactionToneFrequency(reaction, song) {
   const baseTone = getBaseToneFrequency(song);
-  const spaceLift = reaction.spaceBoost * 8_400;
-  const leadLift = reaction.leadLift * 6_400;
+  const spaceLift = reaction.spaceBoost * 9_800;
+  const leadLift = reaction.leadLift * 8_200;
   if (reaction.interactionType === "resonance") {
-    return clamp(baseTone + 2_600 + spaceLift, 1_800, 14_500);
+    return clamp(baseTone + 3_100 + spaceLift, 1_800, 15_500);
   }
   if (reaction.interactionType === "star-touch") {
-    return clamp(baseTone + 3_400 + leadLift, 1_800, 15_500);
+    return clamp(baseTone + 4_000 + leadLift, 1_800, 17_500);
   }
-  return clamp(baseTone + 1_400 + leadLift * 0.74, 1_800, 13_500);
+  return clamp(baseTone + 1_600 + leadLift * 0.74, 1_800, 13_500);
 }
 
 function normalizePlan(plan) {
@@ -1046,7 +1046,7 @@ function createStepMelody({
     return {
       frequency: roundNumber(LEAD_SCALE[noteIndex] * (motif.octave ? 2 : 1), 2),
       gain: roundNumber(
-        (0.018 + seededUnit(`${stepSeed}:melody`) * 0.012 + reaction.leadLift * 0.028) *
+        (0.018 + seededUnit(`${stepSeed}:melody`) * 0.012 + reaction.leadLift * 0.04) *
           getDensityGain(reactiveSong),
         3
       )
@@ -1060,17 +1060,17 @@ function createStepMelody({
   const noteIndex = (chord.bar + phrase + reaction.melodyShift + Math.floor(reaction.intensity * 7)) % LEAD_SCALE.length;
   return {
     frequency: roundNumber(LEAD_SCALE[noteIndex], 2),
-    gain: roundNumber((0.012 + reaction.leadLift * 0.05) * getDensityGain(reactiveSong), 3)
+    gain: roundNumber((0.012 + reaction.leadLift * 0.072) * getDensityGain(reactiveSong), 3)
   };
 }
 
 function getReactionDurationSteps(type, intensity, song) {
   const space = clamp(song.space ?? SPACE_LOFI_SPACE, 0, 1);
   if (type === "resonance") {
-    return Math.round(18 + intensity * 8 + space * 6);
+    return Math.round(22 + intensity * 11 + space * 7);
   }
   if (type === "star-touch") {
-    return Math.round(12 + intensity * 6 + space * 5);
+    return Math.round(14 + intensity * 9 + space * 6);
   }
   return Math.round(6 + intensity * 4 + space * 3);
 }
@@ -1098,38 +1098,38 @@ function getReactionMelodyShift(type, hue, intensity) {
 
 function getReactionDensityBoost(type, intensity, song) {
   const headroom = 1 - clamp(song.density ?? SPACE_LOFI_DENSITY, 0, 1);
-  const base = type === "star-touch" ? 0.24 : type === "resonance" ? 0.12 : 0.1;
+  const base = type === "star-touch" ? 0.32 : type === "resonance" ? 0.17 : 0.1;
   return base * intensity * (0.55 + headroom * 0.45);
 }
 
 function getReactionSpaceBoost(type, intensity, song) {
   const headroom = 1 - clamp(song.space ?? SPACE_LOFI_SPACE, 0, 1);
-  const base = type === "resonance" ? 0.32 : type === "star-touch" ? 0.21 : 0.08;
+  const base = type === "resonance" ? 0.44 : type === "star-touch" ? 0.28 : 0.08;
   return base * intensity * (0.55 + headroom * 0.45);
 }
 
 function getReactionPadLift(type, intensity, song) {
-  const base = type === "resonance" ? 0.32 : type === "star-touch" ? 0.17 : 0.08;
+  const base = type === "resonance" ? 0.44 : type === "star-touch" ? 0.22 : 0.08;
   return base * intensity;
 }
 
 function getReactionBassLift(type, intensity, song) {
-  const base = type === "resonance" ? 0.12 : 0.05;
+  const base = type === "resonance" ? 0.16 : type === "star-touch" ? 0.07 : 0.05;
   return base * intensity;
 }
 
 function getReactionLeadLift(type, intensity, song) {
-  const base = type === "star-touch" ? 0.3 : 0.12;
+  const base = type === "star-touch" ? 0.44 : type === "resonance" ? 0.18 : 0.12;
   return base * intensity;
 }
 
 function getReactionDustLift(type, intensity, song) {
-  const base = type === "star-touch" ? 0.42 : type === "resonance" ? 0.26 : 0.12;
+  const base = type === "star-touch" ? 0.58 : type === "resonance" ? 0.34 : 0.12;
   return base * intensity;
 }
 
 function getReactionDrumSoftening(type, intensity, song) {
-  const base = type === "resonance" ? 0.34 : type === "star-touch" ? 0.1 : 0.04;
+  const base = type === "resonance" ? 0.46 : type === "star-touch" ? 0.15 : 0.04;
   return base * intensity;
 }
 

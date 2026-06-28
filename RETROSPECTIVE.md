@@ -73,6 +73,7 @@
 - Removed the temporary playable-room instrumentation and its domain/view-state plumbing once the separate simulator had become the better place for movement inspection.
 - Rolled back the brighter layered lume treatment after feedback clarified that the desired change was not a new look, but the original lumes with light pulsation; the final renderer keeps the original sphere/halo/light setup and adds only a subtle deterministic breathing pulse.
 - Debugged clunky remote-player movement after comparing it with smoother locally simulated bots. The fix preserved authoritative presence snapshots separately from participant intent, then reused the target-driven motion integrator for remote humans and bots with short velocity projection plus bounded correction.
+- Retuned lo-fi reactions after feedback that interaction was still too subtle: star touches now push lead, dust, density, and tone harder, while resonances create a longer pad/space bloom and stronger kit softening without reintroducing separate sound-effect stabs.
 
 ## AI Tools Used
 

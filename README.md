@@ -17,7 +17,7 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Rooms maintain a capped shared population of human players plus automatic star-seeking bots.
 - Touch-star availability scales from the active human and bot population, with a 72-star generated pool and active cap spread across the playable space.
 - When different players' pulse fronts meet, they create a brief resonance flash.
-- Hear the procedural space lo-fi song after the browser unlocks audio through interaction; star-touch pulses and resonance flashes briefly and noticeably reshape the song's density, space, tone, and voices instead of playing as separate effects.
+- Hear the procedural space lo-fi song after the browser unlocks audio through interaction; star-touch pulses create a clear lead/dust bloom, and resonance flashes create a wider pad/space swell while still reshaping the song instead of playing as separate effects.
 - Use compact room controls to copy the invite link, mute or unmute the reactive song, and leave the room.
 - On mobile, the Lights roster stays shallow and scrolls sideways so the room remains playable with larger populations.
 - Shared AI-driven bots seek less-contested touch stars automatically and are simulated by the connected players through deterministic ownership.

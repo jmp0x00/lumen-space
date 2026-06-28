@@ -12,7 +12,7 @@ import { clamp, SPACE_BOUNDS } from "./physics/vector.js";
 import {
   createSpaceLofiSongController,
   createSpaceLofiSongPlan
-} from "./space-lofi-song.js?v=audible-reactions-20260628";
+} from "./space-lofi-song.js?v=obvious-lofi-reactions-20260628";
 
 export {
   LOFI_LOOP_BPM,
@@ -169,7 +169,7 @@ export function createPulseSongReaction(pulse, { localClientId = "" } = {}) {
     type: "song-reaction",
     interactionType: "star-touch",
     color,
-    intensity: roundNumber(clamp(0.76 + strength * 0.11, 0.24, 0.98), 3),
+    intensity: roundNumber(clamp(0.82 + strength * 0.13, 0.38, 1), 3),
     pan: getCuePan(pulse.origin)
   };
 }
@@ -227,7 +227,7 @@ export function createResonanceSongReaction(resonance) {
     type: "song-reaction",
     interactionType: "resonance",
     color,
-    intensity: roundNumber(clamp(0.62 + intensity * 0.32, 0.42, 0.96), 3),
+    intensity: roundNumber(clamp(0.7 + intensity * 0.34, 0.48, 1), 3),
     pan: getCuePan(resonance.position)
   };
 }

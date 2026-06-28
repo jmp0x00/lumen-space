@@ -58,17 +58,17 @@ test("createSpaceLofiReaction maps interactions to deterministic song modulation
     intensity: 0.74,
     pan: 0.28,
     startStep: 2,
-    endStep: 21,
-    durationSteps: 19,
+    endStep: 26,
+    durationSteps: 24,
     phase: 2,
     melodyShift: 3,
-    densityBoost: 0.138,
-    spaceBoost: 0.12,
-    padLift: 0.126,
-    bassLift: 0.037,
-    leadLift: 0.222,
-    dustLift: 0.311,
-    drumSoftening: 0.074
+    densityBoost: 0.184,
+    spaceBoost: 0.161,
+    padLift: 0.163,
+    bassLift: 0.052,
+    leadLift: 0.326,
+    dustLift: 0.429,
+    drumSoftening: 0.111
   });
 });
 
@@ -83,22 +83,22 @@ test("reaction state decays while temporarily tuning density and space", () => {
     activeCount: 1,
     interactionType: "star-touch",
     color: "#fcd34d",
-    intensity: 0.636,
-    density: 0.62,
-    space: 0.6,
-    densityBoost: 0.119,
-    spaceBoost: 0.103,
-    padLift: 0.108,
-    bassLift: 0.032,
-    leadLift: 0.191,
-    dustLift: 0.267,
-    drumSoftening: 0.064,
+    intensity: 0.696,
+    density: 0.67,
+    space: 0.65,
+    densityBoost: 0.173,
+    spaceBoost: 0.151,
+    padLift: 0.153,
+    bassLift: 0.049,
+    leadLift: 0.306,
+    dustLift: 0.403,
+    drumSoftening: 0.104,
     pan: 0.28,
     phase: 2,
     melodyShift: 3
   });
-  assert.equal(getSpaceLofiReactionState(plan, [reaction], 10).intensity, 0.502);
-  assert.equal(getSpaceLofiReactionState(plan, [reaction], 22).activeCount, 0);
+  assert.equal(getSpaceLofiReactionState(plan, [reaction], 10).intensity, 0.602);
+  assert.equal(getSpaceLofiReactionState(plan, [reaction], 27).activeCount, 0);
 });
 
 test("song steps fold active reactions into existing voices", () => {
@@ -110,8 +110,8 @@ test("song steps fold active reactions into existing voices", () => {
   const reactiveStep = getSpaceLofiSongStep(plan, 2, { reactions: [reaction] });
 
   assert.equal(reactiveStep.reaction.interactionType, "star-touch");
-  assert.equal(reactiveStep.reaction.density, 0.62);
-  assert.deepEqual(reactiveStep.melody, { frequency: 220, gain: 0.032 });
+  assert.equal(reactiveStep.reaction.density, 0.67);
+  assert.deepEqual(reactiveStep.melody, { frequency: 220, gain: 0.04 });
   assert.deepEqual(reactiveStep.drums, ["hat"]);
   assert.equal(reactiveStep.dust, true);
 });
