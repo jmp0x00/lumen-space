@@ -96,6 +96,7 @@
 - Adjusted adaptive room-song progression after noticing the 88-constellation catalogue would make one layer per reveal feel too reactive; persistent music layers now unlock only on five-constellation milestones while star-touch and resonance highlights still react immediately.
 - Added a constellation reveal border flash after reviewing how completions should feel: every newly visible constellation now creates a brief visual-only flash around all scene edges in that constellation's deterministic color, derived locally from completed progress instead of a network event.
 - Moved normal player starts away from the map center with a deterministic random-looking room/client seed, while preserving explicit simulator and test start-position overrides; this made entry feel more like appearing somewhere in the vast sky map instead of always near origin.
+- Added a GitHub Pages workflow that publishes the existing `docs/app` static app as an Actions artifact, keeping the GitDocs-friendly folder structure while making the game shareable from GitHub too.
 
 ## AI Tools Used
 
@@ -123,12 +124,13 @@
 - Turning the constellation data into a separate observer mode reinforced the value of pure selectors: the same source map can now support gameplay, tests, and visual inspection without a parallel debug-only data path.
 - Keeping star placement, opening, progress, bots, and rendering as mostly pure modules made the later shift to persistent openable stars a contained change with deterministic test coverage.
 - A static app shape matched the GitDocs sharing goal and avoided backend credentials.
+- The same static app shape could be published to GitHub Pages without adding a build step or changing app paths.
 
 ## What Did Not Work Well
 
 - True backend-free realtime still depends on public relay/signaling infrastructure.
 - WebRTC behavior can vary by network, NAT, and browser, so local tests cannot fully prove hosted multiplayer reliability.
-- GitDocs deployment details are environment-specific and need final verification after repository creation.
+- GitDocs and GitHub Pages deployment details are environment-specific and need final verification after repository creation and first hosted workflow run.
 - Hidden product-surface diagnostics were useful for tuning but became documentation and UI debt once the simulator covered the same questions more cleanly.
 - Real constellation lines are not formally standardized by the IAU in the same way constellation boundaries are, so the feature uses a practical asterism-line dataset rather than claiming official line art.
 
@@ -147,7 +149,7 @@ Initial implementation session: TBD after final validation.
 
 ## What I Would Do Differently Next Time
 
-- Confirm the exact hosted GitDocs URL pattern before writing the README link.
+- Confirm the exact hosted GitDocs and GitHub Pages URL patterns before replacing README placeholders with final playable links.
 - Test WebRTC across two different networks earlier if realtime reliability becomes part of evaluation.
 - Consider a tiny optional relay only after the static MVP is proven.
 

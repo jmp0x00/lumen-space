@@ -28,6 +28,7 @@ Lumen Space is a social visual game without scoring or winners. The goal is to c
 In scope:
 
 - Static browser app under `docs/app`.
+- GitHub Pages deployment workflow that publishes the `docs/app` static app without a build step.
 - Peer-to-peer realtime rooms for 2-8 participants.
 - Nickname and color identity stored locally.
 - Three.js visual scene with participant lights, compact pulse wavefronts, resonance flashes, and edge indicators.
@@ -146,4 +147,5 @@ Out of scope:
 - Closing a bot owner tab causes remaining clients to recalculate deterministic bot ownership and continue publishing shared bot presence.
 - Closing one tab removes that participant from the other tab within the stale-peer window.
 - `npm test` passes.
+- The GitHub Pages workflow can publish `docs/app` from the `main` or `master` branch, or from a manual workflow dispatch after GitHub Pages is configured to use GitHub Actions.
 - `README.md`, `SPEC.md`, `ARCHITECTURE.md`, and `RETROSPECTIVE.md` exist at repository root.

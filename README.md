@@ -2,7 +2,10 @@
 
 Lumen Space is a small social visual game for the AI-native development challenge. Players enter an ephemeral shared room, appear as glowing lights in a calm 3D space, drift with cursor movement, and reveal shared constellations by opening touch stars.
 
-Playable link: TODO after the repository is created under `rc-ai-learning/vadim-kiryukhin-lumen-space` and GitDocs is enabled.
+Playable links:
+
+- GitHub Pages: TODO after this repository is pushed to GitHub and the Pages workflow runs. Expected shape: `https://<github-user-or-org>.github.io/vadim-kiryukhin-lumen-space/`.
+- GitLab/GitDocs: TODO after the repository is created under `rc-ai-learning/vadim-kiryukhin-lumen-space` and GitDocs is enabled.
 
 ## Game Description
 
@@ -76,9 +79,23 @@ npm test
 Manual browser validation is documented in [docs/testing/manual-smoke-test.md](docs/testing/manual-smoke-test.md).
 For physics tuning, use `simulator.html`.
 
+## Deploy To GitHub Pages
+
+This repository includes a GitHub Actions workflow at `.github/workflows/pages.yml`.
+It publishes the static app from `docs/app` to GitHub Pages on every push to
+`main` or `master`, and can also be run manually from the Actions tab.
+
+After pushing to GitHub:
+
+1. Open the repository on GitHub.
+2. Go to `Settings` -> `Pages`.
+3. Set `Build and deployment` -> `Source` to `GitHub Actions`.
+4. Run the `Deploy Lumen Space to GitHub Pages` workflow or push to `main` or `master`.
+
 ## Project Structure
 
-- `docs/app/`: static playable app intended for GitDocs hosting.
+- `.github/workflows/pages.yml`: GitHub Actions workflow that publishes `docs/app` to GitHub Pages.
+- `docs/app/`: static playable app intended for GitDocs and GitHub Pages hosting.
 - `docs/app/simulator.html`: automated simulator app with physics, realtime, constellation-map, and procedural song modes.
 - `docs/app/src/simulation-clients.js`: realtime room simulator presets and scripted client target selection.
 - `docs/app/src/constellation-map-simulation.js`: pure observer model for the simulator's passive all-sky constellation map mode.
