@@ -32,7 +32,7 @@ test("bot drift is deterministic, bounded, and non-mutating", () => {
   assert.ok(second[0].position.z >= SPACE_BOUNDS.z[0] && second[0].position.z <= SPACE_BOUNDS.z[1]);
 });
 
-test("bot movement targets the closest available touch star", () => {
+test("bot movement targets the closest unopened touch star", () => {
   const now = 4_000;
   const participant = {
     id: "bot-1",
@@ -199,7 +199,7 @@ test("fresh bots spread across similarly reachable stars instead of all chasing 
   );
 });
 
-test("bot movement ignores cooling touch stars and keeps pushed velocity", () => {
+test("bot movement ignores opened stars and treats legacy availability as visible", () => {
   const now = 4_000;
   const participant = {
     id: "bot-1",
@@ -214,12 +214,18 @@ test("bot movement ignores cooling touch stars and keeps pushed velocity", () =>
   };
   const touchStars = [
     {
-      id: "cooling-star",
+      id: "legacy-future-star",
       position: { x: 0.1, y: 0, z: 0 },
       availableAt: now + 1_000
     },
     {
-      id: "available-star",
+      id: "opened-star",
+      position: { x: 0.25, y: 0, z: 0 },
+      availableAt: now,
+      openedAt: now - 500
+    },
+    {
+      id: "unopened-star",
       position: { x: 3, y: 0, z: 0 },
       availableAt: now
     }
@@ -227,7 +233,8 @@ test("bot movement ignores cooling touch stars and keeps pushed velocity", () =>
 
   const [next] = updateBotParticipants([participant], now, 1 / 60, { touchStars });
 
-  assert.deepEqual(next.targetPosition, touchStars[1].position);
+  assert.equal(next.botTargetStarId, "legacy-future-star");
+  assert.deepEqual(next.targetPosition, touchStars[0].position);
   assert.ok(next.velocity.x < 0);
   assert.ok(planeDistance(next.position, participant.position) > 0);
 });
@@ -358,7 +365,7 @@ test("stalled bot still chases the closest available star without idle retargeti
   assert.deepEqual(participants[0].targetPosition, { x: 0, y: 0, z: 0 });
 });
 
-test("bot movement falls back to drift and clears target state when no stars are available", () => {
+test("bot movement falls back to drift and clears target state when no unopened stars remain", () => {
   const now = 10_000;
   const participant = {
     id: "bot-1",
@@ -380,12 +387,14 @@ test("bot movement falls back to drift and clears target state when no stars are
     {
       id: "blocked-star",
       position: { x: 0, y: 0, z: 0 },
-      availableAt: now + 1_000
+      availableAt: now + 1_000,
+      openedAt: now - 500
     },
     {
       id: "next-star",
       position: { x: 2, y: 0, z: 0 },
-      availableAt: now + 1_000
+      availableAt: now + 1_000,
+      openedAt: now - 400
     }
   ];
 

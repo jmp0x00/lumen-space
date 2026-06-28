@@ -229,7 +229,7 @@ function getNearestAvailableStarPosition(localParticipant, touchStars, now) {
   let nearestDistance = Infinity;
 
   for (const star of Array.isArray(touchStars) ? touchStars : []) {
-    if (!star?.position || Number(star.availableAt ?? 0) > now) {
+    if (!star?.position || isTouchStarOpened(star)) {
       continue;
     }
 
@@ -241,6 +241,10 @@ function getNearestAvailableStarPosition(localParticipant, touchStars, now) {
   }
 
   return nearestStar ? clampVector(nearestStar.position) : null;
+}
+
+function isTouchStarOpened(star) {
+  return Number.isFinite(Number(star?.openedAt));
 }
 
 function getOrbitTarget(config, elapsedSeconds) {

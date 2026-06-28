@@ -40,8 +40,8 @@ test("enterRoomState creates deterministic room state with local bots and touch 
   assert.equal(state.phase, "room");
   assert.deepEqual(state.pointerTarget, { x: 1, y: 2, z: 0 });
   assert.equal(state.localParticipant.lastSeen, 10_000);
-  assert.equal(state.touchStars.length, 176);
-  assert.equal(getActiveTouchStars(state).length, 58);
+  assert.equal(state.touchStars.length, 767);
+  assert.equal(getActiveTouchStars(state).length, 767);
   assert.equal(state.botParticipants.length, 6);
   assert.equal(state.botParticipants[0].id, "bot:room-1:0");
   assert.equal(state.botParticipants[0].ownerClientId, "client-1");
@@ -51,7 +51,7 @@ test("enterRoomState creates deterministic room state with local bots and touch 
     humanCount: 1,
     botCount: 6,
     activeLumes: 7,
-    touchStarCount: 58
+    touchStarCount: 767
   });
 });
 

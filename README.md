@@ -1,6 +1,6 @@
 # Lumen Space
 
-Lumen Space is a small social visual game for the AI-native development challenge. Players enter an ephemeral shared room, appear as glowing lights in a calm 3D space, drift with cursor movement, and reveal shared constellations by consuming touch stars.
+Lumen Space is a small social visual game for the AI-native development challenge. Players enter an ephemeral shared room, appear as glowing lights in a calm 3D space, drift with cursor movement, and reveal shared constellations by opening touch stars.
 
 Playable link: TODO after the repository is created under `rc-ai-learning/vadim-kiryukhin-lumen-space` and GitDocs is enabled.
 
@@ -10,14 +10,15 @@ Playable link: TODO after the repository is created under `rc-ai-learning/vadim-
 - Fresh rooms start with a generated funny name that can be edited or regenerated.
 - Create or join a room link.
 - Move your light by moving the pointer.
-- Travel through a larger space that extends beyond the first camera view while the camera gently follows your light.
+- Travel through a larger space that extends far beyond the first camera view while the camera gently follows your light.
 - Nearby lights use a small size-based collision radius, with local lumes slightly larger and bots smaller.
 - Pushed idle lights keep the displaced resting spot until fresh pointer or presence input moves them again.
-- Drift through small colorful touch stars that appear on sky-map constellation paths to release pulses that blend star and lumen colors; star consumption is the only pulse source.
+- Drift through small colorful touch stars that appear on sky-map constellation paths to release pulses that blend star and lumen colors; opening a star is the only pulse source.
 - Each constellation has one deterministic room color, tracks touched star nodes for the whole room, and reveals its glowing line pattern and name when all nodes have been gathered.
-- Revealed constellations stay visible for everyone while future touch stars keep cycling along those completed paths.
+- All constellation-node stars are visible at once; unopened stars pulse gently as guidance, and opened stars stay in place with a brighter shine.
+- Revealed constellations stay visible for everyone while their opened stars remain lit.
 - Rooms maintain a capped shared population of human players plus automatic star-seeking bots.
-- Touch-star availability scales from the active human and bot population, with a 176-star generated pool distributed across all 88 constellations in an equirectangular sky-map projection.
+- The room starts with the full 767-star all-sky node catalogue distributed across all 88 constellations in an enlarged equirectangular sky-map projection.
 - When different players' pulse fronts meet, they create a brief resonance flash.
 - Hear the procedural space lo-fi song after the browser unlocks audio through interaction; star-touch pulses create a clear lead/dust bloom, and resonance flashes create a wider pad/space swell while still reshaping the song instead of playing as separate effects.
 - Use compact room controls to copy the invite link, mute or unmute the reactive song, and leave the room.

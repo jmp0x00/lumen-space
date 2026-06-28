@@ -74,9 +74,9 @@ export const NETWORK_CONFIG = Object.freeze({
 });
 
 export const SPACE_BOUNDS = Object.freeze({
-  x: Object.freeze([-24, 24]),
-  y: Object.freeze([-13.5, 13.5]),
-  z: Object.freeze([-3.6, 2.8])
+  x: Object.freeze([-36, 36]),
+  y: Object.freeze([-20.25, 20.25]),
+  z: Object.freeze([-4.2, 3.2])
 });
 
 export const MOTION_CONFIG = Object.freeze({
@@ -149,13 +149,12 @@ export const SPACE_LOFI_CONFIG = Object.freeze({
 });
 
 export const TOUCH_STAR_CONFIG = Object.freeze({
-  generatedPoolSize: 176,
+  generatedPoolSize: 767,
   radius: 0.48,
-  cooldownMs: 7_500,
-  activeMin: 22,
-  activeMax: 88,
-  activeBase: 16,
-  activePerLume: 6,
+  activeMin: 767,
+  activeMax: 767,
+  activeBase: 767,
+  activePerLume: 0,
   spawnPaddingX: 1,
   spawnPaddingY: 0.9,
   spreadCellInset: 0.18,
@@ -215,10 +214,10 @@ export const BOT_CONFIG = Object.freeze({
 
 export const SCENE_CONFIG = Object.freeze({
   threeUrl: "https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js",
-  backgroundStarCount: 6_000,
-  backgroundStarOverscanX: 52,
-  backgroundStarOverscanY: 34,
-  backgroundStarDepth: 48,
+  backgroundStarCount: 8_000,
+  backgroundStarOverscanX: 74,
+  backgroundStarOverscanY: 48,
+  backgroundStarDepth: 56,
   cameraDistance: 18,
   cameraFollowLerp: 0.075,
   maxPixelRatio: 2
@@ -425,7 +424,6 @@ export const SPACE_LOFI_SWING = SPACE_LOFI_CONFIG.swing;
 export const SPACE_LOFI_REACTION_MIX = SPACE_LOFI_CONFIG.reactionMix;
 export const TOUCH_STAR_COUNT = TOUCH_STAR_CONFIG.generatedPoolSize;
 export const TOUCH_STAR_RADIUS = TOUCH_STAR_CONFIG.radius;
-export const TOUCH_STAR_COOLDOWN_MS = TOUCH_STAR_CONFIG.cooldownMs;
 export const HARD_LUME_LIMIT = POPULATION_CONFIG.hardLumeLimit;
 export const DESIRED_ROOM_LUMES = POPULATION_CONFIG.desiredRoomLumes;
 export const MAX_SHARED_BOTS = POPULATION_CONFIG.maxSharedBots;

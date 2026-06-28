@@ -41,11 +41,11 @@ test("shared bot ownership is deterministic round-robin over sorted human client
   );
 });
 
-test("touch-star count scales from active lumes and clamps to the capped pool", () => {
-  assert.equal(getActiveTouchStarCount(0), 22);
-  assert.equal(getActiveTouchStarCount(1), 22);
-  assert.equal(getActiveTouchStarCount(7), 58);
-  assert.equal(getActiveTouchStarCount(8), 64);
+test("touch-star count uses the full visible catalogue", () => {
+  assert.equal(getActiveTouchStarCount(0), MAX_TOUCH_STARS);
+  assert.equal(getActiveTouchStarCount(1), MAX_TOUCH_STARS);
+  assert.equal(getActiveTouchStarCount(7), MAX_TOUCH_STARS);
+  assert.equal(getActiveTouchStarCount(8), MAX_TOUCH_STARS);
   assert.equal(getActiveTouchStarCount(12), MAX_TOUCH_STARS);
 });
 

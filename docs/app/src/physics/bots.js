@@ -204,7 +204,7 @@ function getAvailableTouchStars(touchStars, now) {
   const availableStars = [];
 
   for (const star of touchStars) {
-    if (!star?.position || Number(star.availableAt ?? 0) > now) {
+    if (!star?.position || isTouchStarOpened(star)) {
       continue;
     }
 
@@ -214,6 +214,10 @@ function getAvailableTouchStars(touchStars, now) {
   }
 
   return availableStars;
+}
+
+function isTouchStarOpened(star) {
+  return Number.isFinite(Number(star?.openedAt));
 }
 
 function countBotTargetedStars(participants, touchStars, now, options) {

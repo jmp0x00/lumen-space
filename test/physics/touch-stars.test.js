@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  TOUCH_STAR_COOLDOWN_MS,
   collectTouchStarPulses,
   createTouchStars,
   suppressTouchStarsFromPulses
@@ -32,24 +31,25 @@ test("touch stars are deterministic constellation nodes inside bounds", () => {
     assert.match(star.constellationId, /^[a-z0-9-]+$/);
     assert.equal(typeof star.constellationName, "string");
     assert.equal(typeof star.constellationNodeIndex, "number");
+    assert.equal(Object.hasOwn(star, "openedAt"), false);
     assert.ok(star.position.x >= SPACE_BOUNDS.x[0] && star.position.x <= SPACE_BOUNDS.x[1]);
     assert.ok(star.position.y >= SPACE_BOUNDS.y[0] && star.position.y <= SPACE_BOUNDS.y[1]);
     assert.ok(star.position.z >= SPACE_BOUNDS.z[0] && star.position.z <= SPACE_BOUNDS.z[1]);
   }
 });
 
-test("active touch-star prefixes are spread across the playable space", () => {
-  const stars = createTouchStars("lumen-spread", 36).slice(0, 18);
+test("touch-star catalogue spans the enlarged playable space", () => {
+  const stars = createTouchStars("lumen-spread").slice(0, 240);
   const xBands = new Set(stars.map((star) => getBand(star.position.x, "x", 3)));
   const yBands = new Set(stars.map((star) => getBand(star.position.y, "y", 4)));
   const constellationIds = new Set(stars.map((star) => star.constellationId));
 
   assert.equal(xBands.size, 3);
   assert.equal(yBands.size, 4);
-  assert.equal(constellationIds.size, 18);
+  assert.ok(constellationIds.size > 24);
 });
 
-test("touch-star collisions emit one blended pulse and respawn after cooldown", () => {
+test("touch-star collisions emit one blended pulse and keep the opened star visible", () => {
   const touchStars = createTouchStars("lumen-touch", 1);
   const originalStar = touchStars[0];
   const participant = {
@@ -68,11 +68,13 @@ test("touch-star collisions emit one blended pulse and respawn after cooldown", 
   assert.notEqual(touched.pulses[0].color, originalStar.color);
   assert.deepEqual(touched.pulses[0].origin, participant.position);
   assert.equal(touched.touchStars[0].generation, 1);
-  assert.notDeepEqual(touched.touchStars[0].position, originalStar.position);
-  assert.equal(touched.touchStars[0].availableAt, 2_000 + TOUCH_STAR_COOLDOWN_MS);
+  assert.deepEqual(touched.touchStars[0].position, originalStar.position);
+  assert.equal(touched.touchStars[0].openedAt, 2_000);
+  assert.equal(touched.touchStars[0].availableAt, 0);
 
   const repeated = collectTouchStarPulses(touched.touchStars, [participant], 2_100);
   assert.deepEqual(repeated.pulses, []);
+  assert.deepEqual(repeated.touchStars, touched.touchStars);
 });
 
 test("touch-star collisions use movement-plane distance instead of rendered depth", () => {
@@ -140,10 +142,10 @@ test("bot touch-star collisions emit a bot-strength star pulse", () => {
   assert.equal(touched.pulses[0].sourceId, "bot-1");
   assert.equal(touched.pulses[0].trigger, "star-touch");
   assert.equal(touched.pulses[0].strength, 0.84);
-  assert.equal(touched.touchStars[0].availableAt, 2_000 + TOUCH_STAR_COOLDOWN_MS);
+  assert.equal(touched.touchStars[0].openedAt, 2_000);
 });
 
-test("remote star-touch pulses suppress and respawn the matching star deterministically", () => {
+test("remote star-touch pulses open the matching star without moving it", () => {
   const localStars = createTouchStars("lumen-sync", 1);
   const remoteStars = createTouchStars("lumen-sync", 1);
   const participant = {
@@ -171,7 +173,8 @@ test("remote star-touch pulses suppress and respawn the matching star determinis
   );
   assert.deepEqual(remoteSuppressed[0].position, localTouch.touchStars[0].position);
   assert.equal(remoteSuppressed[0].color, localTouch.touchStars[0].color);
-  assert.equal(remoteSuppressed[0].availableAt, 2_250 + TOUCH_STAR_COOLDOWN_MS);
+  assert.equal(remoteSuppressed[0].openedAt, 2_250);
+  assert.equal(remoteSuppressed[0].availableAt, 0);
 });
 
 function getBand(value, axis, count) {

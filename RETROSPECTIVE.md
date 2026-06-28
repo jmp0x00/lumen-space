@@ -12,7 +12,7 @@
 - Replaced automatic offline mode with manually controlled bots while realtime connection keeps retrying.
 - Added an external name generator for funny editable player names and bot names, with a local fallback for resilience.
 - Added a manual name regeneration control after trying the default-name flow in the lobby.
-- Added touch stars so pulses can emerge from environmental interaction instead of only explicit controls, then refined them to respawn with deterministic random-looking positions and colors for multiplayer consistency and blend star/lumen pulse colors.
+- Added touch stars so pulses can emerge from environmental interaction instead of only explicit controls, starting with deterministic random-looking positions and colors for multiplayer consistency and blend star/lumen pulse colors.
 - Added temporary room instrumentation for current lume positions and velocities, because multiplayer movement feel needed live data rather than relying only on visual judgment.
 
 ### 2026-06-27
@@ -27,7 +27,7 @@
 - Corrected repulsion to use the visible movement plane by default after bot testing revealed that depth-based distance could make overlapping lumes look unaffected.
 - Refactored bots from scripted-position entities into AI-target-driven participants that use the same motion integration as player movement, so repulsion changes persist across frames.
 - Redirected bot AI from ambient paths to star-seeking targets, while keeping push effects in velocity so player contact can still bend the bot's route without rewriting its objective.
-- Started rooms with visible local bots and let bots consume touch stars through the same pulse pipeline as players.
+- Started rooms with visible local bots and let bots open touch stars through the same pulse pipeline as players.
 - Found that equal-strength peer repulsion could let two bots orbit just outside a shared star's touch radius; moved the fix into bot AI instead of core physics by tracking target progress and switching stalled bots to the next nearest available star.
 - Expanded the temporary room instrumentation with bot AI target and distance state after visual observation still made some bots look motionless without explaining their intent.
 - Tried fixing bot target thrashing with sticky target selection and idle-based target skipping, but visual testing showed the behavior was still too complex for the current bot model.
@@ -60,15 +60,15 @@
 - Retuned the song reactions after environmental interactions became too hard to hear, removing accidental double-softening in the reaction mix and adding an immediate tone/wet-mix bloom on the existing song bus.
 - Reframed pulses as environmental reactions instead of explicit commands: players and bots no longer pulse manually or on timers, and touching stars is now the only pulse source.
 - Reworked bots from local room extras into shared room participants with stable bot IDs, deterministic round-robin ownership among active humans, and presence/pulse publication through the same v2 protocol.
-- Added capped population and star-density policy so rooms stay lively with few humans, avoid unbounded bot growth, and generate more active touch stars as total lumes increase.
+- Added capped population and early star-density policy so rooms stay lively with few humans, avoid unbounded bot growth, and offer more environmental pulse opportunities as total lumes increase.
 - Removed player-facing bot add/remove controls after the shared-bot model made bot count a room rule rather than a user command.
-- Fixed a realtime simulator regression where scripted star racers could chase inactive generated stars and appear idle; the simulator now uses the active star selector for target selection while keeping embedded clients bot-free so the scripted peers remain the controlled population.
+- Fixed a realtime simulator regression where scripted star racers could chase hidden generated stars and appear idle; the simulator now targets visible unopened stars while keeping embedded clients bot-free so the scripted peers remain the controlled population.
 - Tuned shared bot targeting again with a narrower deterministic rule: bots count how many owned or remote bots are already aiming at each available star, continue toward a nearby uncrowded target, and redirect toward less-contested alternatives when a star gets crowded.
-- Centralized app, gameplay, physics, audio, scene, and simulator tunables in `docs/app/src/config.js`, then raised the generated touch-star pool and active cap from 24 to 36 so busier rooms have more environmental pulse opportunities.
+- Centralized app, gameplay, physics, audio, scene, and simulator tunables in `docs/app/src/config.js`, then tuned the early generated touch-star pool so busier rooms had more environmental pulse opportunities.
 - Replaced plain seeded-random touch-star placement with deterministic progressive spread cells, after noticing that the active prefix could clump and leave parts of the space visually underused.
 - Generated a small favicon and touch/app icon set from the lobby's luminous brand-mark direction, then wired the static page to use those assets explicitly so browser logs no longer include the default missing-icon request.
 - Expanded the playable world beyond a single camera view and added smooth camera follow, after visual review showed the room still felt like a small rectangle instead of open space.
-- Increased ambient and touch-star density after the larger world felt too empty, keeping the same deterministic placement and population-scaling model instead of adding a new system.
+- Increased ambient and touch-star density after the larger world felt too empty, keeping the same deterministic placement model instead of adding a new system.
 - Reworked the room chrome for mobile after the Lights list became too tall with shared bots: the roster now stays shallow and scrolls horizontally, while Invite, Lo-Fi, and leave are compact touch-sized icon actions.
 - Removed the temporary playable-room instrumentation and its domain/view-state plumbing once the separate simulator had become the better place for movement inspection.
 - Rolled back the brighter layered lume treatment after feedback clarified that the desired change was not a new look, but the original lumes with light pulsation; the final renderer keeps the original sphere/halo/light setup and adds only a subtle deterministic breathing pulse.
@@ -76,15 +76,16 @@
 - Retuned lo-fi reactions after feedback that interaction was still too subtle: star touches now push lead, dust, density, and tone harder, while resonances create a longer pad/space bloom and stronger kit softening without reintroducing separate sound-effect stabs.
 - Chose collaborative constellations as the next fun-loop improvement because they add shared room memory and exploration without changing the calm noncompetitive identity of the game.
 - Replaced free random-looking touch-star placement with deterministic constellation-node placement across a curated real-inspired catalogue: Orion, Cassiopeia, Ursa Major, Cygnus, Lyra, Scorpius, Taurus, Leo, Pegasus, Andromeda, Draco, and Corona Borealis.
-- Kept the existing star-touch pulse protocol as the gameplay event and derived touched constellation nodes from room ID, star ID, and generation, which avoided broadcasting raw positions or adding a second event channel.
+- Kept the existing star-touch pulse protocol as the gameplay event and derived touched constellation nodes from room ID and star ID, which avoided broadcasting raw positions or adding a second event channel.
 - Added monotonic constellation progress bitmasks to human presence snapshots so late joiners can see already revealed constellations without a backend.
 - Added completed-constellation rendering to the Three.js scene with subtle additive line segments, node glows, and labels, while leaving incomplete constellations hidden until the room discovers every node.
 - Added deterministic tests for constellation placement, progress merging, reveal completion, protocol progress normalization, reducer sync, and local star-touch progress.
 - Replaced the 12 hand-placed constellation sketches with a derived all-88 constellation sky dataset from `d3-celestial`, preserving the BSD license notice in source.
 - Mapped constellation longitude/declination into the game world with a simple equirectangular all-sky projection, including wraparound line splitting so edge-crossing constellations do not draw through the entire room.
 - Merged the two source Serpens line features into one official Serpens constellation, which preserved the canonical 88-count while keeping both separated sky parts.
-- Raised the generated touch-star pool to 176 slots so every constellation can appear in the room economy while preserving population-scaled active-star limits.
+- Replaced the limited generated-star pool with a full 767-node visible catalogue so every constellation node can be discovered directly.
 - Added a passive constellation-map simulator mode after the all-sky data landed, because inspecting the projected map without playing is a faster way to validate placement, labels, colors, and line readability.
+- Changed star behavior to in-place opening: all constellation stars render at once, unopened nodes pulse as navigation beacons, opened nodes stay brighter, bots and scripted clients skip opened stars, and the enlarged map gives more travel distance between nodes.
 
 ## AI Tools Used
 
@@ -106,9 +107,10 @@
 - Building a small inspection harness around the pure physics modules made movement tuning faster than repeatedly staging multiplayer scenarios by hand.
 - Using temporary room instrumentation made multiplayer movement easier to reason about early, and moving that diagnostic role into the simulator kept the final room UI simpler.
 - Keeping audio planning separate from Web Audio playback made it possible to evolve sound design from effects into music without losing unit-test coverage.
-- The existing star generation/event model was flexible enough to support collaborative constellation discovery with a small pure module and a compact progress snapshot.
+- The existing star event model was flexible enough to support collaborative constellation discovery with a small pure module and a compact progress snapshot.
 - Moving from hand-authored constellation sketches to sourced sky coordinates was mostly a data-model change because the previous feature already separated star placement, progress, and rendering.
 - Turning the constellation data into a separate observer mode reinforced the value of pure selectors: the same source map can now support gameplay, tests, and visual inspection without a parallel debug-only data path.
+- Keeping star placement, opening, progress, bots, and rendering as mostly pure modules made the later shift to persistent openable stars a contained change with deterministic test coverage.
 - A static app shape matched the GitDocs sharing goal and avoided backend credentials.
 
 ## What Did Not Work Well

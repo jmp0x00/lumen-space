@@ -2,7 +2,6 @@ import { DEFAULT_COLOR, mixHexColors } from "../colors.js";
 import { getConstellationStarPlacement } from "../constellations.js";
 import {
   TOUCH_STAR_CONFIG,
-  TOUCH_STAR_COOLDOWN_MS,
   TOUCH_STAR_COUNT,
   TOUCH_STAR_RADIUS
 } from "../config.js";
@@ -11,7 +10,7 @@ import { createPulse } from "./pulses.js";
 import { getPeerStarCollisionDistance } from "./collision.js?v=peer-collision-radius-20260627";
 import { planeDistance } from "./vector.js";
 
-export { TOUCH_STAR_COOLDOWN_MS, TOUCH_STAR_COUNT, TOUCH_STAR_RADIUS };
+export { TOUCH_STAR_COUNT, TOUCH_STAR_RADIUS };
 
 export function createTouchStars(roomId, count = TOUCH_STAR_COUNT) {
   const roomSeed = normalizeRoomId(roomId) ?? "lumen-room";
@@ -28,7 +27,6 @@ export function collectTouchStarPulses(
   options = {}
 ) {
   const starRadius = options.starRadius ?? TOUCH_STAR_RADIUS;
-  const cooldownMs = options.cooldownMs ?? TOUCH_STAR_COOLDOWN_MS;
   const touchedIds = new Set();
   const pulses = [];
   const nextTouchStars = touchStars.map((star) => ({ ...star }));
@@ -41,7 +39,7 @@ export function collectTouchStarPulses(
 
     for (let index = 0; index < nextTouchStars.length; index += 1) {
       const star = nextTouchStars[index];
-      if (touchedIds.has(star.id) || Number(star.availableAt ?? 0) > now) {
+      if (touchedIds.has(star.id) || isTouchStarOpened(star)) {
         continue;
       }
 
@@ -70,7 +68,7 @@ export function collectTouchStarPulses(
           starGeneration: nextGeneration
         })
       );
-      nextTouchStars[index] = createNextTouchStar(star, nextGeneration, now + cooldownMs, now);
+      nextTouchStars[index] = openTouchStar(star, nextGeneration, now);
       touchedIds.add(star.id);
       break;
     }
@@ -85,7 +83,6 @@ export function suppressTouchStarsFromPulses(
   now = Date.now(),
   options = {}
 ) {
-  const cooldownMs = options.cooldownMs ?? TOUCH_STAR_COOLDOWN_MS;
   const starPulseTimes = new Map();
 
   for (const pulse of pulses) {
@@ -115,18 +112,15 @@ export function suppressTouchStarsFromPulses(
 
     const currentGeneration = normalizeStarGeneration(star.generation);
     const nextGeneration = Math.max(currentGeneration, suppression.starGeneration);
-    const availableAt = Math.max(
-      Number(star.availableAt ?? 0),
-      suppression.suppressionStart + cooldownMs
-    );
-    if (nextGeneration === currentGeneration) {
-      return {
-        ...star,
-        availableAt
-      };
+    if (isTouchStarOpened(star) && nextGeneration <= currentGeneration) {
+      return star;
     }
-    return createNextTouchStar(star, nextGeneration, availableAt, suppression.suppressionStart);
+    return openTouchStar(star, nextGeneration, suppression.suppressionStart);
   });
+}
+
+export function isTouchStarOpened(star) {
+  return Number.isFinite(Number(star?.openedAt));
 }
 
 function createTouchStar(
@@ -134,7 +128,7 @@ function createTouchStar(
   index,
   generation = 0,
   availableAt = 0,
-  touchedAt = undefined,
+  openedAt = undefined,
   poolSize = TOUCH_STAR_COUNT
 ) {
   const safeRoomSeed = normalizeRoomId(roomSeed) ?? "lumen-room";
@@ -159,31 +153,24 @@ function createTouchStar(
     phase: seededText(seed, "phase") * Math.PI * 2,
     availableAt: Number(availableAt) || 0
   };
-  if (touchedAt !== undefined && Number.isFinite(Number(touchedAt))) {
-    star.touchedAt = Number(touchedAt);
+  if (openedAt !== undefined && Number.isFinite(Number(openedAt))) {
+    star.openedAt = Number(openedAt);
   }
   return star;
 }
 
-function createNextTouchStar(star, generation, availableAt, touchedAt) {
-  return createTouchStar(
-    star?.roomSeed,
-    star?.index ?? parseStarIndex(star?.id),
-    generation,
-    availableAt,
-    touchedAt,
-    star?.poolSize
-  );
+function openTouchStar(star, generation, openedAt) {
+  return {
+    ...star,
+    generation: normalizeStarGeneration(generation),
+    availableAt: 0,
+    openedAt: Number(openedAt) || 0
+  };
 }
 
 function normalizeStarIndex(value) {
   const index = Math.floor(Number(value));
   return Number.isFinite(index) && index >= 0 ? index : 0;
-}
-
-function parseStarIndex(starId) {
-  const match = /^touch-star-(\d+)$/.exec(String(starId ?? ""));
-  return match ? Number(match[1]) : 0;
 }
 
 function normalizeStarGeneration(value) {

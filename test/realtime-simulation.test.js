@@ -154,7 +154,7 @@ test("realtime room clients keep sound assigned to only one source", () => {
   );
 });
 
-test("simulation targets chase the nearest available star and ignore cooling stars", () => {
+test("simulation targets chase the nearest unopened star and ignore legacy availability", () => {
   const config = getSimulationClientConfig(
     "http://localhost:4173/index.html?simClient=1&simBehavior=star&simIndex=0&simCount=1"
   );
@@ -162,14 +162,15 @@ test("simulation targets chase the nearest available star and ignore cooling sta
     config,
     localParticipant: { position: { x: 0, y: 0, z: 0 } },
     touchStars: [
-      { id: "cooling", position: { x: 0.4, y: 0, z: 0 }, availableAt: 2_000 },
+      { id: "legacy-future", position: { x: 0.4, y: 0, z: 0 }, availableAt: 2_000 },
+      { id: "opened", position: { x: 0.6, y: 0, z: 0 }, availableAt: 0, openedAt: 900 },
       { id: "near", position: { x: 1.2, y: 0, z: -1.5 }, availableAt: 0 },
       { id: "far", position: { x: 3, y: 0, z: 0 }, availableAt: 0 }
     ],
     now: 1_000
   });
 
-  assert.deepEqual(target, { x: 1.2, y: 0, z: -1.5 });
+  assert.deepEqual(target, { x: 0.4, y: 0, z: 0 });
 });
 
 test("path and chase targets are deterministic and bounded", () => {
@@ -181,7 +182,7 @@ test("path and chase targets are deterministic and bounded", () => {
   );
 
   const startPosition = getSimulationClientStartPosition(pathConfig);
-  assert.ok(Math.abs(startPosition.x - -15.36) < 1e-12);
+  assert.ok(Math.abs(startPosition.x - -23.04) < 1e-12);
   assert.equal(startPosition.y, -0.92);
   assert.equal(startPosition.z, 0);
   assert.deepEqual(

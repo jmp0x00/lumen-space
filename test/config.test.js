@@ -12,11 +12,11 @@ import {
 } from "../docs/app/src/config.js";
 
 test("touch-star limits are centralized and increased", () => {
-  assert.equal(TOUCH_STAR_CONFIG.generatedPoolSize, 176);
-  assert.equal(TOUCH_STAR_CONFIG.activeMax, 88);
-  assert.equal(TOUCH_STAR_CONFIG.activeMin, 22);
-  assert.equal(TOUCH_STAR_CONFIG.activeBase, 16);
-  assert.equal(TOUCH_STAR_CONFIG.activePerLume, 6);
+  assert.equal(TOUCH_STAR_CONFIG.generatedPoolSize, 767);
+  assert.equal(TOUCH_STAR_CONFIG.activeMax, 767);
+  assert.equal(TOUCH_STAR_CONFIG.activeMin, 767);
+  assert.equal(TOUCH_STAR_CONFIG.activeBase, 767);
+  assert.equal(TOUCH_STAR_CONFIG.activePerLume, 0);
   assert.equal(TOUCH_STAR_CONFIG.spreadCellInset, 0.18);
   assert.equal(TOUCH_STAR_COUNT, TOUCH_STAR_CONFIG.generatedPoolSize);
   assert.equal(MAX_TOUCH_STARS, TOUCH_STAR_CONFIG.activeMax);
@@ -33,9 +33,9 @@ test("simulator includes a passive constellation map observer configuration", ()
 });
 
 test("space bounds are larger than one camera view", () => {
-  assert.deepEqual(SPACE_BOUNDS.x, [-24, 24]);
-  assert.deepEqual(SPACE_BOUNDS.y, [-13.5, 13.5]);
+  assert.deepEqual(SPACE_BOUNDS.x, [-36, 36]);
+  assert.deepEqual(SPACE_BOUNDS.y, [-20.25, 20.25]);
   assert.equal(SCENE_CONFIG.cameraDistance, 18);
-  assert.equal(SCENE_CONFIG.backgroundStarCount, 6_000);
+  assert.equal(SCENE_CONFIG.backgroundStarCount, 8_000);
   assert.equal(SCENE_CONFIG.cameraFollowLerp, 0.075);
 });

@@ -197,7 +197,7 @@ export async function createSpaceScene({
   }
 
   function syncTouchStars(THREERef, now) {
-    const touchStars = getTouchStars().filter((star) => Number(star.availableAt ?? 0) <= now);
+    const touchStars = getTouchStars();
     const activeIds = new Set(touchStars.map((star) => star.id));
 
     for (const star of touchStars) {
@@ -209,14 +209,21 @@ export async function createSpaceScene({
       }
 
       const color = new THREERef.Color(star.color);
-      const twinkle = 0.86 + Math.sin(now * 0.004 + Number(star.phase ?? 0)) * 0.14;
+      const opened = Number.isFinite(Number(star.openedAt));
+      const phase = Number(star.phase ?? 0);
+      const guidePulse = 0.5 + Math.sin(now * 0.0032 + phase) * 0.5;
+      const shimmer = 0.5 + Math.sin(now * 0.0054 + phase * 0.7) * 0.5;
+      const scale = opened ? 1.14 + shimmer * 0.14 : 0.82 + guidePulse * 0.34;
       mesh.group.position.set(star.position.x, star.position.y, star.position.z);
-      mesh.group.scale.setScalar(twinkle);
+      mesh.group.scale.setScalar(scale);
       mesh.core.material.color.copy(color);
+      mesh.core.scale.setScalar(opened ? 1.22 : 0.86 + guidePulse * 0.22);
       mesh.glow.material.color.copy(color);
-      mesh.glow.material.opacity = 0.42 + twinkle * 0.22;
+      mesh.glow.material.opacity = opened ? 0.74 + shimmer * 0.16 : 0.3 + guidePulse * 0.46;
+      mesh.glow.scale.set(opened ? 1.24 : 0.92 + guidePulse * 0.26, opened ? 1.24 : 0.92 + guidePulse * 0.26, 1);
       mesh.light.color.copy(color);
-      mesh.light.intensity = 0.38 + twinkle * 0.2;
+      mesh.light.intensity = opened ? 0.78 + shimmer * 0.22 : 0.24 + guidePulse * 0.46;
+      mesh.light.distance = opened ? 4.2 : 3.2 + guidePulse * 0.9;
     }
 
     for (const [id, mesh] of touchStarMeshes) {

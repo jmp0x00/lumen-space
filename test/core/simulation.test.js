@@ -162,6 +162,8 @@ test("stepGame emits v2 pulse events when a local participant touches a star", (
   assert.equal(sendEvent.message.starId, "touch-star-0");
   assert.equal(sendEvent.message.starGeneration, 1);
   assert.equal(result.state.constellationProgress.andromeda, 1);
+  assert.deepEqual(result.state.touchStars[0].position, state.touchStars[0].position);
+  assert.equal(result.state.touchStars[0].openedAt, 2_000);
 });
 
 test("stepGame emits v2 pulse events when an owned shared bot touches a star", () => {
@@ -192,6 +194,8 @@ test("stepGame emits v2 pulse events when an owned shared bot touches a star", (
   assert.equal(sendEvent.message.sourceKind, "bot");
   assert.equal(sendEvent.message.ownerClientId, "client-local");
   assert.equal(sendEvent.message.botSlot, 0);
+  assert.deepEqual(result.state.touchStars[0].position, state.touchStars[0].position);
+  assert.equal(result.state.touchStars[0].openedAt, 2_000);
 });
 
 test("stepGame does not emit old timer-based bot pulses", () => {

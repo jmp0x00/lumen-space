@@ -23,8 +23,8 @@ const CONSTELLATION_COLOR_LIGHTNESS_MIN = 58;
 const CONSTELLATION_COLOR_LIGHTNESS_MAX = 72;
 const CONSTELLATION_Z_MIN = -0.82;
 const CONSTELLATION_Z_MAX = 0.18;
-const SLOT_STEP = 47;
 const constellationMapCache = new Map();
+const constellationPlacementCache = new Map();
 
 export function createConstellationMap(roomId) {
   const roomSeed = normalizeRoomId(roomId) ?? "lumen-room";
@@ -40,22 +40,51 @@ export function createConstellationMap(roomId) {
 }
 
 export function getConstellationStarPlacement(roomId, starIndex, generation = 0) {
-  const map = createConstellationMap(roomId);
+  const placements = createConstellationStarPlacements(roomId);
   const safeIndex = normalizeStarIndex(starIndex);
-  const constellation = getSlotConstellation(map, safeIndex);
-  const trackIndex = Math.floor(safeIndex / map.length);
-  const nodeIndex =
-    (trackIndex + normalizeStarGeneration(generation)) % constellation.nodes.length;
-  const node = constellation.nodes[nodeIndex];
+  const placement = placements[safeIndex % placements.length] ?? placements[0];
 
   return {
-    constellationId: constellation.id,
-    constellationName: constellation.name,
-    constellationColor: constellation.color,
-    constellationNodeIndex: nodeIndex,
-    constellationNodeCount: constellation.nodes.length,
-    position: { ...node.position }
+    ...placement,
+    position: { ...placement.position }
   };
+}
+
+export function createConstellationStarPlacements(roomId) {
+  const roomSeed = normalizeRoomId(roomId) ?? "lumen-room";
+  const cached = constellationPlacementCache.get(roomSeed);
+  if (cached) {
+    return cached;
+  }
+
+  const placements = createConstellationMap(roomSeed).flatMap((constellation) =>
+    constellation.nodes.map((node) =>
+      Object.freeze({
+        constellationId: constellation.id,
+        constellationName: constellation.name,
+        constellationColor: constellation.color,
+        constellationNodeIndex: node.index,
+        constellationNodeCount: constellation.nodes.length,
+        position: Object.freeze({ ...node.position })
+      })
+    )
+  );
+
+  const safePlacements =
+    placements.length > 0
+      ? Object.freeze(placements)
+      : Object.freeze([
+          Object.freeze({
+            constellationId: "sky",
+            constellationName: "Sky",
+            constellationColor: "#7dd3fc",
+            constellationNodeIndex: 0,
+            constellationNodeCount: 1,
+            position: Object.freeze(projectSkyToWorld([0, 0]))
+          })
+        ]);
+  constellationPlacementCache.set(roomSeed, safePlacements);
+  return safePlacements;
 }
 
 export function markConstellationProgressFromStar(progress, star) {
@@ -77,8 +106,7 @@ export function markConstellationProgressFromPulse(progress, roomId, pulse) {
     return normalizeConstellationProgress(progress);
   }
 
-  const touchedGeneration = Math.max(0, normalizeStarGeneration(pulse.starGeneration) - 1);
-  const placement = getConstellationStarPlacement(roomId, starIndex, touchedGeneration);
+  const placement = getConstellationStarPlacement(roomId, starIndex, 0);
   return markConstellationNode(
     progress,
     placement.constellationId,
@@ -275,12 +303,6 @@ function interpolateDeclination(startLon, startDec, endLon, endDec, edgeLon) {
   const span = endLon - startLon;
   const amount = span === 0 ? 0 : (edgeLon - startLon) / span;
   return startDec + (endDec - startDec) * clamp(amount, 0, 1);
-}
-
-function getSlotConstellation(map, starIndex) {
-  const safeLength = Math.max(1, map.length);
-  const slot = (normalizeStarIndex(starIndex) * SLOT_STEP) % safeLength;
-  return map[slot] ?? map[0];
 }
 
 function createConstellationColor(roomSeed, constellationId) {

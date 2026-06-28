@@ -39,7 +39,6 @@ import {
   updatePulses
 } from "./physics/pulses.js";
 import {
-  TOUCH_STAR_COOLDOWN_MS,
   TOUCH_STAR_COUNT,
   TOUCH_STAR_RADIUS,
   collectTouchStarPulses,
@@ -88,7 +87,6 @@ export {
   updateBotParticipants
 };
 export {
-  TOUCH_STAR_COOLDOWN_MS,
   TOUCH_STAR_COUNT,
   TOUCH_STAR_RADIUS,
   collectTouchStarPulses,

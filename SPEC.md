@@ -9,12 +9,12 @@ Lumen Space is a social visual game without scoring or winners. The goal is to c
 3. Moving the pointer pulls the local light through the space with inertia.
 4. The playable space is larger than the first camera view; the camera gently follows the local light as it travels.
 5. Nearby lights use a small collision radius derived from their visual size so contacts are gentle and bounded.
-6. Touching a small environmental star emits a pulse from the local light, colored by blending the star and lumen colors.
+6. Opening a small environmental star emits a pulse from the local light, colored by blending the star and lumen colors.
 7. Touch stars are generated on real constellation line paths projected into the playable space as a simplified all-sky map.
 8. Each constellation has one deterministic room color and tracks which of its nodes have been touched by any player or bot.
 9. When all nodes in a constellation have been touched, the constellation reveals its glowing line pattern and name for everyone in the room.
-10. Revealed constellations stay visible, and future touch stars continue cycling along their nodes.
-11. Pulses are not an explicit player or bot action; consuming a touch star is the only way to emit a colored pulse.
+10. Revealed constellations stay visible, and opened touch stars stay in place with a brighter shine.
+11. Pulses are not an explicit player or bot action; opening an unopened touch star is the only way to emit a colored pulse.
 12. When pulse fronts from different sources meet, they create a brief resonance flash.
 13. After browser audio is unlocked by user interaction, the room plays the procedural space lo-fi song; star-touch pulses and resonance flashes immediately and noticeably reshape the song's density, space, tone, and voices.
 14. The player can mute or unmute the local lo-fi room audio.
@@ -30,7 +30,7 @@ In scope:
 - Nickname and color identity stored locally.
 - Three.js visual scene with participant lights and pulse rings.
 - All 88 recognized constellations represented as deterministic touch-star paths and shared room discoveries.
-- Crowd-aware star-seeking bots with deterministic ownership, capped by room population, that move through the shared motion physics and consume stars.
+- Crowd-aware star-seeking bots with deterministic ownership, capped by room population, that move through the shared motion physics and open stars.
 - Automated browser simulator for inspecting peer repulsion without manual multiplayer setup.
 - Realtime multi-user simulator mode that embeds several scene-only no-bot app clients in one WebRTC room and drives those peers with scripted user presets plus a configurable 1-8 client count.
 - Passive constellation-map simulator mode that shows the projected all-sky map without joining a playable room.
@@ -71,20 +71,21 @@ Out of scope:
 - The app runtime must support a configurable UI generator that receives app view state and action callbacks, then decides what UI to render.
 - The default app runtime must use the full lobby and room UI generator.
 - The physics simulator must include a realtime room mode where each simulated user is visible in its own embedded app screen, joins the same room through the normal WebRTC connection, starts without bots, uses a scene-only UI generator, follows a chosen preset such as star chasing, scripted paths, orbiting, or chasing another user, and can be launched with a selected 1-8 client count.
-- Scripted realtime star-chasing clients must target only the currently active population-scaled touch-star subset, so they cannot idle on inactive generated stars.
-- Rooms must render deterministic touch stars from a capped 176-star pool, using constellation-node placement so even the active subset is distributed across the playable space.
+- Scripted realtime star-chasing clients must target only unopened touch stars, so they do not idle on already-opened nodes.
+- Rooms must render deterministic touch stars from the full 767-node constellation catalogue, using one visible star per constellation node.
 - The constellation catalogue must include all 88 recognized constellations, with Serpens merged into one official constellation even though the source asterism data contains its two separated sky parts.
 - Constellation positions must be projected from celestial longitude/declination into the game world with a simplified equirectangular all-sky map.
 - Constellation line segments should follow sourced star-line coordinates where available; wraparound line segments near the sky-map edge must render without crossing the entire game world.
-- Each room must assign one deterministic color to each constellation, and every active touch star on that constellation must use that color.
-- Each touch-star slot must map deterministically from room ID, star index, and generation to one constellation node.
-- After a touch, the star must temporarily disappear and respawn on a new deterministic node along its constellation path.
+- Each room must assign one deterministic color to each constellation, and every visible touch star on that constellation must use that color.
+- Each touch-star slot must map deterministically from room ID and star index to one constellation node; generation is retained only as pulse metadata compatibility and must not move the star.
+- After a touch, the star must stay visible at the same node, mark itself opened, and shine brighter for all players.
+- Unopened touch stars must visibly pulse so players can scan the enlarged map for where to go next.
 - Star-touch progress must be monotonic: touching a node marks it discovered for the room and repeated touches must not remove progress.
 - Constellation progress must synchronize peer-to-peer through compact presence snapshots so late joiners can see already revealed constellations without a backend.
 - A constellation must reveal its line segments and name after all of its nodes have been touched.
-- Revealed constellations must remain visible while touch stars continue respawning on their nodes.
+- Revealed constellations must remain visible while their opened node stars stay lit.
 - Star-touch pulse colors must blend the touched star color with the triggering lumen color.
-- Star-touch pulses must temporarily suppress and respawn the matching star for other clients through existing pulse metadata.
+- Star-touch pulses must open and highlight the matching star for other clients through existing pulse metadata without moving that star.
 - Star-touch pulses must be the only accepted pulse event type; manual pulse messages must be ignored safely.
 - Stale peers must be removed after the heartbeat timeout.
 - Duplicate pulse messages must not create duplicate visuals.
@@ -101,7 +102,7 @@ Out of scope:
 - If realtime connection fails, the app must keep retrying without switching into a separate offline mode.
 - Rooms must maintain automatic shared bots according to active human count, with a hard total lume limit of 12, desired room population of 8, and maximum of 6 generated bots.
 - Shared bot IDs must be stable room-level participant IDs, and sorted active human client IDs must assign bot slots round-robin.
-- Bots must choose available touch stars through deterministic crowd-aware scoring, continue toward a nearby current star when it is not overcrowded, redirect toward lower-pressure alternatives when multiple bots aim at the same star, ignore cooling stars, move through the same motion integration as user-driven lumes, preserve existing velocity, remain within world bounds, consume touch stars, and emit pulses only through star consumption.
+- Bots must choose unopened touch stars through deterministic crowd-aware scoring, continue toward a nearby current star when it is not overcrowded, redirect toward lower-pressure alternatives when multiple bots aim at the same star, ignore already-opened stars, move through the same motion integration as user-driven lumes, preserve existing velocity, remain within world bounds, open stars, and emit pulses only through star opening.
 
 ## Acceptance Criteria
 
@@ -110,14 +111,14 @@ Out of scope:
 - Two browser tabs using the same room show each other as separate colored lights.
 - Pointer movement updates the local light and propagates to peers.
 - Holding the pointer toward an edge lets the local light travel beyond the initial viewport while the camera follows smoothly.
-- Nearby lumes and bots use size-based collision contact while remaining inside the playable bounds, and bots continuously pursue available stars while avoiding overcrowded targets and stale skipped-target state.
+- Nearby lumes and bots use size-based collision contact while remaining inside the playable bounds, and bots continuously pursue unopened stars while avoiding overcrowded targets and stale skipped-target state.
 - When a moving participant pushes an idle peer, the idle peer remains at the pushed resting position until new input or presence data moves it again.
 - Opening `simulator.html` starts an automated peer simulation that visibly shows repulsion without requiring network setup.
 - In `simulator.html`, selecting the crossing scenario shows two peers following intersecting routes through the center.
 - In `simulator.html`, selecting realtime mode launches the selected number of scene-only embedded app clients in the same no-bot WebRTC room; changing the client count in realtime mode relaunches the embedded room with that count, and each client screen shows scripted movement through the normal app/WebRTC runtime.
 - In `simulator.html`, selecting song mode shows a procedural music visualization; pressing the Song mode audio control starts and stops the shared space lo-fi infinite song, changing the song sliders updates tempo, density, space, and volume, and reaction audition controls let star-touch and resonance reactions be heard.
 - In `simulator.html`, selecting map mode shows the complete projected constellation catalogue, advances a focus tour automatically, lets the user pause on a constellation, and does not require entering the game.
-- Touching an environmental star emits a blended-color pulse and temporarily hides that star.
+- Touching an unopened environmental star emits a blended-color pulse and leaves that star shining brighter in place.
 - Touching all nodes of a constellation reveals its glowing sky-map line pattern and name for all connected players.
 - A new player joining after a reveal receives constellation progress through presence and sees already revealed constellations.
 - Entering or interacting with a room starts the soft procedural space lo-fi song after browser audio is unlocked.

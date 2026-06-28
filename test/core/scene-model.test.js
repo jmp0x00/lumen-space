@@ -26,31 +26,33 @@ function createRoomState(options = {}) {
   );
 }
 
-test("runtime target context exposes active touch stars only", () => {
+test("runtime target context exposes the full visible touch-star catalogue", () => {
   const state = createRoomState({ sharedBotsEnabled: false });
-  const activeTouchStars = getActiveTouchStars(state);
+  const visibleTouchStars = getActiveTouchStars(state);
   const context = selectRuntimeTargetContext(state, {
     elapsedSeconds: 4.25,
     now: 2_000
   });
 
-  assert.ok(activeTouchStars.length < state.touchStars.length);
-  assert.deepEqual(context.touchStars, activeTouchStars);
+  assert.equal(visibleTouchStars.length, state.touchStars.length);
+  assert.deepEqual(context.touchStars, visibleTouchStars);
   assert.equal(context.elapsedSeconds, 4.25);
   assert.equal(context.now, 2_000);
   assert.equal(context.localParticipant, state.localParticipant);
 });
 
-test("scripted star racers do not target inactive stars from the generated pool", () => {
+test("scripted star racers do not target already-opened stars", () => {
   const state = createRoomState({ sharedBotsEnabled: false });
-  const activeTouchStars = getActiveTouchStars(state);
-  const inactiveStar = state.touchStars[activeTouchStars.length];
+  const openedStar = state.touchStars[0];
   const context = selectRuntimeTargetContext(
     {
       ...state,
+      touchStars: state.touchStars.map((star, index) =>
+        index === 0 ? { ...star, openedAt: 2_000 } : star
+      ),
       localParticipant: {
         ...state.localParticipant,
-        position: inactiveStar.position
+        position: openedStar.position
       }
     },
     { now: 2_000 }
@@ -68,5 +70,5 @@ test("scripted star racers do not target inactive stars from the generated pool"
     now: context.now
   });
 
-  assert.notDeepEqual(target, inactiveStar.position);
+  assert.notDeepEqual(target, openedStar.position);
 });

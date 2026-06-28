@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   CONSTELLATION_TEMPLATES,
   createConstellationMap,
+  createConstellationStarPlacements,
   getConstellationStarPlacement,
   markConstellationProgressFromPulse,
   mergeConstellationProgress,
@@ -49,44 +50,47 @@ test("sky projection keeps known constellations in plausible celestial-map posit
   const northPole = projectSkyToWorld([0, 90]);
   const southPole = projectSkyToWorld([0, -90]);
 
-  assert.ok(orion.labelPosition.x > 8 && orion.labelPosition.y > -1 && orion.labelPosition.y < 2);
-  assert.ok(taurus.labelPosition.x > 7 && taurus.labelPosition.y > orion.labelPosition.y);
-  assert.ok(scorpius.labelPosition.x < -10 && scorpius.labelPosition.y < -2);
-  assert.ok(northPole.y > 12);
-  assert.ok(southPole.y < -12);
+  assert.ok(orion.labelPosition.x > 14 && orion.labelPosition.y > -1 && orion.labelPosition.y < 3);
+  assert.ok(taurus.labelPosition.x > 12 && taurus.labelPosition.y > orion.labelPosition.y);
+  assert.ok(scorpius.labelPosition.x < -18 && scorpius.labelPosition.y < -5);
+  assert.ok(northPole.y > 18);
+  assert.ok(southPole.y < -18);
 });
 
-test("touch-star placements cycle along one constellation path while keeping its color", () => {
-  const starIndex = findStarIndexForConstellation("lumen-cycle", "orion");
-  const first = getConstellationStarPlacement("lumen-cycle", starIndex, 0);
-  const second = getConstellationStarPlacement("lumen-cycle", starIndex, 1);
-  const wrapped = getConstellationStarPlacement(
-    "lumen-cycle",
-    starIndex,
-    first.constellationNodeCount
-  );
+test("touch-star placements enumerate concrete constellation nodes once", () => {
+  const roomId = "lumen-cycle";
+  const placements = createConstellationStarPlacements(roomId);
+  const map = createConstellationMap(roomId);
+  const orion = map.find((constellation) => constellation.id === "orion");
+  const orionPlacements = placements.filter((placement) => placement.constellationId === "orion");
+  const firstOrionIndex = placements.findIndex((placement) => placement.constellationId === "orion");
+  const first = getConstellationStarPlacement("lumen-cycle", firstOrionIndex, 0);
+  const sameAfterGeneration = getConstellationStarPlacement("lumen-cycle", firstOrionIndex, 12);
 
+  assert.equal(placements.length, 767);
+  assert.equal(orionPlacements.length, orion.nodes.length);
+  assert.equal(
+    new Set(orionPlacements.map((placement) => placement.constellationNodeIndex)).size,
+    orion.nodes.length
+  );
   assert.equal(first.constellationName, "Orion");
-  assert.equal(second.constellationName, "Orion");
-  assert.equal(first.constellationColor, second.constellationColor);
-  assert.notDeepEqual(first.position, second.position);
-  assert.equal(wrapped.constellationNodeIndex, first.constellationNodeIndex);
-  assert.deepEqual(wrapped.position, first.position);
+  assert.deepEqual(sameAfterGeneration.position, first.position);
+  assert.equal(sameAfterGeneration.constellationNodeIndex, first.constellationNodeIndex);
 });
 
 test("constellation progress is monotonic and reveals only completed shapes", () => {
   const roomId = "lumen-progress";
-  const starIndex = findStarIndexForConstellation(roomId, "orion");
   const orion = createConstellationMap(roomId).find(
     (constellation) => constellation.id === "orion"
   );
+  const orionStarIndices = findStarIndicesForConstellation(roomId, "orion");
   let progress = {};
 
-  for (let generation = 0; generation < orion.nodes.length - 1; generation += 1) {
+  for (let index = 0; index < orionStarIndices.length - 1; index += 1) {
     progress = markConstellationProgressFromPulse(progress, roomId, {
       trigger: "star-touch",
-      starId: `touch-star-${starIndex}`,
-      starGeneration: generation + 1
+      starId: `touch-star-${orionStarIndices[index]}`,
+      starGeneration: 1
     });
   }
 
@@ -94,8 +98,8 @@ test("constellation progress is monotonic and reveals only completed shapes", ()
 
   const completed = markConstellationProgressFromPulse(progress, roomId, {
     trigger: "star-touch",
-    starId: `touch-star-${starIndex}`,
-    starGeneration: orion.nodes.length
+    starId: `touch-star-${orionStarIndices.at(-1)}`,
+    starGeneration: 1
   });
   const revealed = selectRevealedConstellations(roomId, completed);
 
@@ -106,11 +110,15 @@ test("constellation progress is monotonic and reveals only completed shapes", ()
   assert.deepEqual(mergeConstellationProgress({ orion: 1 }, completed), completed);
 });
 
-function findStarIndexForConstellation(roomId, constellationId) {
-  for (let index = 0; index < CONSTELLATION_TEMPLATES.length; index += 1) {
+function findStarIndicesForConstellation(roomId, constellationId) {
+  const indices = [];
+  for (let index = 0; index < createConstellationStarPlacements(roomId).length; index += 1) {
     if (getConstellationStarPlacement(roomId, index, 0).constellationId === constellationId) {
-      return index;
+      indices.push(index);
     }
   }
-  throw new Error(`No star slot found for ${constellationId}`);
+  if (indices.length === 0) {
+    throw new Error(`No star slot found for ${constellationId}`);
+  }
+  return indices;
 }
