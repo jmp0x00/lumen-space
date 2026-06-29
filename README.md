@@ -23,7 +23,7 @@ Playable links:
 - Each constellation has one deterministic room color, tracks touched star nodes for the whole room, and reveals its glowing line pattern and name with a brief all-border color flash when all nodes have been gathered.
 - All constellation-node stars are visible at once; unopened stars pulse gently as guidance, and opened stars stay in place with a brighter shine.
 - Revealed constellations stay visible for everyone while their opened stars remain lit.
-- When the full catalogue is complete, the room goal panel becomes a collaborative scoreboard and the scene keeps the full sky map visible.
+- When the full catalogue is complete, the scene zooms out to show the full sky map on desktop and mobile with a collaborative scoreboard overlay ranking who finished the most constellations, plus Stay and Leave actions.
 - Rooms maintain a capped shared population of human players plus automatic star-seeking bots.
 - The room starts with the full 767-star all-sky node catalogue distributed across all 88 constellations in a vast equirectangular sky-map projection.
 - When different players' pulse fronts meet, they create a brief local resonance flash.
@@ -104,11 +104,11 @@ After pushing to GitHub:
 - `docs/app/src/runtime-config.js`: app runtime configuration, including the selected UI generator and scene-only embedded clients.
 - `docs/app/src/config.js`: shared app, gameplay, physics, audio, scene, and simulator configuration values.
 - `docs/app/src/constellation-sky-data.js`: derived all-88 constellation line data from the BSD-licensed `d3-celestial` dataset.
-- `docs/app/src/constellations.js`: sky projection, deterministic room color, star-node mapping, progress/reveal helpers, completed-constellation selectors, and full-map progress selectors.
-- `docs/app/src/app-ui.js`: default and scene-only UI generators that render app state, objective guidance, room progress, completion scoreboard, and controls into DOM.
+- `docs/app/src/constellations.js`: sky projection, deterministic room color, star-node mapping, progress/reveal helpers, reveal-credit normalization/merging, completed-constellation selectors, and full-map progress selectors.
+- `docs/app/src/app-ui.js`: default and scene-only UI generators that render app state, objective guidance, room progress, full-map completion scoreboard overlay, and controls into DOM.
 - `docs/app/src/domain.js`: pure domain facade for identity, presence, and compatibility exports.
 - `docs/app/src/protocol.js`: v2 peer protocol creators and validators for hello, presence, and pulse events.
-- `docs/app/src/core/`: canonical game state, event reducer, simulation step, and scene/UI selectors, including completion/full-map view selection.
+- `docs/app/src/core/`: canonical game state, event reducer, simulation step, and scene/UI selectors, including completion attribution, scoreboard ranking, and full-map view selection.
 - `docs/app/src/physics/`: focused pure physics modules for vectors, local motion, peer collision/repulsion, AI-driven bot motion, touch stars, pulses, and resonance.
 - `docs/app/src/sound.js`: room audio glue, shared space lo-fi song preset, pulse/resonance reaction planning, and the Web Audio performer.
 - `docs/app/src/space-lofi-song.js`: shared procedural space lo-fi infinite song plan, deterministic discovery-layer arrangement, deterministic reaction model, reusable controller, and simulator Web Audio performer.

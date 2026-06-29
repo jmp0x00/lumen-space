@@ -18,14 +18,14 @@ The app is split into pure domain/physics modules and browser adapters.
 The preferred long-term game-core model is documented in
 [docs/core-game-architecture.md](docs/core-game-architecture.md). In short, local input, remote peer messages, bot decisions, and frame time should be normalized into validated events or snapshots; pure game-state logic should update the canonical state; and the UI plus Three.js scene should render derived projections of that state.
 
-- `protocol.js` owns the v2 peer protocol for `hello`, `presence`, and pulse `event` messages. It creates outbound messages, validates inbound messages, rejects non-v2 payloads, normalizes identity/vector/color/timing/progress fields, and exposes sequence/dedup helpers.
+- `protocol.js` owns the v2 peer protocol for `hello`, `presence`, and pulse `event` messages. It creates outbound messages, validates inbound messages, rejects non-v2 payloads, normalizes identity/vector/color/timing/progress/reveal-credit fields, and exposes sequence/dedup helpers.
 - `core/population.js` owns capped room population policy, shared bot slot ownership, stable bot IDs, and full-catalogue touch-star counts.
 - `core/game-state.js` owns the canonical state shape, room-entry state creation, deterministic random-looking off-center local start positions, spread-out shared bot start positions, shared bot participant creation, full touch-star catalogue selection, and participant aggregation.
 - `core/game-events.js` owns pure event reduction for lobby changes, room lifecycle, pointer targets, peer hello/presence, star-touch pulse events, stale-peer pruning, and outbound network effects.
 - `core/simulation.js` owns the tick-based room simulation: local motion, remote participant motion and network correction, shared bot ownership/motion, repulsion, pulse lifecycle, touch-star pulses, local resonance detection, and simulation effects.
-- `core/scene-model.js` owns selectors that derive UI, objective/progress guidance, completion scoreboard, full-map reveal state, scene, participant, and runtime-simulator views from canonical game state.
+- `core/scene-model.js` owns selectors that derive UI, objective/progress guidance, reveal-leader scoreboard ranking, full-map reveal state, scene, participant, and runtime-simulator views from canonical game state.
 - `constellation-sky-data.js` owns the derived all-88 constellation line dataset from the BSD-licensed `d3-celestial` GeoJSON data, including the retained license notice.
-- `constellations.js` owns sky projection, deterministic room-seeded constellation colors, star-slot-to-node mapping, wraparound line splitting, monotonic progress bitmasks, progress merging, completed-constellation scene models, and full-map progress selection.
+- `constellations.js` owns sky projection, deterministic room-seeded constellation colors, star-slot-to-node mapping, wraparound line splitting, monotonic progress bitmasks, progress merging, reveal-credit normalization and merging, completed-constellation scene models, and full-map progress selection.
 - `constellation-map-simulation.js` owns the pure read-only simulator model for passively observing the projected all-sky constellation map, including catalogue metrics, focus-tour state, and focus row selection.
 - `domain.js` is the public domain facade for identity sanitization, legacy pure helpers, and stable room/physics exports for existing callers.
 - `room.js` owns room ID normalization, room ID generation, room extraction from URLs, and invite URL creation.
@@ -40,9 +40,9 @@ The preferred long-term game-core model is documented in
 - `physics/pulses.js` owns pulse normalization, compact activation progression, radius calculation, deduplication, expiry, and local resonance detection when pulse fronts meet.
 - `network.js` dynamically imports Trystero and exposes a small room adapter with `sendHello`, `sendPresence`, `sendEvent`, and `leave`.
 - `names.js` dynamically imports Unique Names Generator and falls back to a small deterministic local generator if the CDN is unavailable.
-- `scene.js` dynamically imports Three.js and renders participants, labels, a dense oversized star field, touch stars, revealed constellation line patterns and labels, brief all-border constellation reveal flashes, compact star-colored pulse wavefronts, resonance flashes, and thin camera-edge lines for off-screen pulses, with a smooth camera follow so the larger world is reachable beyond the initial viewport. Participant lumes keep the original colored sphere plus additive halo presentation and apply only a light deterministic breathing pulse to scale, halo opacity, and point-light intensity.
+- `scene.js` dynamically imports Three.js and renders participants, labels, a dense oversized star field, touch stars, revealed constellation line patterns and labels, brief all-border constellation reveal flashes, compact star-colored pulse wavefronts, resonance flashes, and thin camera-edge lines for off-screen pulses, with a smooth camera follow so the larger world is reachable beyond the initial viewport. In completion mode it switches to a full-map camera that frames the whole projected sky map with lighter fog, a far plane large enough for portrait viewports, and full-map-only visual scaling so constellation nodes remain legible after zooming out. Participant lumes keep the original colored sphere plus additive halo presentation and apply only a light deterministic breathing pulse to scale, halo opacity, and point-light intensity.
 - `app.js` is now a browser adapter. It owns DOM/UI callbacks, local storage, URL updates, realtime connection, timers, animation frames, scene startup, and effect execution while delegating game-state changes to the pure core modules.
-- `app-ui.js` owns default DOM rendering for the lobby, room chrome, compact objective guidance, room progress stats, completion scoreboard, participant roster, icon actions, and toast, plus a scene-only generator for embedded clients.
+- `app-ui.js` owns default DOM rendering for the lobby, room chrome, compact objective guidance, room progress stats, full-map completion scoreboard overlay with Stay/Leave actions, participant roster, icon actions, and toast, plus a scene-only generator for embedded clients.
 - `runtime-config.js` owns app runtime hooks and UI generator selection, defaulting to the full lobby and room UI while allowing embedded clients to render scene-only.
 - `config.js` owns shared app, gameplay, physics, audio, scene, and simulator constants so limits and tunables have one source of truth, including map-relative shared-bot spawn anchors.
 - `simulation-clients.js` owns no-bot realtime simulator client URL generation, single sound-source assignment, scripted movement target selection, and deterministic target helpers for tests, using presets from `config.js`.
@@ -67,7 +67,7 @@ This shape keeps network and rendering side effects away from the logic covered 
 9. Touch-star pulse events are the only accepted pulse events. They include `trigger`, `starId`, and `starGeneration`; other clients open and brighten the matching deterministic star in place, then derive the touched constellation node from the shared room ID and star index.
 10. `physics/pulses.js` derives resonance events locally when different pulse fronts meet; no extra network message is sent. Off-screen activity is communicated by `scene.js` as thin camera-edge lines derived from active pulse origins.
 11. `app.js` compares the current pulse/resonance IDs and revealed constellation count with a local sound snapshot, then asks `sound.js` to keep the shared space lo-fi song running, update its persistent discovery-layer arrangement, and apply newly observed song reactions when sound is enabled and browser audio has been unlocked by a user gesture. The persistent arrangement is derived from merged constellation progress rather than a network audio event: 0-4 revealed constellations leave only the base pad/bed, then each five-constellation milestone unlocks capped bass, soft kit, lead, and dust/shimmer layers. The reaction model updates future song steps and also moves the current song bus tone, wet mix, feedback, and output gain so interactions are audible immediately. The snapshot still advances while muted so old reactions do not replay on unmute.
-12. Constellation progress is monotonic room state: local and remote star-touch pulses mark nodes, opened node stars stay lit, peer presence snapshots are merged with bitwise OR, completed constellations are selected for rendering, and `scene.js` derives a transient all-border color flash when a completed constellation first appears locally. When all stars or all constellations are complete, the same selector switches the scene model to the full constellation map and gives the UI a collaborative completion scoreboard. No backend persistence or reveal-specific network event is required.
+12. Constellation progress is monotonic room state: local and remote star-touch pulses mark nodes, opened node stars stay lit, peer presence snapshots are merged with bitwise OR, completed constellations are selected for rendering, and `scene.js` derives a transient all-border color flash when a completed constellation first appears locally. When a pulse moves a constellation from incomplete to complete, the reducer records a reveal credit for the participant or bot that opened the final node; those credits travel in human presence snapshots and merge deterministically. When all stars or all constellations are complete, the same selector switches the scene model to the full constellation map, the scene camera frames the whole sky projection, and the UI shows a full-map completion overlay ranking reveal leaders. No backend persistence or reveal-specific network event is required.
 13. The simulator's map mode can construct a read-only all-sky observer from the same constellation map without creating game state, participants, bots, WebRTC connections, or sound state.
 14. Shared bots are owned by connected human clients through deterministic round-robin slot assignment. Each supported bot slot has a unique map-relative spawn anchor so newly created shared bots begin spread across the enlarged room. The owner simulates each assigned bot, counts owned and remote bot target pressure from current star targets, prefers continuing toward a nearby uncrowded target, redirects toward lower-pressure unopened stars when needed, publishes bot presence, and broadcasts only star-touch pulse events when that bot opens a star.
 
@@ -120,11 +120,21 @@ Presence:
   "targetPosition": { "x": 1, "y": 0, "z": 0 },
   "kind": "human",
   "constellationProgress": { "orion": 15 },
+  "constellationReveals": {
+    "orion": {
+      "constellationId": "orion",
+      "participantId": "lumen-abc123",
+      "name": "Ada",
+      "color": "#7dd3fc",
+      "kind": "human",
+      "revealedAt": 1782482400000
+    }
+  },
   "timestamp": 1782482400000
 }
 ```
 
-Bot presence uses the same shape with `"kind": "bot"`, `clientId` set to the stable bot ID, and `ownerClientId` plus `botSlot` included. Constellation progress is sent on human presence snapshots; receivers merge progress with bitwise OR because touched nodes never become untouchable again.
+Bot presence uses the same shape with `"kind": "bot"`, `clientId` set to the stable bot ID, and `ownerClientId` plus `botSlot` included. Constellation progress and reveal credits are sent on human presence snapshots; receivers merge progress with bitwise OR because touched nodes never become untouchable again, and keep the earliest known reveal credit per constellation for deterministic leaderboards.
 
 Pulse Event:
 
@@ -150,7 +160,7 @@ Pulse Event:
 
 For star-touch pulse events, `color` is the touched star color and `trigger`, `starId`, and `starGeneration` are required. Pulse events without `trigger: "star-touch"` are ignored.
 
-For presence, `position` is the authoritative peer snapshot used for bounded remote correction. `velocity` allows a short dead-reckoned projection between throttled presence messages. `targetPosition` carries the sender's current input or AI target so remote humans and remote bots can keep moving through the same target-driven motion loop used by local and bot participants. `constellationProgress` is optional and maps constellation IDs to compact node bitmasks.
+For presence, `position` is the authoritative peer snapshot used for bounded remote correction. `velocity` allows a short dead-reckoned projection between throttled presence messages. `targetPosition` carries the sender's current input or AI target so remote humans and remote bots can keep moving through the same target-driven motion loop used by local and bot participants. `constellationProgress` is optional and maps constellation IDs to compact node bitmasks. `constellationReveals` is optional and maps completed constellation IDs to the participant or bot credited with opening the final node.
 
 ## Major Design Decisions
 

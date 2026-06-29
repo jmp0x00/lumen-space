@@ -75,6 +75,29 @@ test("presence messages carry replaceable snapshots with monotonic sequences", (
     velocity: { x: 0.25, y: 0, z: 0 },
     targetPosition: { x: 2, y: 0, z: 0 },
     constellationProgress: { orion: 3, "Bad ID": 4, ignored: 0 },
+    constellationReveals: {
+      orion: {
+        participantId: "client-2",
+        name: "Lin",
+        color: "#86EFAC",
+        kind: "human",
+        revealedAt: 2_000
+      },
+      "wrong-key": {
+        constellationId: "ursa-major",
+        participantId: "client-3",
+        name: "Grace",
+        color: "#fcd34d",
+        kind: "human",
+        revealedAt: 2_100
+      },
+      ignored: {
+        participantId: "",
+        name: "Nobody",
+        color: "#ffffff",
+        revealedAt: 2_000
+      }
+    },
     timestamp: 2_000
   });
   const normalized = normalizePresenceMessage(message, 2_050);
@@ -84,6 +107,24 @@ test("presence messages carry replaceable snapshots with monotonic sequences", (
   assert.equal(normalized.ownerClientId, null);
   assert.equal(normalized.botSlot, null);
   assert.deepEqual(normalized.constellationProgress, { orion: 3, "bad-id": 4 });
+  assert.deepEqual(normalized.constellationReveals, {
+    orion: {
+      constellationId: "orion",
+      participantId: "client-2",
+      name: "Lin",
+      color: "#86efac",
+      kind: "human",
+      revealedAt: 2_000
+    },
+    "ursa-major": {
+      constellationId: "ursa-major",
+      participantId: "client-3",
+      name: "Grace",
+      color: "#fcd34d",
+      kind: "human",
+      revealedAt: 2_100
+    }
+  });
   assert.deepEqual(normalized.position, { x: SPACE_BOUNDS.x[1], y: 1, z: 0 });
   assert.equal(isNewerSequence(6, normalized.sequence), true);
   assert.equal(isNewerSequence(7, normalized.sequence), false);

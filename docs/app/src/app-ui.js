@@ -39,11 +39,13 @@ export function createDefaultAppUi({ document, window, colors, actions }) {
       });
       state.renderedColor = state.selectedColor;
 
+      elements.space.dataset.complete = String(Boolean(view.objective?.isComplete));
       elements.roomLabel.textContent = `Room ${view.roomId ?? ""}`;
       elements.roomTitle.textContent = view.identity?.name ?? "Lumen Space";
       elements.connectionStatus.textContent = view.status?.text ?? "Starting";
       elements.connectionStatus.dataset.state = view.status?.state ?? "pending";
       renderObjectiveGuide(elements, view.objective);
+      renderCompletionOverlay(elements, view.objective);
       renderPeople(elements, view.participants ?? []);
       renderSoundControl(elements, view.sound);
     },
@@ -116,6 +118,14 @@ function queryDefaultElements(document) {
     createRoomButton: document.querySelector("#create-room-button"),
     space: document.querySelector("#space"),
     sceneHost: document.querySelector("#scene-host"),
+    completionOverlay: document.querySelector("#completion-overlay"),
+    completionTitle: document.querySelector("#completion-title"),
+    completionText: document.querySelector("#completion-text"),
+    completionScoreboardTitle: document.querySelector("#completion-scoreboard-title"),
+    completionLeaders: document.querySelector("#completion-leaders"),
+    completionStats: document.querySelector("#completion-stats"),
+    stayButton: document.querySelector("#stay-button"),
+    completionLeaveButton: document.querySelector("#completion-leave-button"),
     roomLabel: document.querySelector("#room-label"),
     roomTitle: document.querySelector("#room-title"),
     connectionStatus: document.querySelector("#connection-status"),
@@ -126,9 +136,6 @@ function queryDefaultElements(document) {
     objectiveProgress: document.querySelector("#objective-progress"),
     objectiveStars: document.querySelector("#objective-stars"),
     objectiveConstellations: document.querySelector("#objective-constellations"),
-    completionScoreboard: document.querySelector("#completion-scoreboard"),
-    completionScoreboardTitle: document.querySelector("#completion-scoreboard-title"),
-    completionScoreboardList: document.querySelector("#completion-scoreboard-list"),
     peopleList: document.querySelector("#people-list"),
     peerCount: document.querySelector("#peer-count"),
     copyLinkButton: document.querySelector("#copy-link-button"),
@@ -157,6 +164,12 @@ function bindDefaultUi(elements, actions) {
   });
   elements.copyLinkButton.addEventListener("click", () => {
     actions.onCopyInvite?.();
+  });
+  elements.stayButton?.addEventListener("click", () => {
+    actions.onStayInRoom?.();
+  });
+  elements.completionLeaveButton?.addEventListener("click", () => {
+    actions.onLeaveRoom?.();
   });
   elements.soundButton.addEventListener("click", () => {
     actions.onToggleSound?.();
@@ -223,36 +236,74 @@ function renderObjectiveGuide(elements, objective) {
   elements.objectiveStars.textContent = `${objective.openedStarCount}/${objective.totalStarCount}`;
   elements.objectiveConstellations.textContent =
     `${objective.revealedConstellationCount}/${objective.totalConstellationCount}`;
-  renderCompletionScoreboard(elements, objective.scoreboard);
 }
 
-function renderCompletionScoreboard(elements, scoreboard) {
-  if (!elements.completionScoreboard || !elements.completionScoreboardList) {
+function renderCompletionOverlay(elements, objective) {
+  const scoreboard = objective?.scoreboard;
+  const isComplete = Boolean(objective?.isComplete && scoreboard);
+  if (!elements.completionOverlay) {
     return;
   }
 
-  const rows = Array.isArray(scoreboard?.rows) ? scoreboard.rows : [];
-  elements.completionScoreboard.hidden = rows.length === 0;
-  if (rows.length === 0) {
-    elements.completionScoreboardList.replaceChildren();
+  elements.completionOverlay.hidden = !isComplete;
+  if (!isComplete) {
+    elements.completionLeaders?.replaceChildren();
+    elements.completionStats?.replaceChildren();
     return;
   }
 
+  if (elements.completionTitle) {
+    elements.completionTitle.textContent = objective.title;
+  }
+  if (elements.completionText) {
+    elements.completionText.textContent = objective.text;
+  }
   if (elements.completionScoreboardTitle) {
-    elements.completionScoreboardTitle.textContent = scoreboard.title ?? "Scoreboard";
+    elements.completionScoreboardTitle.textContent = scoreboard.title ?? "Constellation leaders";
   }
 
-  elements.completionScoreboardList.replaceChildren(
-    ...rows.map((row) => {
-      const item = elements.completionScoreboardList.ownerDocument.createElement("div");
-      const label = elements.completionScoreboardList.ownerDocument.createElement("dt");
-      const value = elements.completionScoreboardList.ownerDocument.createElement("dd");
-      label.textContent = row.label ?? "";
-      value.textContent = row.value ?? "";
+  const document = elements.completionOverlay.ownerDocument;
+  const leaders = Array.isArray(scoreboard.leaders) ? scoreboard.leaders : [];
+  elements.completionLeaders?.replaceChildren(
+    ...(leaders.length > 0
+      ? leaders.map((leader) => createLeaderRow(document, leader))
+      : [createEmptyLeaderRow(document)])
+  );
+  const stats = Array.isArray(scoreboard.stats) ? scoreboard.stats : [];
+  elements.completionStats?.replaceChildren(
+    ...stats.map((stat) => {
+      const item = document.createElement("div");
+      const label = document.createElement("dt");
+      const value = document.createElement("dd");
+      label.textContent = stat.label ?? "";
+      value.textContent = stat.value ?? "";
       item.append(label, value);
       return item;
     })
   );
+}
+
+function createLeaderRow(document, leader) {
+  const item = document.createElement("li");
+  item.className = "completion-leader";
+  item.innerHTML = `
+    <span class="leader-rank"></span>
+    <span class="leader-swatch" style="--leader-color: ${leader.color}"></span>
+    <span class="leader-name"></span>
+    <span class="leader-score"></span>
+  `;
+  item.querySelector(".leader-rank").textContent = `#${leader.rank}`;
+  item.querySelector(".leader-name").textContent = leader.name;
+  item.querySelector(".leader-score").textContent =
+    `${leader.count} ${leader.count === 1 ? "constellation" : "constellations"}`;
+  return item;
+}
+
+function createEmptyLeaderRow(document) {
+  const item = document.createElement("li");
+  item.className = "completion-leader completion-leader-empty";
+  item.textContent = "Reveal credits are syncing.";
+  return item;
 }
 
 function renderSoundControl(elements, sound) {

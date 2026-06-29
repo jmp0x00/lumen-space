@@ -84,6 +84,7 @@ const ui = runtimeConfig.createUi({
     onJoinRoom: joinRoomFromLobby,
     onSelectColor: selectColor,
     onCopyInvite: copyInviteLink,
+    onStayInRoom: stayInCompletedRoom,
     onToggleSound: toggleSound,
     onLeaveRoom: leaveRoom
   }
@@ -203,7 +204,8 @@ async function enterRoom() {
       getPulses: () => selectSceneModel(game).pulses,
       getResonances: () => selectSceneModel(game).resonances,
       getTouchStars: () => selectSceneModel(game).touchStars,
-      getConstellations: () => selectSceneModel(game).constellations
+      getConstellations: () => selectSceneModel(game).constellations,
+      getSceneMode: () => selectSceneModel(game).mode
     });
     sceneController.start();
     if (runtimeConfig.usePointerInput) {
@@ -441,6 +443,10 @@ function leaveRoom() {
   stopPresenceLoop();
   window.cancelAnimationFrame(animationFrame);
   dispatch({ type: "room/leave" });
+}
+
+function stayInCompletedRoom() {
+  showToast("Staying in the completed sky.");
 }
 
 function toggleSound() {

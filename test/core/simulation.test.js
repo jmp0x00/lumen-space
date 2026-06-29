@@ -4,6 +4,11 @@ import { createInitialGameState, enterRoomState } from "../../docs/app/src/core/
 import { stepGame } from "../../docs/app/src/core/simulation.js";
 import { reduceGameEvent } from "../../docs/app/src/core/game-events.js";
 import {
+  createConstellationStarPlacements,
+  getConstellationStarPlacement,
+  markConstellationProgressFromPulse
+} from "../../docs/app/src/constellations.js";
+import {
   createPresenceMessage,
   normalizePresenceMessage
 } from "../../docs/app/src/protocol.js";
@@ -168,6 +173,31 @@ test("stepGame emits v2 pulse events when a local participant touches a star", (
   assert.equal(result.state.touchStars[0].openedAt, 2_000);
 });
 
+test("stepGame credits the participant who completes a constellation", () => {
+  const roomId = "room-1";
+  const constellationId = "orion";
+  const indices = findStarIndicesForConstellation(roomId, constellationId);
+  const finalStar = getConstellationStarPlacement(roomId, indices.at(-1), 0);
+  const base = createRoomState({ startPosition: finalStar.position });
+  const state = {
+    ...base,
+    localParticipant: {
+      ...base.localParticipant,
+      position: finalStar.position,
+      targetPosition: finalStar.position
+    },
+    pointerTarget: finalStar.position,
+    constellationProgress: completeAllButLast(roomId, constellationId)
+  };
+
+  const result = stepGame(state, { now: 2_000, deltaSeconds: 0 });
+
+  assert.equal(result.state.constellationReveals[constellationId].participantId, "client-local");
+  assert.equal(result.state.constellationReveals[constellationId].name, "Ada");
+  assert.equal(result.state.constellationReveals[constellationId].color, "#7dd3fc");
+  assert.equal(result.state.constellationReveals[constellationId].revealedAt, 2_000);
+});
+
 test("stepGame emits v2 pulse events when an owned shared bot touches a star", () => {
   const base = createRoomState({ sharedBotsEnabled: true, startPosition: { x: 5, y: 2, z: 0 } });
   const bot = base.botParticipants[0];
@@ -218,3 +248,29 @@ test("stepGame does not emit old timer-based bot pulses", () => {
   assert.equal(result.state.pulses.length, 0);
   assert.equal(result.effects.some((effect) => effect.type === "sendEvent"), false);
 });
+
+function completeAllButLast(roomId, constellationId) {
+  const indices = findStarIndicesForConstellation(roomId, constellationId);
+  let progress = {};
+  for (const index of indices.slice(0, -1)) {
+    progress = markConstellationProgressFromPulse(progress, roomId, {
+      trigger: "star-touch",
+      starId: `touch-star-${index}`,
+      starGeneration: 1
+    });
+  }
+  return progress;
+}
+
+function findStarIndicesForConstellation(roomId, constellationId) {
+  const indices = [];
+  for (let index = 0; index < createConstellationStarPlacements(roomId).length; index += 1) {
+    if (getConstellationStarPlacement(roomId, index, 0).constellationId === constellationId) {
+      indices.push(index);
+    }
+  }
+  if (indices.length === 0) {
+    throw new Error(`No star slot found for ${constellationId}`);
+  }
+  return indices;
+}

@@ -84,26 +84,51 @@ test("completed rooms show a scoreboard and reveal the full map", () => {
   });
   const completeState = {
     ...state,
-    constellationProgress: completeConstellationProgress(state.roomId)
+    peers: {
+      "client-lin": {
+        id: "client-lin",
+        clientId: "client-lin",
+        name: "Lin Lane",
+        color: "#86efac",
+        position: { x: 1, y: 0, z: 0 },
+        velocity: { x: 0, y: 0, z: 0 },
+        targetPosition: { x: 1, y: 0, z: 0 },
+        isBot: false
+      }
+    },
+    constellationProgress: completeConstellationProgress(state.roomId),
+    constellationReveals: createRevealCredits(state.roomId)
   };
 
   const scene = selectSceneModel(completeState);
   const view = selectUiView(completeState);
 
+  assert.equal(scene.mode, "full-map");
   assert.equal(scene.constellations.length, 88);
   assert.ok(scene.constellations.every((constellation) => constellation.fullMapVisible));
   assert.equal(view.objective.title, "Sky map complete");
   assert.equal(view.objective.isComplete, true);
   assert.equal(view.objective.openedStarCount, state.touchStars.length);
   assert.equal(view.objective.revealedConstellationCount, 88);
-  assert.equal(view.objective.scoreboard.title, "Scoreboard");
+  assert.equal(view.objective.scoreboard.title, "Constellation leaders");
   assert.deepEqual(
-    view.objective.scoreboard.rows.map((row) => row.label),
+    view.objective.scoreboard.stats.map((row) => row.label),
     ["Room score", "Stars lit", "Constellations", "Lights here"]
   );
   assert.deepEqual(
-    view.objective.scoreboard.rows.map((row) => row.value),
-    ["100%", "767/767", "88/88", "1 player"]
+    view.objective.scoreboard.stats.map((row) => row.value),
+    ["100%", "767/767", "88/88", "2 players"]
+  );
+  assert.deepEqual(
+    view.objective.scoreboard.leaders.map((leader) => [
+      leader.rank,
+      leader.name,
+      leader.count
+    ]),
+    [
+      [1, "Ada Star", 60],
+      [2, "Lin Lane", 28]
+    ]
   );
 });
 
@@ -144,6 +169,22 @@ function completeConstellationProgress(roomId) {
     createConstellationMap(roomId).map((constellation) => [
       constellation.id,
       (2 ** constellation.nodes.length) - 1
+    ])
+  );
+}
+
+function createRevealCredits(roomId) {
+  return Object.fromEntries(
+    createConstellationMap(roomId).map((constellation, index) => [
+      constellation.id,
+      {
+        constellationId: constellation.id,
+        participantId: index < 60 ? "client-local" : "client-lin",
+        name: index < 60 ? "Ada Star" : "Lin Lane",
+        color: index < 60 ? "#7dd3fc" : "#86efac",
+        kind: "human",
+        revealedAt: 2_000 + index
+      }
     ])
   );
 }

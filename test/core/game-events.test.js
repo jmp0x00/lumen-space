@@ -3,6 +3,11 @@ import assert from "node:assert/strict";
 import { createInitialGameState, enterRoomState } from "../../docs/app/src/core/game-state.js";
 import { reduceGameEvent } from "../../docs/app/src/core/game-events.js";
 import {
+  createConstellationStarPlacements,
+  getConstellationStarPlacement,
+  markConstellationProgressFromPulse
+} from "../../docs/app/src/constellations.js";
+import {
   createPresenceMessage,
   createPulseEventMessage,
   normalizePresenceMessage,
@@ -144,6 +149,110 @@ test("peer presence merges constellation progress monotonically", () => {
   });
 });
 
+test("peer presence merges constellation reveal credits deterministically", () => {
+  const state = {
+    ...createRoomState(),
+    constellationReveals: {
+      orion: {
+        constellationId: "orion",
+        participantId: "client-local",
+        name: "Ada",
+        color: "#7dd3fc",
+        kind: "human",
+        revealedAt: 2_000
+      }
+    }
+  };
+  const message = normalizePresenceMessage(
+    createPresenceMessage({
+      clientId: "client-peer",
+      sequence: 2,
+      identity: { name: "Lin", color: "#86efac" },
+      position: { x: 3, y: 0, z: 0 },
+      velocity: { x: 1, y: 0, z: 0 },
+      targetPosition: { x: 4, y: 0, z: 0 },
+      constellationReveals: {
+        orion: {
+          constellationId: "orion",
+          participantId: "client-peer",
+          name: "Lin",
+          color: "#86efac",
+          kind: "human",
+          revealedAt: 3_000
+        },
+        "ursa-major": {
+          constellationId: "ursa-major",
+          participantId: "client-peer",
+          name: "Lin",
+          color: "#86efac",
+          kind: "human",
+          revealedAt: 3_100
+        }
+      },
+      timestamp: 2_000
+    }),
+    2_050
+  );
+  const result = reduceGameEvent(state, {
+    type: "peer/presence",
+    peerId: "transport-1",
+    message
+  }).state;
+
+  assert.equal(result.constellationReveals.orion.participantId, "client-local");
+  assert.equal(result.constellationReveals["ursa-major"].participantId, "client-peer");
+});
+
+test("remote star-touch completion credits the revealer", () => {
+  const roomId = "room-1";
+  const constellationId = "orion";
+  const indices = findStarIndicesForConstellation(roomId, constellationId);
+  const almostComplete = completeAllButLast(roomId, constellationId);
+  const state = reduceGameEvent(
+    {
+      ...createRoomState(),
+      constellationProgress: almostComplete
+    },
+    {
+      type: "peer/presence",
+      peerId: "transport-1",
+      message: normalizePresenceMessage(
+        createPresenceMessage({
+          clientId: "client-peer",
+          sequence: 2,
+          identity: { name: "Lin", color: "#86efac" },
+          position: { x: 3, y: 0, z: 0 },
+          velocity: { x: 1, y: 0, z: 0 },
+          targetPosition: { x: 4, y: 0, z: 0 },
+          timestamp: 2_000
+        }),
+        2_050
+      )
+    }
+  ).state;
+  const message = normalizePulseEventMessage(
+    createPulseEventMessage({
+      clientId: "client-peer",
+      sequence: 4,
+      eventId: "event-orion-complete",
+      origin: getConstellationStarPlacement(roomId, indices.at(-1), 0).position,
+      color: "#fcd34d",
+      strength: 1,
+      timestamp: 4_000,
+      trigger: "star-touch",
+      starId: `touch-star-${indices.at(-1)}`,
+      starGeneration: 1
+    }),
+    4_050
+  );
+
+  const result = reduceGameEvent(state, { type: "network/pulse", message }).state;
+
+  assert.equal(result.constellationReveals[constellationId].participantId, "client-peer");
+  assert.equal(result.constellationReveals[constellationId].name, "Lin");
+  assert.equal(result.constellationReveals[constellationId].color, "#86efac");
+});
+
 test("presence requests increment sequence and emit a v2 presence effect", () => {
   const result = reduceGameEvent(createRoomState(), {
     type: "network/presence-request",
@@ -168,6 +277,28 @@ test("presence requests include constellation progress for human snapshots", () 
   });
 
   assert.deepEqual(result.effects[0].message.constellationProgress, { orion: 3 });
+});
+
+test("presence requests include constellation reveal credits for human snapshots", () => {
+  const state = {
+    ...createRoomState(),
+    constellationReveals: {
+      orion: {
+        constellationId: "orion",
+        participantId: "client-local",
+        name: "Ada",
+        color: "#7dd3fc",
+        kind: "human",
+        revealedAt: 2_000
+      }
+    }
+  };
+  const result = reduceGameEvent(state, {
+    type: "network/presence-request",
+    now: 5_000
+  });
+
+  assert.deepEqual(result.effects[0].message.constellationReveals, state.constellationReveals);
 });
 
 test("presence requests publish owned shared bots as logical bot participants", () => {
@@ -244,3 +375,29 @@ test("one transport peer can publish human and bot logical participants", () => 
   const afterLeave = reduceGameEvent(withBot, { type: "peer/leave", peerId: "transport-1" }).state;
   assert.deepEqual(afterLeave.peers, {});
 });
+
+function completeAllButLast(roomId, constellationId) {
+  const indices = findStarIndicesForConstellation(roomId, constellationId);
+  let progress = {};
+  for (const index of indices.slice(0, -1)) {
+    progress = markConstellationProgressFromPulse(progress, roomId, {
+      trigger: "star-touch",
+      starId: `touch-star-${index}`,
+      starGeneration: 1
+    });
+  }
+  return progress;
+}
+
+function findStarIndicesForConstellation(roomId, constellationId) {
+  const indices = [];
+  for (let index = 0; index < createConstellationStarPlacements(roomId).length; index += 1) {
+    if (getConstellationStarPlacement(roomId, index, 0).constellationId === constellationId) {
+      indices.push(index);
+    }
+  }
+  if (indices.length === 0) {
+    throw new Error(`No star slot found for ${constellationId}`);
+  }
+  return indices;
+}

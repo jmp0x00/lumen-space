@@ -7,14 +7,15 @@ export async function createSpaceScene({
   getPulses,
   getResonances = () => [],
   getTouchStars = () => [],
-  getConstellations = () => []
+  getConstellations = () => [],
+  getSceneMode = () => "follow"
 }) {
   const THREE = await import(SCENE_CONFIG.threeUrl);
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x05070d, 0.026);
+  scene.fog = new THREE.FogExp2(0x05070d, SCENE_CONFIG.followFogDensity);
 
-  const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 100);
+  const camera = new THREE.PerspectiveCamera(58, 1, 0.1, SCENE_CONFIG.cameraFar);
   camera.position.set(0, 0, SCENE_CONFIG.cameraDistance);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -78,6 +79,11 @@ export async function createSpaceScene({
   }
 
   function syncCamera(participants) {
+    if (isFullMapMode()) {
+      syncFullMapCamera();
+      return;
+    }
+
     const focusParticipant =
       participants.find((participant) => participant?.isLocal) ?? participants[0];
     if (!focusParticipant?.position) {
@@ -94,6 +100,31 @@ export async function createSpaceScene({
     camera.position.y += (cameraFocus.y - camera.position.y) * followLerp;
     camera.position.z += (SCENE_CONFIG.cameraDistance - camera.position.z) * followLerp;
     camera.lookAt(camera.position.x, camera.position.y, 0);
+    if (scene.fog) {
+      scene.fog.density += (SCENE_CONFIG.followFogDensity - scene.fog.density) * followLerp;
+    }
+  }
+
+  function syncFullMapCamera() {
+    const followLerp = clamp01(SCENE_CONFIG.cameraFollowLerp);
+    const targetZ = getFullMapCameraDistance();
+    camera.position.x += (0 - camera.position.x) * followLerp;
+    camera.position.y += (0 - camera.position.y) * followLerp;
+    camera.position.z += (targetZ - camera.position.z) * followLerp;
+    camera.lookAt(0, 0, 0);
+    if (scene.fog) {
+      scene.fog.density += (SCENE_CONFIG.fullMapFogDensity - scene.fog.density) * followLerp;
+    }
+  }
+
+  function getFullMapCameraDistance() {
+    const worldWidth = SPACE_BOUNDS.x[1] - SPACE_BOUNDS.x[0];
+    const worldHeight = SPACE_BOUNDS.y[1] - SPACE_BOUNDS.y[0];
+    const verticalFov = (camera.fov * Math.PI) / 180;
+    const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * Math.max(0.1, camera.aspect));
+    const distanceForHeight = (worldHeight / 2) / Math.tan(verticalFov / 2);
+    const distanceForWidth = (worldWidth / 2) / Math.tan(horizontalFov / 2);
+    return Math.max(distanceForHeight, distanceForWidth) * SCENE_CONFIG.fullMapCameraPadding;
   }
 
   function syncParticipants(THREERef, participants, now) {
@@ -154,6 +185,8 @@ export async function createSpaceScene({
     const constellations = getConstellations();
     const activeIds = new Set(constellations.map((constellation) => constellation.id));
     let revealedConstellation = null;
+    const fullMap = isFullMapMode();
+    const fullMapVisualScale = getFullMapVisualScale();
 
     for (const constellation of constellations) {
       let mesh = constellationMeshes.get(constellation.id);
@@ -171,15 +204,18 @@ export async function createSpaceScene({
       const color = new THREERef.Color(constellation.color);
       const shimmer = 0.86 + Math.sin(now * 0.0018 + stablePhase(constellation.id)) * 0.14;
       mesh.lines.material.color.copy(color);
-      mesh.lines.material.opacity = 0.2 + shimmer * 0.14;
+      mesh.lines.material.opacity = fullMap ? 0.46 + shimmer * 0.22 : 0.2 + shimmer * 0.14;
       for (const node of mesh.nodes) {
         node.material.color.copy(color);
-        node.material.opacity = 0.42 + shimmer * 0.24;
+        node.material.opacity = fullMap ? 0.68 + shimmer * 0.24 : 0.42 + shimmer * 0.24;
+        node.scale.setScalar(fullMap ? fullMapVisualScale : 1);
       }
       mesh.halo.material.color.copy(color);
-      mesh.halo.material.opacity = 0.12 + shimmer * 0.08;
+      mesh.halo.material.opacity = fullMap ? 0.14 + shimmer * 0.1 : 0.12 + shimmer * 0.08;
+      mesh.halo.scale.setScalar(fullMap ? Math.min(72, 2.8 * fullMapVisualScale * 0.9) : 2.8);
       mesh.light.color.copy(color);
-      mesh.light.intensity = 0.22 + shimmer * 0.12;
+      mesh.light.intensity = fullMap ? 0.32 + shimmer * 0.2 : 0.22 + shimmer * 0.12;
+      mesh.light.distance = fullMap ? 12 + fullMapVisualScale * 0.8 : 6.4;
       mesh.labelPosition.copy(vectorFromPosition(THREERef, constellation.labelPosition));
 
       const label = constellationLabels.get(constellation.id);
@@ -207,6 +243,14 @@ export async function createSpaceScene({
   function syncTouchStars(THREERef, now) {
     const touchStars = getTouchStars();
     const activeIds = new Set(touchStars.map((star) => star.id));
+    const fullMap = isFullMapMode();
+    const fullMapVisualScale = getFullMapVisualScale();
+    const touchStarVisualScale = fullMap
+      ? Math.min(
+          SCENE_CONFIG.fullMapTouchStarScaleMax,
+          Math.max(1, fullMapVisualScale * 0.28)
+        )
+      : 1;
 
     for (const star of touchStars) {
       let mesh = touchStarMeshes.get(star.id);
@@ -221,17 +265,34 @@ export async function createSpaceScene({
       const phase = Number(star.phase ?? 0);
       const guidePulse = 0.5 + Math.sin(now * 0.0032 + phase) * 0.5;
       const shimmer = 0.5 + Math.sin(now * 0.0054 + phase * 0.7) * 0.5;
-      const scale = opened ? 1.14 + shimmer * 0.14 : 0.82 + guidePulse * 0.34;
+      const scale =
+        (opened ? 1.14 + shimmer * 0.14 : 0.82 + guidePulse * 0.34) *
+        touchStarVisualScale;
       mesh.group.position.set(star.position.x, star.position.y, star.position.z);
       mesh.group.scale.setScalar(scale);
       mesh.core.material.color.copy(color);
-      mesh.core.scale.setScalar(opened ? 1.22 : 0.86 + guidePulse * 0.22);
+      mesh.core.scale.setScalar(
+        (opened ? 1.22 : 0.86 + guidePulse * 0.22) * (fullMap ? 1.24 : 1)
+      );
       mesh.glow.material.color.copy(color);
-      mesh.glow.material.opacity = opened ? 0.74 + shimmer * 0.16 : 0.3 + guidePulse * 0.46;
-      mesh.glow.scale.set(opened ? 1.24 : 0.92 + guidePulse * 0.26, opened ? 1.24 : 0.92 + guidePulse * 0.26, 1);
+      mesh.glow.material.opacity = opened
+        ? fullMap
+          ? 0.52 + shimmer * 0.18
+          : 0.74 + shimmer * 0.16
+        : 0.3 + guidePulse * 0.46;
+      const glowScale = (opened ? 1.24 : 0.92 + guidePulse * 0.26) * (fullMap ? 1.18 : 1);
+      mesh.glow.scale.set(glowScale, glowScale, 1);
       mesh.light.color.copy(color);
-      mesh.light.intensity = opened ? 0.78 + shimmer * 0.22 : 0.24 + guidePulse * 0.46;
-      mesh.light.distance = opened ? 4.2 : 3.2 + guidePulse * 0.9;
+      mesh.light.intensity = opened
+        ? fullMap
+          ? 0.38 + shimmer * 0.18
+          : 0.78 + shimmer * 0.22
+        : 0.24 + guidePulse * 0.46;
+      mesh.light.distance = opened
+        ? fullMap
+          ? 5.8 + touchStarVisualScale * 0.4
+          : 4.2
+        : 3.2 + guidePulse * 0.9;
     }
 
     for (const [id, mesh] of touchStarMeshes) {
@@ -443,6 +504,19 @@ export async function createSpaceScene({
     renderer.setSize(width, height);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
+  }
+
+  function isFullMapMode() {
+    return getSceneMode() === "full-map";
+  }
+
+  function getFullMapVisualScale() {
+    if (!isFullMapMode()) {
+      return 1;
+    }
+
+    const distanceScale = camera.position.z / Math.max(1, SCENE_CONFIG.cameraDistance);
+    return clamp(distanceScale * 0.72, 1, SCENE_CONFIG.fullMapVisualScaleMax);
   }
 
   function screenToWorld(clientX, clientY) {

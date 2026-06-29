@@ -1,4 +1,4 @@
-import { hslToHex } from "./colors.js";
+import { DEFAULT_COLOR, hslToHex, normalizeHexColor } from "./colors.js";
 import { SKY_CONSTELLATION_DATA } from "./constellation-sky-data.js";
 import { SPACE_BOUNDS } from "./config.js";
 import { normalizeRoomId } from "./room.js";
@@ -139,6 +139,68 @@ export function mergeConstellationProgress(current, incoming) {
   return changed ? next : normalizeConstellationProgress(current);
 }
 
+export function recordConstellationRevealsFromPulse(
+  reveals,
+  {
+    roomId,
+    beforeProgress,
+    afterProgress,
+    pulse,
+    participant,
+    sourceKind = participant?.isBot ? "bot" : "human"
+  } = {}
+) {
+  const newlyCompleted = selectNewlyCompletedConstellations(
+    roomId,
+    beforeProgress,
+    afterProgress
+  );
+  if (newlyCompleted.length === 0) {
+    return normalizeConstellationReveals(reveals);
+  }
+
+  let nextReveals = normalizeConstellationReveals(reveals);
+  let changed = false;
+  for (const constellation of newlyCompleted) {
+    if (nextReveals[constellation.id]) {
+      continue;
+    }
+    const reveal = normalizeConstellationReveal({
+      constellationId: constellation.id,
+      participantId: participant?.clientId ?? participant?.id ?? pulse?.sourceId,
+      name: participant?.name,
+      color: participant?.color,
+      kind: sourceKind,
+      revealedAt: pulse?.timestamp
+    });
+    if (reveal) {
+      nextReveals = {
+        ...nextReveals,
+        [constellation.id]: reveal
+      };
+      changed = true;
+    }
+  }
+  return changed ? nextReveals : normalizeConstellationReveals(reveals);
+}
+
+export function mergeConstellationReveals(current, incoming) {
+  const next = normalizeConstellationReveals(current);
+  const normalizedIncoming = normalizeConstellationReveals(incoming);
+  let changed = false;
+
+  for (const [constellationId, incomingReveal] of Object.entries(normalizedIncoming)) {
+    const currentReveal = next[constellationId] ?? null;
+    const preferred = choosePreferredReveal(currentReveal, incomingReveal);
+    if (preferred !== currentReveal) {
+      next[constellationId] = preferred;
+      changed = true;
+    }
+  }
+
+  return changed ? next : normalizeConstellationReveals(current);
+}
+
 export function normalizeConstellationProgress(progress) {
   if (!isPlainObject(progress)) {
     return {};
@@ -150,6 +212,25 @@ export function normalizeConstellationProgress(progress) {
     const mask = readProgressMask(rawMask);
     if (id && mask > 0) {
       normalized[id] = mask;
+    }
+  }
+  return normalized;
+}
+
+export function normalizeConstellationReveals(reveals) {
+  if (!isPlainObject(reveals)) {
+    return {};
+  }
+
+  const normalized = {};
+  for (const [rawId, rawReveal] of Object.entries(reveals)) {
+    const constellationId = normalizeConstellationId(rawId);
+    const reveal = normalizeConstellationReveal({
+      ...rawReveal,
+      constellationId: rawReveal?.constellationId ?? constellationId
+    });
+    if (reveal) {
+      normalized[reveal.constellationId] = reveal;
     }
   }
   return normalized;
@@ -177,6 +258,18 @@ export function selectConstellationsWithProgress(roomId, progress) {
     });
 }
 
+export function selectNewlyCompletedConstellations(roomId, beforeProgress, afterProgress) {
+  const before = new Map(
+    selectConstellationsWithProgress(roomId, beforeProgress).map((constellation) => [
+      constellation.id,
+      constellation.complete
+    ])
+  );
+  return selectConstellationsWithProgress(roomId, afterProgress).filter(
+    (constellation) => constellation.complete && before.get(constellation.id) !== true
+  );
+}
+
 export function projectSkyToWorld([longitude, declination], z = 0) {
   const halfWidth = (SPACE_BOUNDS.x[1] - SPACE_BOUNDS.x[0]) / 2 - SKY_PADDING_X;
   const halfHeight = (SPACE_BOUNDS.y[1] - SPACE_BOUNDS.y[0]) / 2 - SKY_PADDING_Y;
@@ -184,6 +277,27 @@ export function projectSkyToWorld([longitude, declination], z = 0) {
     x: clamp((normalizeLongitude(longitude) / 180) * halfWidth, SPACE_BOUNDS.x[0], SPACE_BOUNDS.x[1]),
     y: clamp((clamp(Number(declination), -90, 90) / 90) * halfHeight, SPACE_BOUNDS.y[0], SPACE_BOUNDS.y[1]),
     z: clamp(z, SPACE_BOUNDS.z[0], SPACE_BOUNDS.z[1])
+  };
+}
+
+function normalizeConstellationReveal(reveal) {
+  if (!isPlainObject(reveal)) {
+    return null;
+  }
+
+  const constellationId = normalizeConstellationId(reveal.constellationId);
+  const participantId = normalizeRevealText(reveal.participantId, 96);
+  if (!constellationId || !participantId) {
+    return null;
+  }
+
+  return {
+    constellationId,
+    participantId,
+    name: normalizeRevealText(reveal.name, 32) ?? participantId,
+    color: normalizeHexColor(reveal.color, DEFAULT_COLOR),
+    kind: reveal.kind === "bot" ? "bot" : "human",
+    revealedAt: readRevealTimestamp(reveal.revealedAt)
   };
 }
 
@@ -368,9 +482,39 @@ function readProgressMask(value) {
   return mask & 0x7fffffff;
 }
 
+function readRevealTimestamp(value) {
+  const timestamp = Math.floor(Number(value));
+  return Number.isFinite(timestamp) && timestamp > 0 ? timestamp : 0;
+}
+
 function readNodeIndex(value) {
   const index = Math.floor(Number(value));
   return Number.isFinite(index) && index >= 0 && index < 30 ? index : null;
+}
+
+function choosePreferredReveal(current, incoming) {
+  if (!current) {
+    return incoming;
+  }
+  if (!incoming) {
+    return current;
+  }
+
+  const currentTime = current.revealedAt > 0 ? current.revealedAt : Number.POSITIVE_INFINITY;
+  const incomingTime = incoming.revealedAt > 0 ? incoming.revealedAt : Number.POSITIVE_INFINITY;
+  if (incomingTime !== currentTime) {
+    return incomingTime < currentTime ? incoming : current;
+  }
+  return incoming.participantId.localeCompare(current.participantId) < 0 ? incoming : current;
+}
+
+function normalizeRevealText(value, maxLength) {
+  const text = String(value ?? "")
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, maxLength);
+  return text || null;
 }
 
 function normalizeConstellationId(value) {

@@ -16,7 +16,7 @@ Lumen Space is a social visual game without scoring or winners. The goal is to c
 10. Each constellation has one deterministic room color and tracks which of its nodes have been touched by any player or bot.
 11. When all nodes in a constellation have been touched, the constellation reveals its glowing line pattern and name for everyone in the room, with a brief all-border flash in that constellation's color.
 12. Revealed constellations stay visible, and opened touch stars stay in place with a brighter shine.
-13. When all catalogue stars have been lit or all constellations have been completed, the room shows a collaborative completion scoreboard and the scene keeps the full sky map visible.
+13. When all catalogue stars have been lit or all constellations have been completed, the room zooms out to the full sky map and shows a collaborative completion scoreboard ranking who revealed the most constellations, with Stay and Leave actions.
 14. Pulses are not an explicit player or bot action; opening an unopened touch star is the only way to emit a colored pulse.
 15. Off-screen star-touch pulses show a brief thin colored edge line in the direction of the activation.
 16. When pulse fronts from different sources meet, they create a brief local resonance flash.
@@ -89,6 +89,8 @@ Out of scope:
 - Unopened touch stars must visibly pulse so players can scan the vast map for where to go next.
 - Star-touch progress must be monotonic: touching a node marks it discovered for the room and repeated touches must not remove progress.
 - Constellation progress must synchronize peer-to-peer through compact presence snapshots so late joiners can see already revealed constellations without a backend.
+- When a star touch completes a constellation, the room must credit the participant or bot that opened the final node as that constellation's revealer.
+- Constellation reveal credits must synchronize peer-to-peer through presence snapshots and merge deterministically without replacing earlier known reveal credits.
 - A constellation must reveal its line segments and name after all of its nodes have been touched.
 - A newly visible constellation must create a brief visual-only flash on all scene borders using that constellation's deterministic color.
 - Revealed constellations must remain visible while their opened node stars stay lit.
@@ -108,8 +110,8 @@ Out of scope:
 - Star-touch pulses and resonance flashes must noticeably tune existing song voices, density, space, and tone in distinct ways, including an immediate tone/space bloom, while avoiding separate sound-effect stabs during repeated play.
 - The default room UI must expose a mute/unmute Lo-Fi control.
 - The default room UI must expose compact goal guidance and room progress for lit stars and revealed constellations.
-- When the room has lit the full touch-star catalogue or completed all constellations, the default room UI must switch the goal panel to a compact completion view with a collaborative scoreboard showing room score, stars lit, constellations revealed, and lights present.
-- When the room is complete, the scene model must reveal the full constellation map instead of only the already completed constellation subset.
+- When the room has lit the full touch-star catalogue or completed all constellations, the default room UI must hide normal room chrome and show a full-map completion overlay with a collaborative leaderboard ranking participants by completed constellations, room stats, and Stay/Leave actions.
+- When the room is complete, the scene model must reveal the full constellation map instead of only the already completed constellation subset, and the scene camera must frame the full sky map instead of following the local light on both desktop and mobile viewports.
 - The default room UI must expose copy invite, mute/unmute Lo-Fi, and leave controls as compact touch-friendly actions.
 - On mobile-width viewports, the Lights roster must remain shallow and horizontally scrollable instead of becoming a tall overlay.
 - Muted room audio must stop the song and must not replay old pulse or resonance reactions when unmuted again.
@@ -140,7 +142,7 @@ Out of scope:
 - In `simulator.html`, selecting map mode shows the complete projected constellation catalogue, advances a focus tour automatically, lets the user pause on a constellation, and does not require entering the game.
 - Touching an unopened environmental star emits a compact star-colored pulse, leaves that star shining brighter in place, and shows a thin colored edge line when the activation is off-screen.
 - Touching all nodes of a constellation reveals its glowing sky-map line pattern and name for all connected players, with a short all-border flash in that constellation's color.
-- After all 767 touch stars and 88 constellations are complete, the goal panel shows the completion scoreboard and the scene renders the full sky map.
+- After all 767 touch stars and 88 constellations are complete, the scene zooms out to the full sky map on desktop and mobile and shows a scoreboard overlay ranking who revealed the most constellations, with Stay and Leave buttons.
 - A new player joining after a reveal receives constellation progress through presence and sees already revealed constellations.
 - Entering or interacting with a room starts the soft procedural space lo-fi song after browser audio is unlocked.
 - Before five constellations are revealed, room audio remains sparse; each five-constellation reveal milestone deterministically adds capped bass, soft kit, lead, and dust/shimmer layers for all clients that have the same room progress.

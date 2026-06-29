@@ -1,7 +1,9 @@
 import { DEFAULT_COLOR } from "../colors.js";
 import {
   markConstellationProgressFromPulse,
-  mergeConstellationProgress
+  mergeConstellationProgress,
+  mergeConstellationReveals,
+  recordConstellationRevealsFromPulse
 } from "../constellations.js";
 import { STALE_PEER_MS } from "../config.js";
 import { clampVector, sanitizeVector } from "../physics/vector.js";
@@ -214,6 +216,10 @@ function applyPeerPresence(state, peerId, message) {
       state.constellationProgress,
       message.constellationProgress
     ),
+    constellationReveals: mergeConstellationReveals(
+      state.constellationReveals,
+      message.constellationReveals
+    ),
     peers: {
       ...peers,
       [peerKey]: {
@@ -269,15 +275,29 @@ function applyNetworkPulseEvent(state, message) {
     starGeneration: message.starGeneration,
     receivedAt: message.receivedAt
   });
+  const nextProgress = markConstellationProgressFromPulse(
+    state.constellationProgress,
+    state.roomId,
+    message
+  );
+  const sourceParticipant = findParticipantByClientId(state, message.clientId);
+  const constellationReveals = recordConstellationRevealsFromPulse(
+    state.constellationReveals,
+    {
+      roomId: state.roomId,
+      beforeProgress: state.constellationProgress,
+      afterProgress: nextProgress,
+      pulse,
+      participant: sourceParticipant,
+      sourceKind: message.sourceKind
+    }
+  );
 
   return addPulseToState(
     {
       ...state,
-      constellationProgress: markConstellationProgressFromPulse(
-        state.constellationProgress,
-        state.roomId,
-        message
-      ),
+      constellationProgress: nextProgress,
+      constellationReveals,
       seenEventIds: {
         ...state.seenEventIds,
         [dedupKey]: true
@@ -321,6 +341,7 @@ function createPresenceEffect(state, now = Date.now()) {
         ownerClientId,
         botSlot,
         constellationProgress: kind === "human" ? state.constellationProgress : null,
+        constellationReveals: kind === "human" ? state.constellationReveals : null,
         timestamp: now
       })
     });
@@ -356,6 +377,25 @@ function createPresenceEffect(state, now = Date.now()) {
     state: nextState,
     effects
   };
+}
+
+function findParticipantByClientId(state, clientId) {
+  const candidateId = String(clientId ?? "");
+  if (!candidateId) {
+    return null;
+  }
+  if (String(state.localParticipant?.clientId ?? "") === candidateId) {
+    return state.localParticipant;
+  }
+  const ownedBot = (state.botParticipants ?? []).find(
+    (participant) => String(participant?.clientId ?? participant?.id ?? "") === candidateId
+  );
+  if (ownedBot) {
+    return ownedBot;
+  }
+  return Object.values(state.peers ?? {}).find(
+    (participant) => String(participant?.clientId ?? participant?.id ?? "") === candidateId
+  ) ?? null;
 }
 
 function withoutEffects(state) {

@@ -222,7 +222,13 @@ export const SCENE_CONFIG = Object.freeze({
   backgroundStarOverscanY: 360,
   backgroundStarDepth: 120,
   cameraDistance: 18,
+  cameraFar: 1_600,
   cameraFollowLerp: 0.075,
+  followFogDensity: 0.026,
+  fullMapFogDensity: 0.0012,
+  fullMapCameraPadding: 1.1,
+  fullMapVisualScaleMax: 48,
+  fullMapTouchStarScaleMax: 16,
   edgeFlashInsetRatio: 0.92,
   constellationRevealFlashMs: 1_280,
   maxPixelRatio: 2

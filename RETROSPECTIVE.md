@@ -105,6 +105,8 @@
 - Kept the room guidance state-backed by `core/scene-model.js`, with lit-star and revealed-constellation progress, so the UI can teach the goal without becoming a separate hardcoded tutorial.
 - Added an explicit completion state after feedback that the room needed a clearer finish: when all stars or all constellations are revealed, the same selector now exposes the full map to the scene and a compact collaborative scoreboard to the room UI.
 - This was a useful AI-native workflow reminder: end-state polish is safer when modeled as pure selectable state first, then rendered in the browser, because the tests can describe the product promise instead of only checking DOM details.
+- Refined the completion state after feedback clarified that the scoreboard should answer who revealed the most constellations and that "full map" means a zoomed-out sky-map end-screen. Added reveal-credit attribution, synced it through presence, ranked leaders in pure selectors, and switched the scene camera to a full-map overview with Stay and Leave actions on the overlay.
+- Browser validation caught a portrait-only full-map rendering issue: the camera correctly zoomed out but the far plane clipped the map on mobile, so the scene now has a larger completion far plane plus full-map-only node/glow scaling and a regression test for portrait framing.
 
 ## AI Tools Used
 
@@ -135,6 +137,8 @@
 - The same static app shape could be published to GitHub Pages without adding a build step or changing app paths; branch-based Pages from `docs` is simpler than an Actions artifact for this repository.
 - Player comprehension needs explicit product surface, not only a complete specification; the calm visual style still benefits from a small persistent goal panel.
 - Completion feedback benefits from a selector-owned state transition: it kept the scoreboard and full-map reveal aligned across tests, docs, UI, and scene rendering.
+- Scoreboards need explicit attribution data, not just aggregate progress. Adding that as a small monotonic room fact kept the leaderboard useful without introducing persistence or a new event channel.
+- Screenshot and pixel-based browser checks were especially useful for the end state because unit tests proved the selector contract, while the browser caught camera and viewport presentation details.
 
 ## What Did Not Work Well
 

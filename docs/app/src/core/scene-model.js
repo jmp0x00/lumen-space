@@ -11,6 +11,7 @@ export function selectParticipants(state) {
 export function selectSceneModel(state) {
   const progressView = selectRoomProgressView(state);
   return {
+    mode: progressView.isMapComplete ? "full-map" : "follow",
     participants: selectParticipants(state),
     pulses: state.pulses,
     resonances: state.resonances,
@@ -100,7 +101,7 @@ function selectObjectiveView(state, progressView, participants) {
         ? progressView.openedStarCount / progressView.totalStarCount
         : 0,
     scoreboard: progressView.isMapComplete
-      ? createCompletionScoreboard(progressView, participants)
+      ? createCompletionScoreboard(progressView, participants, state.constellationReveals)
       : null
   };
 }
@@ -150,12 +151,13 @@ function selectRoomProgressView(state) {
   };
 }
 
-function createCompletionScoreboard(progressView, participants) {
+function createCompletionScoreboard(progressView, participants, constellationReveals) {
   const humanCount = participants.filter((participant) => !participant.isBot).length;
   const botCount = participants.length - humanCount;
   return {
-    title: "Scoreboard",
-    rows: [
+    title: "Constellation leaders",
+    leaders: createRevealLeaders(constellationReveals, participants),
+    stats: [
       {
         label: "Room score",
         value: `${Math.round(
@@ -180,6 +182,46 @@ function createCompletionScoreboard(progressView, participants) {
       }
     ]
   };
+}
+
+function createRevealLeaders(constellationReveals, participants) {
+  const participantsById = new Map();
+  for (const participant of participants ?? []) {
+    const ids = [participant?.id, participant?.clientId].filter(Boolean);
+    for (const id of ids) {
+      participantsById.set(String(id), participant);
+    }
+  }
+
+  const leaders = new Map();
+  for (const reveal of Object.values(constellationReveals ?? {})) {
+    const participantId = String(reveal?.participantId ?? "").trim();
+    if (!participantId) {
+      continue;
+    }
+    const currentParticipant = participantsById.get(participantId);
+    const existing = leaders.get(participantId);
+    leaders.set(participantId, {
+      participantId,
+      name: currentParticipant?.name ?? reveal.name ?? participantId,
+      color: currentParticipant?.color ?? reveal.color ?? "#7dd3fc",
+      kind: currentParticipant?.isBot || reveal.kind === "bot" ? "bot" : "human",
+      count: (existing?.count ?? 0) + 1
+    });
+  }
+
+  return Array.from(leaders.values())
+    .sort(
+      (a, b) =>
+        b.count - a.count ||
+        Number(a.kind === "bot") - Number(b.kind === "bot") ||
+        a.name.localeCompare(b.name) ||
+        a.participantId.localeCompare(b.participantId)
+    )
+    .map((leader, index) => ({
+      ...leader,
+      rank: index + 1
+    }));
 }
 
 function pluralize(label, count) {
