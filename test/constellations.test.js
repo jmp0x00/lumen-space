@@ -8,6 +8,7 @@ import {
   markConstellationProgressFromPulse,
   mergeConstellationProgress,
   projectSkyToWorld,
+  selectConstellationsWithProgress,
   selectRevealedConstellations
 } from "../docs/app/src/constellations.js";
 import { SPACE_BOUNDS } from "../docs/app/src/physics/vector.js";
@@ -118,6 +119,24 @@ test("constellation progress is monotonic and reveals only completed shapes", ()
   assert.equal(revealed[0].completedNodeCount, orion.nodes.length);
   assert.deepEqual(mergeConstellationProgress(completed, { orion: 1 }), completed);
   assert.deepEqual(mergeConstellationProgress({ orion: 1 }, completed), completed);
+});
+
+test("constellation progress selector can expose the full map with completion state", () => {
+  const roomId = "lumen-full-map";
+  const map = createConstellationMap(roomId);
+  const first = map[0];
+  const completeMask = (2 ** first.nodes.length) - 1;
+  const constellations = selectConstellationsWithProgress(roomId, {
+    [first.id]: completeMask
+  });
+
+  assert.equal(constellations.length, 88);
+  assert.equal(constellations[0].id, first.id);
+  assert.equal(constellations[0].progressMask, completeMask);
+  assert.equal(constellations[0].completeMask, completeMask);
+  assert.equal(constellations[0].completedNodeCount, first.nodes.length);
+  assert.equal(constellations[0].complete, true);
+  assert.equal(constellations[1].complete, false);
 });
 
 function findStarIndicesForConstellation(roomId, constellationId) {

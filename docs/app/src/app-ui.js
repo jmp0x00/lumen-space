@@ -120,11 +120,15 @@ function queryDefaultElements(document) {
     roomTitle: document.querySelector("#room-title"),
     connectionStatus: document.querySelector("#connection-status"),
     objectivePanel: document.querySelector("#objective-panel"),
+    objectiveKicker: document.querySelector(".objective-kicker"),
     objectiveTitle: document.querySelector("#objective-title"),
     objectiveText: document.querySelector("#objective-text"),
     objectiveProgress: document.querySelector("#objective-progress"),
     objectiveStars: document.querySelector("#objective-stars"),
     objectiveConstellations: document.querySelector("#objective-constellations"),
+    completionScoreboard: document.querySelector("#completion-scoreboard"),
+    completionScoreboardTitle: document.querySelector("#completion-scoreboard-title"),
+    completionScoreboardList: document.querySelector("#completion-scoreboard-list"),
     peopleList: document.querySelector("#people-list"),
     peerCount: document.querySelector("#peer-count"),
     copyLinkButton: document.querySelector("#copy-link-button"),
@@ -207,6 +211,10 @@ function renderObjectiveGuide(elements, objective) {
   }
 
   elements.objectiveTitle.textContent = objective.title;
+  elements.objectivePanel.dataset.complete = String(Boolean(objective.isComplete));
+  if (elements.objectiveKicker) {
+    elements.objectiveKicker.textContent = objective.isComplete ? "Complete" : "Goal";
+  }
   elements.objectiveText.textContent = objective.text;
   elements.objectiveProgress.style.setProperty(
     "--objective-progress",
@@ -215,6 +223,36 @@ function renderObjectiveGuide(elements, objective) {
   elements.objectiveStars.textContent = `${objective.openedStarCount}/${objective.totalStarCount}`;
   elements.objectiveConstellations.textContent =
     `${objective.revealedConstellationCount}/${objective.totalConstellationCount}`;
+  renderCompletionScoreboard(elements, objective.scoreboard);
+}
+
+function renderCompletionScoreboard(elements, scoreboard) {
+  if (!elements.completionScoreboard || !elements.completionScoreboardList) {
+    return;
+  }
+
+  const rows = Array.isArray(scoreboard?.rows) ? scoreboard.rows : [];
+  elements.completionScoreboard.hidden = rows.length === 0;
+  if (rows.length === 0) {
+    elements.completionScoreboardList.replaceChildren();
+    return;
+  }
+
+  if (elements.completionScoreboardTitle) {
+    elements.completionScoreboardTitle.textContent = scoreboard.title ?? "Scoreboard";
+  }
+
+  elements.completionScoreboardList.replaceChildren(
+    ...rows.map((row) => {
+      const item = elements.completionScoreboardList.ownerDocument.createElement("div");
+      const label = elements.completionScoreboardList.ownerDocument.createElement("dt");
+      const value = elements.completionScoreboardList.ownerDocument.createElement("dd");
+      label.textContent = row.label ?? "";
+      value.textContent = row.value ?? "";
+      item.append(label, value);
+      return item;
+    })
+  );
 }
 
 function renderSoundControl(elements, sound) {

@@ -1,6 +1,5 @@
 import {
-  CONSTELLATION_TEMPLATES,
-  normalizeConstellationProgress,
+  selectConstellationsWithProgress,
   selectRevealedConstellations
 } from "../constellations.js";
 import { getActiveTouchStars, getParticipants, getRoomPopulationPolicy } from "./game-state.js";
@@ -10,15 +9,13 @@ export function selectParticipants(state) {
 }
 
 export function selectSceneModel(state) {
+  const progressView = selectRoomProgressView(state);
   return {
     participants: selectParticipants(state),
     pulses: state.pulses,
     resonances: state.resonances,
     touchStars: getActiveTouchStars(state),
-    constellations: selectRevealedConstellations(
-      state.roomId,
-      state.constellationProgress
-    )
+    constellations: progressView.visibleConstellations
   };
 }
 
@@ -37,10 +34,7 @@ export function selectRuntimeTargetContext(
 
 export function selectUiView(state, { uiMode = "default" } = {}) {
   const participants = selectParticipants(state);
-  const revealedConstellations = selectRevealedConstellations(
-    state.roomId,
-    state.constellationProgress
-  );
+  const progressView = selectRoomProgressView(state);
   return {
     uiMode,
     phase: state.phase,
@@ -50,7 +44,7 @@ export function selectUiView(state, { uiMode = "default" } = {}) {
     lobbyNote: state.lobbyNote,
     status: state.status,
     participants,
-    objective: selectObjectiveView(state, revealedConstellations)
+    objective: selectObjectiveView(state, progressView, participants)
   };
 }
 
@@ -73,34 +67,22 @@ export function selectRuntimeStateContext(state, now = Date.now()) {
   };
 }
 
-function selectObjectiveView(state, revealedConstellations) {
+function selectObjectiveView(state, progressView, participants) {
   if (state?.phase !== "room") {
     return null;
   }
-
-  const touchStars = getActiveTouchStars(state);
-  const totalStarCount = touchStars.length;
-  const openedStarCount = Math.min(
-    totalStarCount,
-    Math.max(
-      touchStars.filter(isOpenedTouchStar).length,
-      countProgressNodes(state.constellationProgress)
-    )
-  );
-  const revealedConstellationCount = revealedConstellations.length;
-  const totalConstellationCount = CONSTELLATION_TEMPLATES.length;
 
   let title = "Reveal constellations";
   let text =
     "Move the pointer to steer through pulsing stars. Same-color stars form constellations.";
 
-  if (totalStarCount > 0 && openedStarCount >= totalStarCount) {
-    title = "All stars lit";
-    text = "The sky map is fully opened for this room.";
-  } else if (revealedConstellationCount > 0) {
+  if (progressView.isMapComplete) {
+    title = "Sky map complete";
+    text = "The whole room map is revealed. The scoreboard shows the shared finish.";
+  } else if (progressView.revealedConstellationCount > 0) {
     title = "Reveal another constellation";
     text = "Opened stars stay bright. Keep finding pulsing stars to finish more groups.";
-  } else if (openedStarCount > 0) {
+  } else if (progressView.openedStarCount > 0) {
     title = "Keep lighting stars";
     text = "Opened stars stay bright. Finish same-color groups to reveal their constellation lines.";
   }
@@ -108,11 +90,18 @@ function selectObjectiveView(state, revealedConstellations) {
   return {
     title,
     text,
-    openedStarCount,
-    totalStarCount,
-    revealedConstellationCount,
-    totalConstellationCount,
-    progress: totalStarCount > 0 ? openedStarCount / totalStarCount : 0
+    isComplete: progressView.isMapComplete,
+    openedStarCount: progressView.openedStarCount,
+    totalStarCount: progressView.totalStarCount,
+    revealedConstellationCount: progressView.revealedConstellationCount,
+    totalConstellationCount: progressView.totalConstellationCount,
+    progress:
+      progressView.totalStarCount > 0
+        ? progressView.openedStarCount / progressView.totalStarCount
+        : 0,
+    scoreboard: progressView.isMapComplete
+      ? createCompletionScoreboard(progressView, participants)
+      : null
   };
 }
 
@@ -120,19 +109,79 @@ function isOpenedTouchStar(star) {
   return Number.isFinite(Number(star?.openedAt));
 }
 
-function countProgressNodes(progress) {
-  return Object.values(normalizeConstellationProgress(progress)).reduce(
-    (sum, mask) => sum + countBits(mask),
+function selectRoomProgressView(state) {
+  const constellations = selectConstellationsWithProgress(
+    state.roomId,
+    state.constellationProgress
+  );
+  const revealedConstellations = constellations.filter((constellation) => constellation.complete);
+  const touchStars = getActiveTouchStars(state);
+  const totalStarCount = touchStars.length;
+  const progressNodeCount = constellations.reduce(
+    (sum, constellation) => sum + constellation.completedNodeCount,
     0
   );
+  const openedTouchStarCount = touchStars.filter(isOpenedTouchStar).length;
+  const openedStarCount = Math.min(
+    totalStarCount,
+    Math.max(openedTouchStarCount, progressNodeCount)
+  );
+  const totalConstellationCount = constellations.length;
+  const revealedConstellationCount = revealedConstellations.length;
+  const allStarsLit = totalStarCount > 0 && openedStarCount >= totalStarCount;
+  const allConstellationsRevealed =
+    totalConstellationCount > 0 && revealedConstellationCount >= totalConstellationCount;
+  const isMapComplete = allStarsLit || allConstellationsRevealed;
+
+  return {
+    constellations,
+    revealedConstellations,
+    visibleConstellations: isMapComplete
+      ? constellations.map((constellation) => ({
+          ...constellation,
+          fullMapVisible: true
+        }))
+      : revealedConstellations,
+    totalStarCount,
+    openedStarCount,
+    totalConstellationCount,
+    revealedConstellationCount,
+    isMapComplete
+  };
 }
 
-function countBits(value) {
-  let mask = Math.max(0, Math.floor(Number(value)) || 0);
-  let count = 0;
-  while (mask > 0) {
-    count += mask & 1;
-    mask >>>= 1;
-  }
-  return count;
+function createCompletionScoreboard(progressView, participants) {
+  const humanCount = participants.filter((participant) => !participant.isBot).length;
+  const botCount = participants.length - humanCount;
+  return {
+    title: "Scoreboard",
+    rows: [
+      {
+        label: "Room score",
+        value: `${Math.round(
+          (progressView.openedStarCount / Math.max(1, progressView.totalStarCount)) * 100
+        )}%`
+      },
+      {
+        label: "Stars lit",
+        value: `${progressView.openedStarCount}/${progressView.totalStarCount}`
+      },
+      {
+        label: "Constellations",
+        value: `${progressView.revealedConstellationCount}/${progressView.totalConstellationCount}`
+      },
+      {
+        label: "Lights here",
+        value:
+          botCount > 0
+            ? `${humanCount} ${pluralize("player", humanCount)} + ` +
+              `${botCount} ${pluralize("bot", botCount)}`
+            : `${humanCount} ${pluralize("player", humanCount)}`
+      }
+    ]
+  };
+}
+
+function pluralize(label, count) {
+  return count === 1 ? label : `${label}s`;
 }

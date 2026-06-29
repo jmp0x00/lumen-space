@@ -12,7 +12,7 @@
     <link rel="icon" href="./icon-192.png" type="image/png" sizes="192x192">
     <link rel="apple-touch-icon" href="./apple-touch-icon.png">
     <meta name="theme-color" content="#05070d">
-    <link rel="stylesheet" href="./styles.css?v=room-guide-20260629">
+    <link rel="stylesheet" href="./styles.css?v=completion-scoreboard-20260629">
   </head>
   <body>
     <main class="app-shell">
@@ -112,6 +112,15 @@
               revealed
             </span>
           </div>
+          <div
+            class="completion-scoreboard"
+            id="completion-scoreboard"
+            aria-label="Completion scoreboard"
+            hidden
+          >
+            <h4 id="completion-scoreboard-title">Scoreboard</h4>
+            <dl id="completion-scoreboard-list"></dl>
+          </div>
         </aside>
 
         <header class="top-bar">
@@ -185,6 +194,6 @@
       </section>
     </main>
 
-    <script type="module" src="./src/app.js?v=room-guide-20260629"></script>
+    <script type="module" src="./src/app.js?v=completion-scoreboard-20260629"></script>
   </body>
 </html>

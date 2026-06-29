@@ -156,6 +156,12 @@ export function normalizeConstellationProgress(progress) {
 }
 
 export function selectRevealedConstellations(roomId, progress) {
+  return selectConstellationsWithProgress(roomId, progress).filter(
+    (constellation) => constellation.complete
+  );
+}
+
+export function selectConstellationsWithProgress(roomId, progress) {
   const progressMap = normalizeConstellationProgress(progress);
   return createConstellationMap(roomId)
     .map((constellation) => {
@@ -168,8 +174,7 @@ export function selectRevealedConstellations(roomId, progress) {
         completedNodeCount: countBits(progressMask & completeMask),
         complete: (progressMask & completeMask) === completeMask
       };
-    })
-    .filter((constellation) => constellation.complete);
+    });
 }
 
 export function projectSkyToWorld([longitude, declination], z = 0) {

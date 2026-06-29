@@ -378,6 +378,14 @@ button:focus-visible {
   backdrop-filter: blur(16px);
 }
 
+.objective-panel[data-complete="true"] {
+  border-color: rgba(134, 239, 172, 0.34);
+  background: rgba(5, 12, 18, 0.78);
+  box-shadow:
+    0 18px 48px var(--shadow),
+    0 0 26px rgba(134, 239, 172, 0.12);
+}
+
 .objective-title-row {
   display: flex;
   justify-content: space-between;
@@ -452,6 +460,56 @@ button:focus-visible {
   color: #f8fbff;
   font-size: 0.94rem;
   line-height: 1.08;
+}
+
+.completion-scoreboard {
+  margin-top: 12px;
+  border: 1px solid rgba(134, 239, 172, 0.2);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.completion-scoreboard h4 {
+  margin: 0 0 8px;
+  color: #ecfdf5;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.completion-scoreboard dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.completion-scoreboard dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.completion-scoreboard dt,
+.completion-scoreboard dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.completion-scoreboard dt {
+  color: var(--muted);
+}
+
+.completion-scoreboard dd {
+  color: #f8fbff;
+  text-align: right;
 }
 
 .top-bar {
@@ -769,6 +827,21 @@ button:focus-visible {
 
   .objective-stats b {
     font-size: 0.8rem;
+  }
+
+  .completion-scoreboard {
+    margin-top: 8px;
+    padding: 8px;
+  }
+
+  .completion-scoreboard h4 {
+    margin-bottom: 6px;
+    font-size: 0.7rem;
+  }
+
+  .completion-scoreboard dt,
+  .completion-scoreboard dd {
+    font-size: 0.68rem;
   }
 
   .panel-title-row {

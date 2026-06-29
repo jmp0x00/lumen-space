@@ -6,9 +6,11 @@ import {
   getActiveTouchStars
 } from "../../docs/app/src/core/game-state.js";
 import {
+  selectSceneModel,
   selectRuntimeTargetContext,
   selectUiView
 } from "../../docs/app/src/core/scene-model.js";
+import { createConstellationMap } from "../../docs/app/src/constellations.js";
 import {
   getSimulationClientConfig,
   getSimulationTarget
@@ -75,6 +77,36 @@ test("room UI view exposes objective guidance and progress", () => {
   assert.equal(syncedView.objective.openedStarCount, 3);
 });
 
+test("completed rooms show a scoreboard and reveal the full map", () => {
+  const state = createRoomState({
+    roomId: "scene-model-complete",
+    sharedBotsEnabled: false
+  });
+  const completeState = {
+    ...state,
+    constellationProgress: completeConstellationProgress(state.roomId)
+  };
+
+  const scene = selectSceneModel(completeState);
+  const view = selectUiView(completeState);
+
+  assert.equal(scene.constellations.length, 88);
+  assert.ok(scene.constellations.every((constellation) => constellation.fullMapVisible));
+  assert.equal(view.objective.title, "Sky map complete");
+  assert.equal(view.objective.isComplete, true);
+  assert.equal(view.objective.openedStarCount, state.touchStars.length);
+  assert.equal(view.objective.revealedConstellationCount, 88);
+  assert.equal(view.objective.scoreboard.title, "Scoreboard");
+  assert.deepEqual(
+    view.objective.scoreboard.rows.map((row) => row.label),
+    ["Room score", "Stars lit", "Constellations", "Lights here"]
+  );
+  assert.deepEqual(
+    view.objective.scoreboard.rows.map((row) => row.value),
+    ["100%", "767/767", "88/88", "1 player"]
+  );
+});
+
 test("scripted star racers do not target already-opened stars", () => {
   const state = createRoomState({ sharedBotsEnabled: false });
   const openedStar = state.touchStars[0];
@@ -106,3 +138,12 @@ test("scripted star racers do not target already-opened stars", () => {
 
   assert.notDeepEqual(target, openedStar.position);
 });
+
+function completeConstellationProgress(roomId) {
+  return Object.fromEntries(
+    createConstellationMap(roomId).map((constellation) => [
+      constellation.id,
+      (2 ** constellation.nodes.length) - 1
+    ])
+  );
+}
