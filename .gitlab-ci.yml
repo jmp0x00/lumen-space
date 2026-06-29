@@ -4,6 +4,8 @@ stages:
 pages:
   stage: deploy
   image: alpine:3.20
+  tags:
+    - gong
   script:
     - rm -rf public
     - mkdir public
