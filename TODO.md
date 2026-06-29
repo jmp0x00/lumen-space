@@ -7,14 +7,16 @@ Use this as the return point for final challenge readiness work.
 - Static browser MVP exists under `docs/app`.
 - Core game loop is implemented: lobby, generated names, room links, movement, pulses, resonance flashes, local bots, and Trystero realtime.
 - Required challenge docs exist: `README.md`, `SPEC.md`, `ARCHITECTURE.md`, and `RETROSPECTIVE.md`.
+- GitLab Pages CI configuration exists and publishes `docs/` as the static site.
 - Unit tests cover the pure domain layer and name fallback behavior.
-- Latest known automated test result: `node --test` passed with 19 tests.
+- Latest known automated test result: `node --test` passed with 155 tests on 2026-06-29.
 - `AGENTS.md` contains future-agent challenge instructions but is currently uncommitted.
 
 ## Highest Priority
 
-- [ ] Create or confirm the GitLab repository under `https://git.ringcentral.com/rc-ai-learning`.
-- [ ] Enable GitLab/GitDocs hosting for the static app.
+- [x] Create or confirm the GitLab repository under `https://git.ringcentral.com/rc-ai-learning`.
+- [x] Add GitLab Pages CI configuration for the static app.
+- [ ] Verify GitLab Pages/GitDocs hosting after the first `master` pipeline succeeds.
 - [ ] Replace the playable-link placeholder in `README.md`.
 - [ ] Smoke test the hosted URL from a clean browser session.
 - [ ] Test hosted realtime behavior with two tabs, and ideally two browsers or networks.
@@ -50,7 +52,7 @@ Use this as the return point for final challenge readiness work.
 - [ ] Verify copy-link behavior.
 - [ ] Verify two-tab realtime presence and pulses.
 - [ ] Verify stale peer removal after closing one tab.
-- [ ] Verify hosted GitDocs URL.
+- [ ] Verify hosted GitLab Pages/GitDocs URL.
 
 ## Optional Bonus
 

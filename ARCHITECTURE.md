@@ -9,7 +9,7 @@
 - Unique Names Generator `4.7.1` via CDN for generated player and bot names.
 - Web Audio API for the shared procedural space lo-fi song with star-touch pulse and resonance-driven song reactions.
 - Node.js built-in test runner for unit tests.
-- GitHub Pages branch hosting from the repository `docs` folder.
+- GitLab Pages/GitDocs static hosting from the repository `docs` folder.
 
 ## Architecture Overview
 
@@ -52,7 +52,7 @@ The preferred long-term game-core model is documented in
 - `simulator.html`, `physics-sim.css`, and `physics-sim.js` form a separate static inspection app that runs scripted peers against the same pure physics modules, embeds realtime app clients, previews the completed scoreboard surface, and exposes the separate song mode.
 - `scoreboard-sim.html` is a standalone iframe-friendly preview that uses the real default room UI renderer, Three.js scene renderer, and `scoreboard-simulation.js` completed-room state so the full-map leaderboard can be visually checked without WebRTC or manual gameplay.
 - `scripts/serve-no-cache.mjs` is the local static development server used by `npm run serve`; it serves `docs/app` with no-store cache headers so iterative browser validation does not reuse stale HTML or module files.
-- `docs/index.html` is the GitHub Pages docs-root entry point. It preserves query/hash state and redirects visitors into the playable static app under `docs/app`.
+- `docs/index.html` is the GitLab Pages/GitDocs docs-root entry point. It preserves query/hash state and redirects visitors into the playable static app under `docs/app`.
 
 This shape keeps network and rendering side effects away from the logic covered by unit tests, and makes each physics behavior independently testable.
 
@@ -169,8 +169,8 @@ For presence, `position` is the authoritative peer snapshot used for bounded rem
 
 ## Major Design Decisions
 
-- Use GitDocs- and GitHub Pages-friendly static files instead of a build system.
-- Publish the repository `docs` folder through branch-based GitHub Pages and keep the playable app under `docs/app`, with a docs-root redirect page instead of a build or artifact workflow.
+- Use GitLab Pages/GitDocs-friendly static files instead of a build system.
+- Publish the repository `docs` folder through GitLab Pages by copying it into the CI `public` artifact, and keep the playable app under `docs/app` with a docs-root redirect page instead of a build workflow.
 - Use Trystero's default decentralized strategy to avoid an owned backend server.
 - Replace the original informal presence/pulse payloads with a v2-only protocol because the project has no deployed compatibility contract yet.
 - Import browser-only dependencies dynamically so app startup can report failures clearly and retry realtime connection.

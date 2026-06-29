@@ -96,7 +96,7 @@
 - Adjusted adaptive room-song progression after noticing the 88-constellation catalogue would make one layer per reveal feel too reactive; persistent music layers now unlock only on five-constellation milestones while star-touch and resonance highlights still react immediately.
 - Added a constellation reveal border flash after reviewing how completions should feel: every newly visible constellation now creates a brief visual-only flash around all scene edges in that constellation's deterministic color, derived locally from completed progress instead of a network event.
 - Moved normal player starts away from the map center with a deterministic random-looking room/client seed, while preserving explicit simulator and test start-position overrides; this made entry feel more like appearing somewhere in the vast sky map instead of always near origin.
-- Replaced the GitHub Actions Pages workflow with branch-based Pages from the `docs` folder, adding a docs-root page that redirects into `docs/app` while preserving room query links.
+- Replaced a hosted-workflow artifact approach with a docs-root page that redirects into `docs/app` while preserving room query links.
 
 ### 2026-06-29
 
@@ -108,6 +108,8 @@
 - Refined the completion state after feedback clarified that the scoreboard should answer who revealed the most constellations and that "full map" means a zoomed-out sky-map end-screen. Added reveal-credit attribution, synced it through presence, ranked leaders in pure selectors, and switched the scene camera to a full-map overview with a Leave action on the overlay.
 - Browser validation caught a portrait-only full-map rendering issue: the camera correctly zoomed out but the far plane clipped the map on mobile, so the scene now has a larger completion far plane plus full-map-only node/glow scaling and a regression test for portrait framing.
 - Added a dedicated simulator Scoreboard mode after realizing the completed-room surface was too expensive to inspect through normal play; the preview reuses the real app UI and scene renderers with a pure completed-room sample state instead of adding a gameplay shortcut.
+- Removed old deployment-host references from the project docs after moving the repository target to GitLab.
+- Added a no-build GitLab Pages pipeline that publishes `docs/` as the Pages root while preserving the `/app/` redirect behavior.
 
 ## AI Tools Used
 
@@ -135,7 +137,7 @@
 - Turning the constellation data into a separate observer mode reinforced the value of pure selectors: the same source map can now support gameplay, tests, and visual inspection without a parallel debug-only data path.
 - Keeping star placement, opening, progress, bots, and rendering as mostly pure modules made the later shift to persistent openable stars a contained change with deterministic test coverage.
 - A static app shape matched the GitDocs sharing goal and avoided backend credentials.
-- The same static app shape could be published to GitHub Pages without adding a build step or changing app paths; branch-based Pages from `docs` is simpler than an Actions artifact for this repository.
+- The same static app shape can be published to GitLab Pages without adding a build step or changing app paths; copying `docs/` to the Pages `public/` artifact is enough for this repository.
 - Player comprehension needs explicit product surface, not only a complete specification; the calm visual style still benefits from a small persistent goal panel.
 - Completion feedback benefits from a selector-owned state transition: it kept the scoreboard and full-map reveal aligned across tests, docs, UI, and scene rendering.
 - Scoreboards need explicit attribution data, not just aggregate progress. Adding that as a small monotonic room fact kept the leaderboard useful without introducing persistence or a new event channel.
@@ -146,7 +148,7 @@
 
 - True backend-free realtime still depends on public relay/signaling infrastructure.
 - WebRTC behavior can vary by network, NAT, and browser, so local tests cannot fully prove hosted multiplayer reliability.
-- GitDocs and GitHub Pages deployment details are environment-specific and need final verification after repository creation and first hosted branch deployment.
+- GitDocs and GitLab Pages deployment details are environment-specific and need final verification after repository creation and first hosted deployment.
 - Hidden product-surface diagnostics were useful for tuning but became documentation and UI debt once the simulator covered the same questions more cleanly.
 - Real constellation lines are not formally standardized by the IAU in the same way constellation boundaries are, so the feature uses a practical asterism-line dataset rather than claiming official line art.
 
@@ -165,7 +167,7 @@ Initial implementation session: TBD after final validation.
 
 ## What I Would Do Differently Next Time
 
-- Confirm the exact hosted GitDocs and GitHub Pages URL patterns before replacing README placeholders with final playable links.
+- Confirm the exact hosted GitLab Pages/GitDocs URL patterns before replacing README placeholders with final playable links.
 - Test WebRTC across two different networks earlier if realtime reliability becomes part of evaluation.
 - Consider a tiny optional relay only after the static MVP is proven.
 

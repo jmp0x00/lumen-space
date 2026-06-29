@@ -1,5 +1,6 @@
 // Derived from d3-celestial constellation GeoJSON data.
-// Source: https://github.com/ofrohn/d3-celestial
+// Source project: d3-celestial constellation data by Olaf Frohn.
+// https://github.com/ofrohn/d3-celestial
 //
 // Copyright (c) 2015, Olaf Frohn
 // All rights reserved.

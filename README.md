@@ -4,8 +4,7 @@ Lumen Space is a small social visual game for the AI-native development challeng
 
 Playable links:
 
-- GitHub Pages: TODO after branch-based Pages is enabled. Expected shape: `https://jmp0x00.github.io/lumen-space/`, which redirects to the playable app under `/app/`.
-- GitLab/GitDocs: TODO after the repository is created under `rc-ai-learning/vadim-kiryukhin-lumen-space` and GitDocs is enabled.
+- GitLab Pages/GitDocs: TODO after the first `master` pipeline publishes Pages. The hosted root should redirect to the playable app under `/app/`.
 
 ## Game Description
 
@@ -36,7 +35,7 @@ Playable links:
 
 ## Screenshots
 
-Screenshots will be added after the first hosted GitDocs smoke test.
+Screenshots will be added after the first hosted GitLab Pages/GitDocs smoke test.
 
 ## Setup
 
@@ -82,23 +81,25 @@ npm test
 Manual browser validation is documented in [docs/testing/manual-smoke-test.md](docs/testing/manual-smoke-test.md).
 For physics tuning, use `simulator.html`.
 
-## Deploy To GitHub Pages
+## Deploy To GitLab Pages
 
-This repository is set up for branch-based GitHub Pages from the `docs` folder.
-The docs-root page at `docs/index.html` redirects visitors into the playable app
-under `docs/app`, preserving query parameters such as `?room=<room-id>`.
+This repository is set up for GitLab Pages through `.gitlab-ci.yml`. The `pages`
+job runs on `master`, copies the `docs` folder into GitLab's required `public`
+artifact, and publishes the static app without a build step. The docs-root page
+at `docs/index.html` redirects visitors into the playable app under `docs/app`,
+preserving query parameters such as `?room=<room-id>`.
 
-After pushing to GitHub:
+After pushing to GitLab:
 
-1. Open the repository on GitHub.
-2. Go to `Settings` -> `Pages`.
-3. Set `Build and deployment` -> `Source` to `Deploy from a branch`.
-4. Select branch `master` or `main`, folder `/docs`, then save.
+1. Push `master` to the GitLab repository.
+2. Wait for the `pages` pipeline job to finish successfully.
+3. Open the project's Pages settings or deployment page and copy the published URL into this README.
 
 ## Project Structure
 
-- `docs/index.html`: GitHub Pages docs-root entry page that redirects to the playable app.
-- `docs/app/`: static playable app intended for GitDocs and GitHub Pages branch hosting.
+- `.gitlab-ci.yml`: GitLab Pages pipeline that publishes the `docs` folder as the static site.
+- `docs/index.html`: GitLab Pages/GitDocs docs-root entry page that redirects to the playable app.
+- `docs/app/`: static playable app intended for GitLab Pages/GitDocs hosting.
 - `docs/app/simulator.html`: automated simulator app with physics, realtime, constellation-map, scoreboard-preview, and procedural song modes.
 - `docs/app/scoreboard-sim.html`: standalone completed-room preview used by the simulator's Scoreboard mode.
 - `docs/app/src/simulation-clients.js`: realtime room simulator presets and scripted client target selection.
