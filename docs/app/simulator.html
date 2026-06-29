@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       name="description"
-      content="Automated Lumen Space simulator for physics, realtime rooms, constellation maps, and procedural audio."
+      content="Automated Lumen Space simulator for physics, realtime rooms, constellation maps, scoreboard previews, and procedural audio."
     >
     <title>Lumen Space Simulator</title>
-    <link rel="stylesheet" href="./physics-sim.css?v=audible-reactions-20260628">
+    <link rel="stylesheet" href="./physics-sim.css?v=scoreboard-sim-20260629">
   </head>
   <body>
     <main class="sim-shell">
@@ -21,6 +21,18 @@
           hidden
         >
           <div class="room-grid" id="room-grid"></div>
+        </section>
+        <section
+          class="scoreboard-stage"
+          id="scoreboard-stage"
+          aria-label="Completed scoreboard simulation"
+          hidden
+        >
+          <iframe
+            id="scoreboard-frame"
+            title="Completed sky map scoreboard preview"
+            src="./scoreboard-sim.html"
+          ></iframe>
         </section>
       </section>
 
@@ -45,6 +57,9 @@
           </button>
           <button class="mode-button" type="button" data-mode="map">
             Map
+          </button>
+          <button class="mode-button mode-button-wide" type="button" data-mode="scoreboard">
+            Scoreboard
           </button>
         </div>
 
@@ -287,6 +302,20 @@
           </div>
         </section>
 
+        <section class="scoreboard-controls" id="scoreboard-controls" hidden>
+          <label for="scoreboard-room-input">
+            Room
+            <output id="scoreboard-room-output" for="scoreboard-room-input">
+              lumen-scoreboard-sim
+            </output>
+          </label>
+          <input id="scoreboard-room-input" type="text" value="lumen-scoreboard-sim">
+
+          <button class="launch-button" id="scoreboard-reload-button" type="button">
+            Reload Scoreboard
+          </button>
+        </section>
+
         <section class="debug-list" aria-label="Peer state">
           <div class="debug-title" id="debug-title">Peers</div>
           <div id="peer-debug"></div>
@@ -294,6 +323,6 @@
       </aside>
     </main>
 
-    <script type="module" src="./src/physics-sim.js?v=obvious-lofi-reactions-20260628"></script>
+    <script type="module" src="./src/physics-sim.js?v=scoreboard-sim-20260629"></script>
   </body>
 </html>

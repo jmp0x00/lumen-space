@@ -107,6 +107,7 @@
 - This was a useful AI-native workflow reminder: end-state polish is safer when modeled as pure selectable state first, then rendered in the browser, because the tests can describe the product promise instead of only checking DOM details.
 - Refined the completion state after feedback clarified that the scoreboard should answer who revealed the most constellations and that "full map" means a zoomed-out sky-map end-screen. Added reveal-credit attribution, synced it through presence, ranked leaders in pure selectors, and switched the scene camera to a full-map overview with Stay and Leave actions on the overlay.
 - Browser validation caught a portrait-only full-map rendering issue: the camera correctly zoomed out but the far plane clipped the map on mobile, so the scene now has a larger completion far plane plus full-map-only node/glow scaling and a regression test for portrait framing.
+- Added a dedicated simulator Scoreboard mode after realizing the completed-room surface was too expensive to inspect through normal play; the preview reuses the real app UI and scene renderers with a pure completed-room sample state instead of adding a gameplay shortcut.
 
 ## AI Tools Used
 
@@ -139,6 +140,7 @@
 - Completion feedback benefits from a selector-owned state transition: it kept the scoreboard and full-map reveal aligned across tests, docs, UI, and scene rendering.
 - Scoreboards need explicit attribution data, not just aggregate progress. Adding that as a small monotonic room fact kept the leaderboard useful without introducing persistence or a new event channel.
 - Screenshot and pixel-based browser checks were especially useful for the end state because unit tests proved the selector contract, while the browser caught camera and viewport presentation details.
+- Expensive end states deserve first-class simulator entry points; they make visual review repeatable without weakening the real game loop.
 
 ## What Did Not Work Well
 

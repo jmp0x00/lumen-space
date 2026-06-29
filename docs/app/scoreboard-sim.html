@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="Lumen Space completed-room scoreboard simulator."
+    >
+    <title>Lumen Space Scoreboard Simulator</title>
+    <link rel="stylesheet" href="./styles.css?v=scoreboard-sim-20260629">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="lobby" id="lobby" hidden>
+        <form class="lobby-panel" id="join-form">
+          <label for="name-input">Name</label>
+          <div class="input-action-row">
+            <input id="name-input" name="name" type="text" value="Ada Star">
+            <button
+              class="input-icon-button"
+              id="generate-name-button"
+              type="button"
+              aria-label="Generate a new name"
+            >
+              <span aria-hidden="true">&#8635;</span>
+            </button>
+          </div>
+          <fieldset class="color-field">
+            <legend>Color</legend>
+            <div class="color-grid" id="color-grid"></div>
+          </fieldset>
+          <label for="room-input">Room</label>
+          <div class="input-action-row">
+            <input id="room-input" name="room" type="text" value="lumen-scoreboard-sim">
+            <button
+              class="input-icon-button"
+              id="create-room-button"
+              type="button"
+              aria-label="Generate a new room"
+            >
+              <span aria-hidden="true">&#8635;</span>
+            </button>
+          </div>
+          <button class="primary-button" type="submit">Enter Space</button>
+          <p class="lobby-note" id="lobby-note" role="status"></p>
+        </form>
+      </section>
+
+      <section class="space" id="space" aria-label="Lumen Space scoreboard preview">
+        <div class="scene-host" id="scene-host" aria-hidden="true"></div>
+
+        <section
+          class="completion-overlay"
+          id="completion-overlay"
+          aria-label="Full sky map scoreboard"
+          hidden
+        >
+          <div class="completion-heading">
+            <p class="completion-kicker">Full map revealed</p>
+            <h3 id="completion-title">Sky map complete</h3>
+            <p id="completion-text">
+              The whole room map is revealed. The leaderboard shows who finished the most constellations.
+            </p>
+          </div>
+          <div class="completion-scoreboard" aria-label="Constellation reveal leaders">
+            <h4 id="completion-scoreboard-title">Constellation leaders</h4>
+            <ol id="completion-leaders"></ol>
+          </div>
+          <dl class="completion-stats" id="completion-stats" aria-label="Completion stats"></dl>
+          <div class="completion-actions" aria-label="Completion actions">
+            <button class="completion-button" id="stay-button" type="button">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M12 3v18" />
+                <path d="m7 8 5-5 5 5" />
+                <path d="m7 16 5 5 5-5" />
+              </svg>
+              <span>Stay</span>
+            </button>
+            <button
+              class="completion-button completion-button-danger"
+              id="completion-leave-button"
+              type="button"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M10 17 15 12 10 7" />
+                <path d="M15 12H3" />
+                <path d="M21 19V5a2 2 0 0 0-2-2h-5" />
+                <path d="M14 21h5a2 2 0 0 0 2-2" />
+              </svg>
+              <span>Leave</span>
+            </button>
+          </div>
+        </section>
+
+        <aside class="objective-panel" id="objective-panel" aria-label="Current goal">
+          <div class="objective-title-row">
+            <div>
+              <p class="objective-kicker">Goal</p>
+              <h3 id="objective-title">Reveal constellations</h3>
+            </div>
+          </div>
+          <p class="objective-text" id="objective-text"></p>
+          <div
+            class="objective-progress"
+            id="objective-progress"
+            aria-hidden="true"
+            style="--objective-progress: 0%"
+          >
+            <span></span>
+          </div>
+          <div class="objective-stats" aria-label="Room progress">
+            <span>
+              <b id="objective-stars">0/767</b>
+              stars lit
+            </span>
+            <span>
+              <b id="objective-constellations">0/88</b>
+              revealed
+            </span>
+          </div>
+        </aside>
+
+        <header class="top-bar">
+          <div>
+            <p class="eyebrow" id="room-label">Room</p>
+            <h2 id="room-title">Lumen Space</h2>
+          </div>
+          <div class="status-pill" id="connection-status">Starting</div>
+        </header>
+
+        <aside class="people-panel" aria-label="Room participants">
+          <div class="panel-title-row">
+            <h3>Lights</h3>
+            <span id="peer-count">1</span>
+          </div>
+          <ul id="people-list"></ul>
+        </aside>
+
+        <nav class="action-bar" aria-label="Room actions">
+          <button
+            class="icon-action-button"
+            id="copy-link-button"
+            type="button"
+            aria-label="Copy invite link"
+            title="Copy invite link"
+          >
+            <span class="action-label">Invite</span>
+          </button>
+          <button
+            class="icon-action-button"
+            id="sound-button"
+            type="button"
+            aria-pressed="false"
+            aria-label="Lo-Fi unavailable"
+            title="Lo-Fi unavailable"
+          >
+            <span class="action-label">Lo-Fi Off</span>
+          </button>
+          <button
+            class="icon-action-button icon-action-button-danger"
+            id="leave-button"
+            type="button"
+            aria-label="Leave room"
+            title="Leave room"
+          >
+            <span class="action-label">Leave</span>
+          </button>
+        </nav>
+
+        <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+      </section>
+    </main>
+
+    <script type="module">
+      import { COLORS } from "./src/domain.js";
+      import { createDefaultAppUi } from "./src/app-ui.js";
+      import { createSpaceScene } from "./src/scene.js";
+      import {
+        SCOREBOARD_SIMULATION_DEFAULT_ROOM,
+        createScoreboardSimulationState
+      } from "./src/scoreboard-simulation.js";
+
+      const roomId =
+        new URL(window.location.href).searchParams.get("room") ??
+        SCOREBOARD_SIMULATION_DEFAULT_ROOM;
+      const simulation = createScoreboardSimulationState({
+        roomId,
+        now: 2_000
+      });
+      const publicState = {
+        type: "lumen-scoreboard-sim-state",
+        roomId: simulation.roomId,
+        mode: simulation.scene.mode,
+        constellationCount: simulation.scene.constellations.length,
+        leaders: simulation.summary.leaders.map(({ rank, name, count, color }) => ({
+          rank,
+          name,
+          count,
+          color
+        })),
+        stats: simulation.summary.stats,
+        openedStarCount: simulation.summary.openedStarCount,
+        totalStarCount: simulation.summary.totalStarCount,
+        revealedConstellationCount: simulation.summary.revealedConstellationCount,
+        totalConstellationCount: simulation.summary.totalConstellationCount
+      };
+      window.__lumenScoreboardSimulationState = publicState;
+
+      const ui = createDefaultAppUi({
+        document,
+        window,
+        colors: COLORS,
+        actions: {
+          onNameEdited() {},
+          onGenerateName() {},
+          onCreateRoom() {},
+          onJoinRoom() {},
+          onSelectColor() {},
+          onCopyInvite() {
+            ui.showToast("Invite copying is disabled in the scoreboard simulator.");
+          },
+          onStayInRoom() {
+            ui.showToast("Staying in the completed sky preview.");
+          },
+          onToggleSound() {},
+          onLeaveRoom() {
+            ui.showToast("Leave returns to the lobby in the playable room.");
+          }
+        }
+      });
+
+      ui.render({
+        ...simulation.view,
+        sound: { available: false, enabled: false }
+      });
+
+      const sceneController = await createSpaceScene({
+        container: ui.sceneHost,
+        getParticipants: () => simulation.scene.participants,
+        getPulses: () => [],
+        getResonances: () => [],
+        getTouchStars: () => simulation.state.touchStars,
+        getConstellations: () => simulation.scene.constellations,
+        getSceneMode: () => simulation.scene.mode
+      });
+      sceneController.start();
+
+      if (window.parent !== window) {
+        window.parent.postMessage(publicState, window.location.origin);
+      }
+    </script>
+  </body>
+</html>

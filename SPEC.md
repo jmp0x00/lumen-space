@@ -39,6 +39,7 @@ In scope:
 - Automated browser simulator for inspecting peer repulsion without manual multiplayer setup.
 - Realtime multi-user simulator mode that embeds several scene-only no-bot app clients in one WebRTC room and drives those peers with scripted user presets plus a configurable 1-8 client count.
 - Passive constellation-map simulator mode that shows the projected all-sky map without joining a playable room.
+- Scoreboard simulator mode that shows the completed full-map leaderboard end screen without joining or playing through a room.
 - Simulator song mode that plays the shared procedural space lo-fi infinite song and visualizes the current musical state.
 - Unit tests for pure domain logic.
 - Required challenge documentation.
@@ -75,6 +76,7 @@ Out of scope:
 - The simulator song mode must expose start/stop, seed-regeneration, tempo, density, space, volume, and reaction audition controls and show current bar, chord, tempo, active voice state, and reaction-influenced voice changes.
 - The simulator map mode must render all 88 projected constellation paths without creating a player, bot, WebRTC room, or room audio session.
 - The simulator map mode must expose a room seed, deterministic constellation colors, auto-tour speed, optional constellation names, current focus, constellation count, and node count.
+- The simulator scoreboard mode must render a completed full-map room preview with the real completion overlay, sample reveal leaders, full room stats, and Stay/Leave controls without requiring WebRTC, bots, audio, or manual gameplay.
 - The app runtime must support a configurable UI generator that receives app view state and action callbacks, then decides what UI to render.
 - The default app runtime must use the full lobby and room UI generator.
 - The physics simulator must include a realtime room mode where each simulated user is visible in its own embedded app screen, joins the same room through the normal WebRTC connection, starts without bots, uses a scene-only UI generator, follows a chosen preset such as star chasing, scripted paths, orbiting, or chasing another user, and can be launched with a selected 1-8 client count.
@@ -140,6 +142,7 @@ Out of scope:
 - In `simulator.html`, selecting realtime mode launches the selected number of scene-only embedded app clients in the same no-bot WebRTC room; changing the client count in realtime mode relaunches the embedded room with that count, and each client screen shows scripted movement through the normal app/WebRTC runtime.
 - In `simulator.html`, selecting song mode shows a procedural music visualization; pressing the Song mode audio control starts and stops the shared space lo-fi infinite song, changing the song sliders updates tempo, density, space, and volume, and reaction audition controls let star-touch and resonance reactions be heard.
 - In `simulator.html`, selecting map mode shows the complete projected constellation catalogue, advances a focus tour automatically, lets the user pause on a constellation, and does not require entering the game.
+- In `simulator.html`, selecting scoreboard mode shows the completed full-map scoreboard preview with ranked reveal leaders and room stats without playing through all stars.
 - Touching an unopened environmental star emits a compact star-colored pulse, leaves that star shining brighter in place, and shows a thin colored edge line when the activation is off-screen.
 - Touching all nodes of a constellation reveals its glowing sky-map line pattern and name for all connected players, with a short all-border flash in that constellation's color.
 - After all 767 touch stars and 88 constellations are complete, the scene zooms out to the full sky map on desktop and mobile and shows a scoreboard overlay ranking who revealed the most constellations, with Stay and Leave buttons.

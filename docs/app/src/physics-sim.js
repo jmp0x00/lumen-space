@@ -13,6 +13,7 @@ import {
 import { SIMULATOR_CONFIG } from "./config.js";
 import { projectSkyToWorld } from "./constellations.js";
 import { normalizeRoomId } from "./room.js";
+import { SCOREBOARD_SIMULATION_DEFAULT_ROOM } from "./scoreboard-simulation.js";
 import {
   REALTIME_ROOM_CLIENT_COUNT_MAX,
   REALTIME_ROOM_CLIENT_COUNT_MIN,
@@ -53,6 +54,8 @@ const context = canvas.getContext("2d");
 const elements = {
   realtimeStage: document.querySelector("#realtime-stage"),
   roomGrid: document.querySelector("#room-grid"),
+  scoreboardStage: document.querySelector("#scoreboard-stage"),
+  scoreboardFrame: document.querySelector("#scoreboard-frame"),
   modeButtons: document.querySelectorAll(".mode-button"),
   physicsControls: document.querySelectorAll(".physics-controls"),
   realtimeControls: document.querySelector("#realtime-controls"),
@@ -83,6 +86,10 @@ const elements = {
   mapSpeedOutput: document.querySelector("#map-speed-output"),
   mapTour: document.querySelector("#map-tour-button"),
   mapLabels: document.querySelector("#map-labels-button"),
+  scoreboardControls: document.querySelector("#scoreboard-controls"),
+  scoreboardRoom: document.querySelector("#scoreboard-room-input"),
+  scoreboardRoomOutput: document.querySelector("#scoreboard-room-output"),
+  scoreboardReload: document.querySelector("#scoreboard-reload-button"),
   debugTitle: document.querySelector("#debug-title"),
   distanceLabel: document.querySelector("#metric-distance-label"),
   repulsionLabel: document.querySelector("#metric-repulsion-label"),
@@ -136,6 +143,7 @@ let mapFocusIndex = 0;
 let mapTourEnabled = true;
 let mapLabelsEnabled = false;
 let mapDebugKey = "";
+let scoreboardState = null;
 
 bindControls();
 setScenario("cluster");
@@ -144,6 +152,8 @@ elements.realtimeRoom.value = createDefaultRealtimeRoomId();
 syncRealtimeRoomOutput();
 elements.mapRoom.value = getInitialMapRoomId();
 resetMapSimulation();
+elements.scoreboardRoom.value = getInitialScoreboardRoomId();
+syncScoreboardRoomOutput();
 setMode(getInitialMode());
 resizeCanvas();
 requestAnimationFrame(tick);
@@ -170,6 +180,10 @@ function bindControls() {
     }
     if (mode === "map") {
       resetMapSimulation({ writeRoomValue: true });
+      return;
+    }
+    if (mode === "scoreboard") {
+      reloadScoreboardSimulation();
       return;
     }
     resetScenario();
@@ -243,7 +257,10 @@ function bindControls() {
     mapLabelsEnabled = !mapLabelsEnabled;
     syncMapControls();
   });
-  window.addEventListener("message", handleRealtimeClientMessage);
+  elements.scoreboardRoom.addEventListener("input", syncScoreboardRoomOutput);
+  elements.scoreboardRoom.addEventListener("change", reloadScoreboardSimulation);
+  elements.scoreboardReload.addEventListener("click", reloadScoreboardSimulation);
+  window.addEventListener("message", handleWindowMessage);
   window.addEventListener("resize", resizeCanvas);
   renderRealtimePresetButtons();
   syncRealtimeSoundButton();
@@ -266,6 +283,9 @@ function tick(now) {
   } else if (mode === "realtime") {
     pollRealtimeFrames();
     renderRealtimeMetrics();
+  } else if (mode === "scoreboard") {
+    pollScoreboardFrame();
+    renderScoreboardMetrics();
   } else if (mode === "map") {
     drawConstellationMap(now / 1000);
     renderMapMetrics(now / 1000);
@@ -874,16 +894,20 @@ function setMode(nextMode) {
         ? "song"
         : nextMode === "map"
           ? "map"
-          : "physics";
+          : nextMode === "scoreboard"
+            ? "scoreboard"
+            : "physics";
   if (previousMode === "song" && mode !== "song") {
     void setSongEnabled(false);
   }
 
-  canvas.hidden = mode === "realtime";
+  canvas.hidden = mode === "realtime" || mode === "scoreboard";
   elements.realtimeStage.hidden = mode !== "realtime";
+  elements.scoreboardStage.hidden = mode !== "scoreboard";
   elements.realtimeControls.hidden = mode !== "realtime";
   elements.songControls.hidden = mode !== "song";
   elements.mapControls.hidden = mode !== "map";
+  elements.scoreboardControls.hidden = mode !== "scoreboard";
   for (const control of elements.physicsControls) {
     control.hidden = mode !== "physics";
   }
@@ -926,6 +950,23 @@ function setMode(nextMode) {
     resizeCanvas();
     drawSong(performance.now() / 1000);
     renderSongMetrics(performance.now() / 1000);
+    return;
+  }
+
+  if (mode === "scoreboard") {
+    elements.pause.disabled = true;
+    elements.pause.textContent = "Ⅱ";
+    elements.debugTitle.textContent = "Leaderboard";
+    elements.distanceLabel.textContent = "Leaders";
+    elements.repulsionLabel.textContent = "Stars";
+    elements.speedLabel.textContent = "Room";
+    const expectedRoom =
+      normalizeRoomId(elements.scoreboardRoom.value) ?? SCOREBOARD_SIMULATION_DEFAULT_ROOM;
+    if (scoreboardState?.roomId !== expectedRoom) {
+      reloadScoreboardSimulation();
+    }
+    pollScoreboardFrame();
+    renderScoreboardMetrics();
     return;
   }
 
@@ -1249,8 +1290,18 @@ function syncSongParameterLabels(parameters = getSongParameterValues()) {
   elements.songVolumeOutput.textContent = parameters.volume.toFixed(2);
 }
 
-function handleRealtimeClientMessage(event) {
-  if (event.origin !== window.location.origin || event.data?.type !== "lumen-sim-client-state") {
+function handleWindowMessage(event) {
+  if (event.origin !== window.location.origin) {
+    return;
+  }
+
+  if (event.data?.type === "lumen-scoreboard-sim-state") {
+    scoreboardState = event.data;
+    renderScoreboardMetrics();
+    return;
+  }
+
+  if (event.data?.type !== "lumen-sim-client-state") {
     return;
   }
 
@@ -1316,6 +1367,58 @@ function renderRealtimeMetrics() {
         : "starting";
       return row;
     })
+  );
+}
+
+function reloadScoreboardSimulation() {
+  const roomId = normalizeRoomId(elements.scoreboardRoom.value) ?? SCOREBOARD_SIMULATION_DEFAULT_ROOM;
+  elements.scoreboardRoom.value = roomId;
+  syncScoreboardRoomOutput();
+  scoreboardState = null;
+
+  const url = new URL("./scoreboard-sim.html", window.location.href);
+  url.searchParams.set("room", roomId);
+  elements.scoreboardFrame.src = url.href;
+  renderScoreboardMetrics();
+}
+
+function pollScoreboardFrame() {
+  try {
+    const state = elements.scoreboardFrame.contentWindow?.__lumenScoreboardSimulationState;
+    if (state?.type === "lumen-scoreboard-sim-state") {
+      scoreboardState = state;
+    }
+  } catch {
+    scoreboardState = null;
+  }
+}
+
+function renderScoreboardMetrics() {
+  const state = scoreboardState;
+  elements.distance.textContent = state ? String(state.leaders.length) : "0";
+  elements.repulsion.textContent = state
+    ? `${state.openedStarCount}/${state.totalStarCount}`
+    : "loading";
+  elements.speed.textContent =
+    state?.roomId ?? normalizeRoomId(elements.scoreboardRoom.value) ?? SCOREBOARD_SIMULATION_DEFAULT_ROOM;
+
+  const leaders = state?.leaders ?? [];
+  elements.debug.replaceChildren(
+    ...(leaders.length > 0
+      ? leaders.map((leader) => {
+          const row = document.createElement("div");
+          row.className = "peer-row";
+          row.innerHTML = `
+            <span class="peer-swatch" style="--peer-color: ${leader.color}"></span>
+            <span class="peer-name"></span>
+            <span class="peer-value"></span>
+          `;
+          row.querySelector(".peer-name").textContent = `#${leader.rank} ${leader.name}`;
+          row.querySelector(".peer-value").textContent =
+            `${leader.count} ${leader.count === 1 ? "constellation" : "constellations"}`;
+          return row;
+        })
+      : [createDebugPlaceholder("loading scoreboard")])
   );
 }
 
@@ -1467,6 +1570,11 @@ function getMapTourSeconds() {
 function syncRealtimeRoomOutput() {
   elements.realtimeRoomOutput.textContent =
     normalizeRoomId(elements.realtimeRoom.value) ?? REALTIME_ROOM_DEFAULT_ID;
+}
+
+function syncScoreboardRoomOutput() {
+  elements.scoreboardRoomOutput.textContent =
+    normalizeRoomId(elements.scoreboardRoom.value) ?? SCOREBOARD_SIMULATION_DEFAULT_ROOM;
 }
 
 function syncRealtimeClientCount({ writeValue = true } = {}) {
@@ -1673,7 +1781,9 @@ function createSongVisualStars(seed) {
 
 function getInitialMode() {
   const modeParam = new URL(window.location.href).searchParams.get("mode");
-  return ["physics", "realtime", "song", "map"].includes(modeParam) ? modeParam : "physics";
+  return ["physics", "realtime", "song", "map", "scoreboard"].includes(modeParam)
+    ? modeParam
+    : "physics";
 }
 
 function getInitialMapRoomId() {
@@ -1681,6 +1791,26 @@ function getInitialMapRoomId() {
     normalizeRoomId(new URL(window.location.href).searchParams.get("mapRoom")) ??
     CONSTELLATION_MAP_SIMULATION_DEFAULT_ROOM
   );
+}
+
+function getInitialScoreboardRoomId() {
+  return (
+    normalizeRoomId(new URL(window.location.href).searchParams.get("scoreboardRoom")) ??
+    SCOREBOARD_SIMULATION_DEFAULT_ROOM
+  );
+}
+
+function createDebugPlaceholder(text) {
+  const row = document.createElement("div");
+  row.className = "peer-row";
+  row.innerHTML = `
+    <span class="peer-swatch" style="--peer-color: #7dd3fc"></span>
+    <span class="peer-name"></span>
+    <span class="peer-value"></span>
+  `;
+  row.querySelector(".peer-name").textContent = text;
+  row.querySelector(".peer-value").textContent = "";
+  return row;
 }
 
 function seededUnit(seed) {

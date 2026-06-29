@@ -63,11 +63,12 @@ Open `http://localhost:4173/`.
 The local server sends no-store cache headers so browser refreshes pick up changed
 HTML, CSS, and JavaScript modules during development.
 
-To inspect peer collision scenarios without joining a room manually, open
+To inspect peer collision scenarios or completion surfaces without joining a room manually, open
 `http://localhost:4173/simulator.html`. The simulator includes a pure physics
 canvas mode, a realtime mode that embeds multiple scene-only no-bot app clients
 in the same WebRTC room, a map mode for passively observing the all-88 projected
-constellation catalogue without joining gameplay, and a song mode for the shared
+constellation catalogue without joining gameplay, a scoreboard mode for checking the completed
+full-map leaderboard end screen without playing through all stars, and a song mode for the shared
 procedural space lo-fi infinite track with tempo, density, space, volume, and reaction audition controls. Realtime
 simulator lo-fi audio is controlled by one simulator button and is routed
 through a single designated embedded client.
@@ -98,9 +99,11 @@ After pushing to GitHub:
 
 - `docs/index.html`: GitHub Pages docs-root entry page that redirects to the playable app.
 - `docs/app/`: static playable app intended for GitDocs and GitHub Pages branch hosting.
-- `docs/app/simulator.html`: automated simulator app with physics, realtime, constellation-map, and procedural song modes.
+- `docs/app/simulator.html`: automated simulator app with physics, realtime, constellation-map, scoreboard-preview, and procedural song modes.
+- `docs/app/scoreboard-sim.html`: standalone completed-room preview used by the simulator's Scoreboard mode.
 - `docs/app/src/simulation-clients.js`: realtime room simulator presets and scripted client target selection.
 - `docs/app/src/constellation-map-simulation.js`: pure observer model for the simulator's passive all-sky constellation map mode.
+- `docs/app/src/scoreboard-simulation.js`: pure completed-room sample state for the simulator's scoreboard preview.
 - `docs/app/src/runtime-config.js`: app runtime configuration, including the selected UI generator and scene-only embedded clients.
 - `docs/app/src/config.js`: shared app, gameplay, physics, audio, scene, and simulator configuration values.
 - `docs/app/src/constellation-sky-data.js`: derived all-88 constellation line data from the BSD-licensed `d3-celestial` dataset.
