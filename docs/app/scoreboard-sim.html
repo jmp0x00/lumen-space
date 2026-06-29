@@ -69,14 +69,6 @@
           </div>
           <dl class="completion-stats" id="completion-stats" aria-label="Completion stats"></dl>
           <div class="completion-actions" aria-label="Completion actions">
-            <button class="completion-button" id="stay-button" type="button">
-              <svg aria-hidden="true" viewBox="0 0 24 24">
-                <path d="M12 3v18" />
-                <path d="m7 8 5-5 5 5" />
-                <path d="m7 16 5 5 5-5" />
-              </svg>
-              <span>Stay</span>
-            </button>
             <button
               class="completion-button completion-button-danger"
               id="completion-leave-button"
@@ -219,9 +211,6 @@
           onSelectColor() {},
           onCopyInvite() {
             ui.showToast("Invite copying is disabled in the scoreboard simulator.");
-          },
-          onStayInRoom() {
-            ui.showToast("Staying in the completed sky preview.");
           },
           onToggleSound() {},
           onLeaveRoom() {

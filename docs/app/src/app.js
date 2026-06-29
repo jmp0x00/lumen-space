@@ -84,7 +84,6 @@ const ui = runtimeConfig.createUi({
     onJoinRoom: joinRoomFromLobby,
     onSelectColor: selectColor,
     onCopyInvite: copyInviteLink,
-    onStayInRoom: stayInCompletedRoom,
     onToggleSound: toggleSound,
     onLeaveRoom: leaveRoom
   }
@@ -443,10 +442,6 @@ function leaveRoom() {
   stopPresenceLoop();
   window.cancelAnimationFrame(animationFrame);
   dispatch({ type: "room/leave" });
-}
-
-function stayInCompletedRoom() {
-  showToast("Staying in the completed sky.");
 }
 
 function toggleSound() {

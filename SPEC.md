@@ -16,7 +16,7 @@ Lumen Space is a social visual game without scoring or winners. The goal is to c
 10. Each constellation has one deterministic room color and tracks which of its nodes have been touched by any player or bot.
 11. When all nodes in a constellation have been touched, the constellation reveals its glowing line pattern and name for everyone in the room, with a brief all-border flash in that constellation's color.
 12. Revealed constellations stay visible, and opened touch stars stay in place with a brighter shine.
-13. When all catalogue stars have been lit or all constellations have been completed, the room zooms out to the full sky map and shows a collaborative completion scoreboard ranking who revealed the most constellations, with Stay and Leave actions.
+13. When all catalogue stars have been lit or all constellations have been completed, the room zooms out to the full sky map and shows a collaborative completion scoreboard ranking who revealed the most constellations, with a Leave action.
 14. Pulses are not an explicit player or bot action; opening an unopened touch star is the only way to emit a colored pulse.
 15. Off-screen star-touch pulses show a brief thin colored edge line in the direction of the activation.
 16. When pulse fronts from different sources meet, they create a brief local resonance flash.
@@ -76,7 +76,7 @@ Out of scope:
 - The simulator song mode must expose start/stop, seed-regeneration, tempo, density, space, volume, and reaction audition controls and show current bar, chord, tempo, active voice state, and reaction-influenced voice changes.
 - The simulator map mode must render all 88 projected constellation paths without creating a player, bot, WebRTC room, or room audio session.
 - The simulator map mode must expose a room seed, deterministic constellation colors, auto-tour speed, optional constellation names, current focus, constellation count, and node count.
-- The simulator scoreboard mode must render a completed full-map room preview with the real completion overlay, sample reveal leaders, full room stats, and Stay/Leave controls without requiring WebRTC, bots, audio, or manual gameplay.
+- The simulator scoreboard mode must render a completed full-map room preview with the real completion overlay, sample reveal leaders, full room stats, and the Leave control without requiring WebRTC, bots, audio, or manual gameplay.
 - The app runtime must support a configurable UI generator that receives app view state and action callbacks, then decides what UI to render.
 - The default app runtime must use the full lobby and room UI generator.
 - The physics simulator must include a realtime room mode where each simulated user is visible in its own embedded app screen, joins the same room through the normal WebRTC connection, starts without bots, uses a scene-only UI generator, follows a chosen preset such as star chasing, scripted paths, orbiting, or chasing another user, and can be launched with a selected 1-8 client count.
@@ -112,7 +112,7 @@ Out of scope:
 - Star-touch pulses and resonance flashes must noticeably tune existing song voices, density, space, and tone in distinct ways, including an immediate tone/space bloom, while avoiding separate sound-effect stabs during repeated play.
 - The default room UI must expose a mute/unmute Lo-Fi control.
 - The default room UI must expose compact goal guidance and room progress for lit stars and revealed constellations.
-- When the room has lit the full touch-star catalogue or completed all constellations, the default room UI must hide normal room chrome and show a full-map completion overlay with a collaborative leaderboard ranking participants by completed constellations, room stats, and Stay/Leave actions.
+- When the room has lit the full touch-star catalogue or completed all constellations, the default room UI must hide normal room chrome and show a full-map completion overlay with a collaborative leaderboard ranking participants by completed constellations, room stats, and a Leave action.
 - When the room is complete, the scene model must reveal the full constellation map instead of only the already completed constellation subset, and the scene camera must frame the full sky map instead of following the local light on both desktop and mobile viewports.
 - The default room UI must expose copy invite, mute/unmute Lo-Fi, and leave controls as compact touch-friendly actions.
 - On mobile-width viewports, the Lights roster must remain shallow and horizontally scrollable instead of becoming a tall overlay.
@@ -145,7 +145,7 @@ Out of scope:
 - In `simulator.html`, selecting scoreboard mode shows the completed full-map scoreboard preview with ranked reveal leaders and room stats without playing through all stars.
 - Touching an unopened environmental star emits a compact star-colored pulse, leaves that star shining brighter in place, and shows a thin colored edge line when the activation is off-screen.
 - Touching all nodes of a constellation reveals its glowing sky-map line pattern and name for all connected players, with a short all-border flash in that constellation's color.
-- After all 767 touch stars and 88 constellations are complete, the scene zooms out to the full sky map on desktop and mobile and shows a scoreboard overlay ranking who revealed the most constellations, with Stay and Leave buttons.
+- After all 767 touch stars and 88 constellations are complete, the scene zooms out to the full sky map on desktop and mobile and shows a scoreboard overlay ranking who revealed the most constellations, with a Leave button.
 - A new player joining after a reveal receives constellation progress through presence and sees already revealed constellations.
 - Entering or interacting with a room starts the soft procedural space lo-fi song after browser audio is unlocked.
 - Before five constellations are revealed, room audio remains sparse; each five-constellation reveal milestone deterministically adds capped bass, soft kit, lead, and dust/shimmer layers for all clients that have the same room progress.

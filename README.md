@@ -23,7 +23,7 @@ Playable links:
 - Each constellation has one deterministic room color, tracks touched star nodes for the whole room, and reveals its glowing line pattern and name with a brief all-border color flash when all nodes have been gathered.
 - All constellation-node stars are visible at once; unopened stars pulse gently as guidance, and opened stars stay in place with a brighter shine.
 - Revealed constellations stay visible for everyone while their opened stars remain lit.
-- When the full catalogue is complete, the scene zooms out to show the full sky map on desktop and mobile with a collaborative scoreboard overlay ranking who finished the most constellations, plus Stay and Leave actions.
+- When the full catalogue is complete, the scene zooms out to show the full sky map on desktop and mobile with a collaborative scoreboard overlay ranking who finished the most constellations, plus a Leave action.
 - Rooms maintain a capped shared population of human players plus automatic star-seeking bots.
 - The room starts with the full 767-star all-sky node catalogue distributed across all 88 constellations in a vast equirectangular sky-map projection.
 - When different players' pulse fronts meet, they create a brief local resonance flash.

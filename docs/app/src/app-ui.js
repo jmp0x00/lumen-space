@@ -124,7 +124,6 @@ function queryDefaultElements(document) {
     completionScoreboardTitle: document.querySelector("#completion-scoreboard-title"),
     completionLeaders: document.querySelector("#completion-leaders"),
     completionStats: document.querySelector("#completion-stats"),
-    stayButton: document.querySelector("#stay-button"),
     completionLeaveButton: document.querySelector("#completion-leave-button"),
     roomLabel: document.querySelector("#room-label"),
     roomTitle: document.querySelector("#room-title"),
@@ -164,9 +163,6 @@ function bindDefaultUi(elements, actions) {
   });
   elements.copyLinkButton.addEventListener("click", () => {
     actions.onCopyInvite?.();
-  });
-  elements.stayButton?.addEventListener("click", () => {
-    actions.onStayInRoom?.();
   });
   elements.completionLeaveButton?.addEventListener("click", () => {
     actions.onLeaveRoom?.();
