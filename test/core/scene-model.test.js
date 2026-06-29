@@ -5,7 +5,10 @@ import {
   enterRoomState,
   getActiveTouchStars
 } from "../../docs/app/src/core/game-state.js";
-import { selectRuntimeTargetContext } from "../../docs/app/src/core/scene-model.js";
+import {
+  selectRuntimeTargetContext,
+  selectUiView
+} from "../../docs/app/src/core/scene-model.js";
 import {
   getSimulationClientConfig,
   getSimulationTarget
@@ -39,6 +42,37 @@ test("runtime target context exposes the full visible touch-star catalogue", () 
   assert.equal(context.elapsedSeconds, 4.25);
   assert.equal(context.now, 2_000);
   assert.equal(context.localParticipant, state.localParticipant);
+});
+
+test("room UI view exposes objective guidance and progress", () => {
+  const state = createRoomState({ sharedBotsEnabled: false });
+  const view = selectUiView(state);
+
+  assert.equal(view.objective.title, "Reveal constellations");
+  assert.equal(view.objective.openedStarCount, 0);
+  assert.equal(view.objective.totalStarCount, state.touchStars.length);
+  assert.equal(view.objective.revealedConstellationCount, 0);
+  assert.equal(view.objective.totalConstellationCount, 88);
+  assert.equal(view.objective.progress, 0);
+
+  const openedState = {
+    ...state,
+    touchStars: state.touchStars.map((star, index) =>
+      index < 2 ? { ...star, openedAt: 2_000 + index } : star
+    )
+  };
+  const openedView = selectUiView(openedState);
+
+  assert.equal(openedView.objective.title, "Keep lighting stars");
+  assert.equal(openedView.objective.openedStarCount, 2);
+  assert.equal(openedView.objective.progress, 2 / state.touchStars.length);
+
+  const syncedView = selectUiView({
+    ...state,
+    constellationProgress: { andromeda: 7 }
+  });
+
+  assert.equal(syncedView.objective.openedStarCount, 3);
 });
 
 test("scripted star racers do not target already-opened stars", () => {

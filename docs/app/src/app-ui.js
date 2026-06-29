@@ -43,6 +43,7 @@ export function createDefaultAppUi({ document, window, colors, actions }) {
       elements.roomTitle.textContent = view.identity?.name ?? "Lumen Space";
       elements.connectionStatus.textContent = view.status?.text ?? "Starting";
       elements.connectionStatus.dataset.state = view.status?.state ?? "pending";
+      renderObjectiveGuide(elements, view.objective);
       renderPeople(elements, view.participants ?? []);
       renderSoundControl(elements, view.sound);
     },
@@ -71,6 +72,7 @@ export function createSceneOnlyAppUi({ document }) {
   const hiddenElements = [
     document.querySelector(".top-bar"),
     document.querySelector("#connection-status"),
+    document.querySelector(".objective-panel"),
     document.querySelector(".people-panel"),
     document.querySelector(".action-bar"),
     document.querySelector("#toast")
@@ -117,6 +119,12 @@ function queryDefaultElements(document) {
     roomLabel: document.querySelector("#room-label"),
     roomTitle: document.querySelector("#room-title"),
     connectionStatus: document.querySelector("#connection-status"),
+    objectivePanel: document.querySelector("#objective-panel"),
+    objectiveTitle: document.querySelector("#objective-title"),
+    objectiveText: document.querySelector("#objective-text"),
+    objectiveProgress: document.querySelector("#objective-progress"),
+    objectiveStars: document.querySelector("#objective-stars"),
+    objectiveConstellations: document.querySelector("#objective-constellations"),
     peopleList: document.querySelector("#people-list"),
     peerCount: document.querySelector("#peer-count"),
     copyLinkButton: document.querySelector("#copy-link-button"),
@@ -185,6 +193,28 @@ function renderColorChoices({
       return button;
     })
   );
+}
+
+function renderObjectiveGuide(elements, objective) {
+  if (!elements.objectivePanel) {
+    return;
+  }
+
+  const hasObjective = Boolean(objective);
+  elements.objectivePanel.hidden = !hasObjective;
+  if (!hasObjective) {
+    return;
+  }
+
+  elements.objectiveTitle.textContent = objective.title;
+  elements.objectiveText.textContent = objective.text;
+  elements.objectiveProgress.style.setProperty(
+    "--objective-progress",
+    `${Math.round((objective.progress ?? 0) * 100)}%`
+  );
+  elements.objectiveStars.textContent = `${objective.openedStarCount}/${objective.totalStarCount}`;
+  elements.objectiveConstellations.textContent =
+    `${objective.revealedConstellationCount}/${objective.totalConstellationCount}`;
 }
 
 function renderSoundControl(elements, sound) {

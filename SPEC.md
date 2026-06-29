@@ -5,23 +5,24 @@
 Lumen Space is a social visual game without scoring or winners. The goal is to create a pleasant shared space where players can notice one another, move gently, and exchange simple light pulses.
 
 1. A player enters a nickname, chooses a color, and joins a room.
-2. Every connected player appears as a glowing light.
-3. The local light starts at a deterministic random-looking off-center point derived from the room and player, not at the map center.
-4. Moving the pointer pulls the local light through the space with inertia.
-5. The playable space is larger than the first camera view; the camera gently follows the local light as it travels.
-6. Nearby lights use a small collision radius derived from their visual size so contacts are gentle and bounded.
-7. Opening a small environmental star emits a compact pulse at the star, using the star's own color.
-8. Touch stars are generated on real constellation line paths projected into the playable space as a simplified all-sky map.
-9. Each constellation has one deterministic room color and tracks which of its nodes have been touched by any player or bot.
-10. When all nodes in a constellation have been touched, the constellation reveals its glowing line pattern and name for everyone in the room, with a brief all-border flash in that constellation's color.
-11. Revealed constellations stay visible, and opened touch stars stay in place with a brighter shine.
-12. Pulses are not an explicit player or bot action; opening an unopened touch star is the only way to emit a colored pulse.
-13. Off-screen star-touch pulses show a brief thin colored edge line in the direction of the activation.
-14. When pulse fronts from different sources meet, they create a brief local resonance flash.
-15. After browser audio is unlocked by user interaction, the room plays the procedural space lo-fi song; the idle room starts as a sparse pad/bed, five-constellation reveal milestones deterministically unlock up to four additional persistent song layers, and star-touch pulses plus resonance flashes immediately and noticeably reshape the song's density, space, tone, and voices.
-16. The player can mute or unmute the local lo-fi room audio.
-17. Other players in the same room see the player's latest position, shared bots, star-touch pulses, off-screen edge lines, revealed constellations, and local resonance flashes.
-18. Rooms are ephemeral. When all players leave, no room state remains.
+2. The lobby and room provide compact goal guidance so players know to steer through pulsing stars, light same-color groups, and reveal constellations.
+3. Every connected player appears as a glowing light.
+4. The local light starts at a deterministic random-looking off-center point derived from the room and player, not at the map center.
+5. Moving the pointer pulls the local light through the space with inertia.
+6. The playable space is larger than the first camera view; the camera gently follows the local light as it travels.
+7. Nearby lights use a small collision radius derived from their visual size so contacts are gentle and bounded.
+8. Opening a small environmental star emits a compact pulse at the star, using the star's own color.
+9. Touch stars are generated on real constellation line paths projected into the playable space as a simplified all-sky map.
+10. Each constellation has one deterministic room color and tracks which of its nodes have been touched by any player or bot.
+11. When all nodes in a constellation have been touched, the constellation reveals its glowing line pattern and name for everyone in the room, with a brief all-border flash in that constellation's color.
+12. Revealed constellations stay visible, and opened touch stars stay in place with a brighter shine.
+13. Pulses are not an explicit player or bot action; opening an unopened touch star is the only way to emit a colored pulse.
+14. Off-screen star-touch pulses show a brief thin colored edge line in the direction of the activation.
+15. When pulse fronts from different sources meet, they create a brief local resonance flash.
+16. After browser audio is unlocked by user interaction, the room plays the procedural space lo-fi song; the idle room starts as a sparse pad/bed, five-constellation reveal milestones deterministically unlock up to four additional persistent song layers, and star-touch pulses plus resonance flashes immediately and noticeably reshape the song's density, space, tone, and voices.
+17. The player can mute or unmute the local lo-fi room audio.
+18. Other players in the same room see the player's latest position, shared bots, star-touch pulses, off-screen edge lines, revealed constellations, and local resonance flashes.
+19. Rooms are ephemeral. When all players leave, no room state remains.
 
 ## Scope
 
@@ -52,6 +53,7 @@ Out of scope:
 ## Functional Requirements
 
 - The app must provide a lobby before entering the visual space.
+- The lobby must summarize the immediate play loop before room entry.
 - The lobby must generate an editable funny default name for first-time visitors.
 - The lobby must let users replace the current nickname with a newly generated name.
 - The lobby must support creating a room ID and joining an existing room ID.
@@ -104,6 +106,7 @@ Out of scope:
 - Persistent room song layers must be capped at four added layers beyond the base pad/bed so discovering many constellations does not make the track overcrowded.
 - Star-touch pulses and resonance flashes must noticeably tune existing song voices, density, space, and tone in distinct ways, including an immediate tone/space bloom, while avoiding separate sound-effect stabs during repeated play.
 - The default room UI must expose a mute/unmute Lo-Fi control.
+- The default room UI must expose compact goal guidance and room progress for lit stars and revealed constellations.
 - The default room UI must expose copy invite, mute/unmute Lo-Fi, and leave controls as compact touch-friendly actions.
 - On mobile-width viewports, the Lights roster must remain shallow and horizontally scrollable instead of becoming a tall overlay.
 - Muted room audio must stop the song and must not replay old pulse or resonance reactions when unmuted again.
@@ -120,6 +123,7 @@ Out of scope:
 
 - A user can run `npm run serve` and open the app locally.
 - A user can enter the lobby, regenerate a nickname, create a room, and copy an invite link.
+- The lobby and room UI make the immediate goal clear: steer through pulsing stars, light same-color groups, and reveal constellations.
 - Creating or joining a room places the local light away from the map center unless an explicit simulator/test start position is configured.
 - Two browser tabs using the same room show each other as separate colored lights.
 - Pointer movement updates the local light and propagates to peers.

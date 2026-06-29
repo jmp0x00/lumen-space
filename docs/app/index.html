@@ -12,7 +12,7 @@
     <link rel="icon" href="./icon-192.png" type="image/png" sizes="192x192">
     <link rel="apple-touch-icon" href="./apple-touch-icon.png">
     <meta name="theme-color" content="#05070d">
-    <link rel="stylesheet" href="./styles.css?v=room-ui-20260628">
+    <link rel="stylesheet" href="./styles.css?v=room-guide-20260629">
   </head>
   <body>
     <main class="app-shell">
@@ -22,7 +22,7 @@
             <span class="brand-mark" aria-hidden="true"></span>
             <div>
               <h1 id="app-title">Lumen Space</h1>
-              <p>Shared light room</p>
+              <p>Drift through pulsing stars to reveal constellations.</p>
             </div>
           </div>
 
@@ -83,6 +83,36 @@
 
       <section class="space" id="space" aria-label="Lumen Space room" hidden>
         <div class="scene-host" id="scene-host" aria-hidden="true"></div>
+
+        <aside class="objective-panel" id="objective-panel" aria-label="Current goal">
+          <div class="objective-title-row">
+            <div>
+              <p class="objective-kicker">Goal</p>
+              <h3 id="objective-title">Reveal constellations</h3>
+            </div>
+          </div>
+          <p class="objective-text" id="objective-text">
+            Move the pointer to steer through pulsing stars. Same-color stars form constellations.
+          </p>
+          <div
+            class="objective-progress"
+            id="objective-progress"
+            aria-hidden="true"
+            style="--objective-progress: 0%"
+          >
+            <span></span>
+          </div>
+          <div class="objective-stats" aria-label="Room progress">
+            <span>
+              <b id="objective-stars">0/767</b>
+              stars lit
+            </span>
+            <span>
+              <b id="objective-constellations">0/88</b>
+              revealed
+            </span>
+          </div>
+        </aside>
 
         <header class="top-bar">
           <div>
@@ -155,6 +185,6 @@
       </section>
     </main>
 
-    <script type="module" src="./src/app.js?v=obvious-lofi-reactions-20260628"></script>
+    <script type="module" src="./src/app.js?v=room-guide-20260629"></script>
   </body>
 </html>

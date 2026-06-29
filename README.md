@@ -12,6 +12,7 @@ Playable links:
 - Choose a nickname and color.
 - Fresh rooms start with a generated funny name that can be edited or regenerated.
 - Create or join a room link.
+- The lobby and room goal panel explain the loop: steer through pulsing stars, light same-color groups, and reveal constellations together.
 - Enter the room at a deterministic random-looking off-center point instead of the map center.
 - Move your light by moving the pointer.
 - Travel through a vast space that extends far beyond the first camera view while the camera gently follows your light.
@@ -103,7 +104,7 @@ After pushing to GitHub:
 - `docs/app/src/config.js`: shared app, gameplay, physics, audio, scene, and simulator configuration values.
 - `docs/app/src/constellation-sky-data.js`: derived all-88 constellation line data from the BSD-licensed `d3-celestial` dataset.
 - `docs/app/src/constellations.js`: sky projection, deterministic room color, star-node mapping, progress/reveal helpers, and completed-constellation selectors.
-- `docs/app/src/app-ui.js`: default and scene-only UI generators that render app state into DOM.
+- `docs/app/src/app-ui.js`: default and scene-only UI generators that render app state, objective guidance, room progress, and controls into DOM.
 - `docs/app/src/domain.js`: pure domain facade for identity, presence, and compatibility exports.
 - `docs/app/src/protocol.js`: v2 peer protocol creators and validators for hello, presence, and pulse events.
 - `docs/app/src/core/`: canonical game state, event reducer, simulation step, and scene/UI selectors.

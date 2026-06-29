@@ -98,6 +98,12 @@
 - Moved normal player starts away from the map center with a deterministic random-looking room/client seed, while preserving explicit simulator and test start-position overrides; this made entry feel more like appearing somewhere in the vast sky map instead of always near origin.
 - Replaced the GitHub Actions Pages workflow with branch-based Pages from the `docs` folder, adding a docs-root page that redirects into `docs/app` while preserving room query links.
 
+### 2026-06-29
+
+- Responded to play feedback that users did not understand what to do after entering the room.
+- Added compact lobby and in-room objective guidance that names the core loop: steer through pulsing stars, light same-color groups, and reveal constellations.
+- Kept the room guidance state-backed by `core/scene-model.js`, with lit-star and revealed-constellation progress, so the UI can teach the goal without becoming a separate hardcoded tutorial.
+
 ## AI Tools Used
 
 - Codex for requirements refinement, planning, implementation, tests, and documentation.
@@ -125,6 +131,7 @@
 - Keeping star placement, opening, progress, bots, and rendering as mostly pure modules made the later shift to persistent openable stars a contained change with deterministic test coverage.
 - A static app shape matched the GitDocs sharing goal and avoided backend credentials.
 - The same static app shape could be published to GitHub Pages without adding a build step or changing app paths; branch-based Pages from `docs` is simpler than an Actions artifact for this repository.
+- Player comprehension needs explicit product surface, not only a complete specification; the calm visual style still benefits from a small persistent goal panel.
 
 ## What Did Not Work Well
 
