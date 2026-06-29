@@ -4,7 +4,7 @@ Lumen Space is a small social visual game for the AI-native development challeng
 
 Playable links:
 
-- GitLab Pages/GitDocs: TODO after the first `master` pipeline publishes Pages. The hosted root should redirect to the playable app under `/app/`.
+- GitLab Pages/GitDocs: [Play Lumen Space](http://vadim-kiryukhin-ai-challenge-9a0dba.pages.git.ringcentral.com). The hosted root redirects to the playable app under `/app/`.
 
 ## Game Description
 
@@ -92,8 +92,12 @@ preserving query parameters such as `?room=<room-id>`.
 After pushing to GitLab:
 
 1. Push `master` to the GitLab repository.
-2. Wait for the `pages` pipeline job to finish successfully.
-3. Open the project's Pages settings or deployment page and copy the published URL into this README.
+2. Wait for the `pages` pipeline job to finish successfully. The first successful `master` Pages pipeline was confirmed on June 29, 2026.
+3. Open the project's Pages settings or deployment page and smoke test the published URL.
+
+Current Pages URL:
+
+- [http://vadim-kiryukhin-ai-challenge-9a0dba.pages.git.ringcentral.com](http://vadim-kiryukhin-ai-challenge-9a0dba.pages.git.ringcentral.com)
 
 ## Project Structure
 

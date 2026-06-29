@@ -110,6 +110,8 @@
 - Added a dedicated simulator Scoreboard mode after realizing the completed-room surface was too expensive to inspect through normal play; the preview reuses the real app UI and scene renderers with a pure completed-room sample state instead of adding a gameplay shortcut.
 - Removed old deployment-host references from the project docs after moving the repository target to GitLab.
 - Added a no-build GitLab Pages pipeline that publishes `docs/` as the Pages root while preserving the `/app/` redirect behavior.
+- Used `glab` on June 29, 2026 to discover the GitLab project and Pages metadata: repository `rc-ai-learning/vadim-kiryukhin-lumen-space`, default branch `master`, public Pages access, and hosted URL `http://vadim-kiryukhin-ai-challenge-9a0dba.pages.git.ringcentral.com`.
+- Confirmed the hosted Pages root and `/app/` URL return `200 OK`; a clean-browser and multiplayer smoke test still need to be completed.
 
 ## AI Tools Used
 
@@ -148,7 +150,7 @@
 
 - True backend-free realtime still depends on public relay/signaling infrastructure.
 - WebRTC behavior can vary by network, NAT, and browser, so local tests cannot fully prove hosted multiplayer reliability.
-- GitDocs and GitLab Pages deployment details are environment-specific and need final verification after repository creation and first hosted deployment.
+- Hosted browser and multiplayer behavior are still environment-specific and need final verification after the first successful Pages pipeline.
 - Hidden product-surface diagnostics were useful for tuning but became documentation and UI debt once the simulator covered the same questions more cleanly.
 - Real constellation lines are not formally standardized by the IAU in the same way constellation boundaries are, so the feature uses a practical asterism-line dataset rather than claiming official line art.
 
@@ -167,7 +169,7 @@ Initial implementation session: TBD after final validation.
 
 ## What I Would Do Differently Next Time
 
-- Confirm the exact hosted GitLab Pages/GitDocs URL patterns before replacing README placeholders with final playable links.
+- Discover and record the exact hosted GitLab Pages/GitDocs URL earlier in the deployment flow, ideally through `glab`, before final README cleanup.
 - Test WebRTC across two different networks earlier if realtime reliability becomes part of evaluation.
 - Consider a tiny optional relay only after the static MVP is proven.
 
